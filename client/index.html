@@ -34,6 +34,7 @@
 
         <main>
             <div class="game-container">
+                <!-- Verify this line carefully -->
                 <canvas id="arena" width="600" height="600"></canvas>
                 <div class="stats-panel">
                     <h3>Robot Stats</h3>
@@ -57,7 +58,7 @@
         </main>
     </div>
 
- <!-- Socket.IO -->
+    <!-- Socket.IO -->
     <script src="/socket.io/socket.io.js"></script>
     <!-- Other Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
@@ -66,8 +67,8 @@
     <!-- Game Engine -->
     <script src="js/engine/arena.js"></script>
     <script src="js/engine/robot.js"></script>
-    <script src="js/engine/interpreter.js"></script>
-    <script src="js/engine/collision.js"></script>
+    <script src="js/engine/interpreter.js"></script> <!-- Note: This is client-side, likely unused now -->
+    <script src="js/engine/collision.js"></script>   <!-- Note: This is client-side, likely unused now -->
     <script src="js/engine/game.js"></script>
 
     <!-- UI Components -->
@@ -76,7 +77,7 @@
     <script src="js/ui/controls.js"></script>
 
     <!-- Network Handler -->
-    <script src="js/network.js"></script>  <!-- ADD THIS LINE -->
+    <script src="js/network.js"></script>
 
     <!-- Main Application -->
     <script src="js/main.js"></script> <!-- This should be last -->
