@@ -10,7 +10,8 @@ const ARENA_HEIGHT = 600; // Match canvas size
 
 /**
  * Represents a single active game match on the server.
- * Manages the game state, robots, interpreter, collisions, and game loop.
+ * Manages the game state, robots, interpreter, collisions, game loop,
+ * and notifies the GameManager upon game completion via a callback.
  */
 class GameInstance {
     /**
@@ -18,8 +19,9 @@ class GameInstance {
      * @param {string} gameId - A unique identifier for this game.
      * @param {SocketIO.Server} io - The main Socket.IO server instance.
      * @param {Array<{socket: SocketIO.Socket, code: string, appearance: string, name: string, isReady: boolean}>} playersData - Array of player data.
+     * @param {Function} gameOverCallback - Function provided by GameManager to call when the game ends. Expects winnerData object.
      */
-    constructor(gameId, io, playersData) {
+    constructor(gameId, io, playersData, gameOverCallback) { // Added gameOverCallback parameter
         this.gameId = gameId;
         this.io = io; // Socket.IO server instance for broadcasting
         this.players = new Map(); // Map: socket.id -> { socket, robot, code, appearance, name }
@@ -31,6 +33,8 @@ class GameInstance {
         this.lastTickTime = 0; // Timestamp of the last tick
         // Stores explosion data generated this tick to send to clients
         this.explosionsToBroadcast = [];
+        // Store the callback function provided by GameManager
+        this.gameOverCallback = gameOverCallback;
 
         console.log(`[${gameId}] Initializing Game Instance...`);
 
@@ -87,8 +91,10 @@ class GameInstance {
 
         this.gameLoopInterval = setInterval(() => {
             const now = Date.now();
+            // Calculate delta time in seconds for physics/movement calculations
             const deltaTime = (now - this.lastTickTime) / 1000.0;
             this.lastTickTime = now;
+            // Execute one tick of the game simulation
             this.tick(deltaTime);
         }, 1000 / TICK_RATE);
     }
@@ -106,12 +112,13 @@ class GameInstance {
     }
 
     /**
-     * Executes a single tick of the game simulation.
+     * Executes a single tick of the game simulation: AI, movement, collisions, game over check, state broadcast.
      * @param {number} deltaTime - The time elapsed since the last tick, in seconds.
      */
     tick(deltaTime) {
         try {
-            this.explosionsToBroadcast = []; // Clear explosions from previous tick
+            // --- Start of Tick ---
+            this.explosionsToBroadcast = []; // Clear transient data from the previous tick
 
             // 1. Execute Robot AI Code
             this.interpreter.executeTick(this.robots, this);
@@ -126,11 +133,14 @@ class GameInstance {
 
             // 4. Check for Game Over Condition
             if (this.checkGameOver()) {
-                return; // Exit tick processing early
+                // checkGameOver calls stopGameLoop and notifies clients/GameManager if true
+                return; // Exit tick processing early as the game has ended
             }
 
-            // 5. Gather and Broadcast Game State
+            // --- State Broadcasting ---
+            // 5. Gather the current state of all entities for clients.
             const gameState = this.getGameState();
+            // 6. Broadcast the state to all clients in this game's room.
             this.io.to(this.gameId).emit('gameStateUpdate', gameState);
 
         } catch (error) {
@@ -142,27 +152,39 @@ class GameInstance {
     }
 
     /**
-     * Checks if the game has ended. If so, stops loop and notifies clients.
+     * Checks if the game has reached an end condition (e.g., only one robot left alive).
+     * If the game is over, it stops the loop, notifies clients in the game room,
+     * and calls the GameManager's game over callback.
      * @returns {boolean} True if the game is over, false otherwise.
      */
     checkGameOver() {
+        // Count how many robots are still marked as alive
         const aliveRobots = this.robots.filter(r => r.isAlive);
 
+        // Game ends if 1 or 0 robots are left alive (and we started with at least 2 robots).
         if (aliveRobots.length <= 1 && this.robots.length >= 2) {
-            const winnerRobot = aliveRobots[0]; // Could be undefined if 0 left
-            const winnerName = winnerRobot ? winnerRobot.name : 'None'; // Get name from robot instance
-            const winnerId = winnerRobot ? winnerRobot.id : null;
-            const reason = winnerRobot ? "Last robot standing!" : "Mutual Destruction!";
+            const winnerRobot = aliveRobots[0]; // Could be undefined if 0 left (draw/mutual destruction)
 
-            console.log(`[${this.gameId}] Game Over detected. Reason: ${reason}. Winner: ${winnerName} (${winnerId || 'N/A'})`);
+            // Prepare winner data object
+            const winnerData = {
+                winnerId: winnerRobot ? winnerRobot.id : null,
+                winnerName: winnerRobot ? winnerRobot.name : 'None', // Get name from robot instance
+                reason: winnerRobot ? "Last robot standing!" : "Mutual Destruction!"
+            };
 
-            // Notify clients about the game end, including winner's name
-            this.io.to(this.gameId).emit('gameOver', {
-                reason: reason,
-                winnerId: winnerId, // Keep ID for any client-side logic needing it
-                winnerName: winnerName // Provide name for easy display
-            });
+            console.log(`[${this.gameId}] Game Over detected. Reason: ${winnerData.reason}. Winner: ${winnerData.winnerName} (${winnerData.winnerId || 'N/A'})`);
 
+            // Notify clients *in this game room* directly about the game end
+            this.io.to(this.gameId).emit('gameOver', winnerData);
+
+            // Call the GameManager callback to handle lobby events etc.
+            if (typeof this.gameOverCallback === 'function') {
+                this.gameOverCallback(winnerData); // Notify GameManager
+            } else {
+                console.warn(`[${this.gameId}] gameOverCallback is not a function!`);
+            }
+
+            // Stop the simulation loop for this game instance.
             this.stopGameLoop();
             return true; // Game is over
         }
@@ -187,15 +209,22 @@ class GameInstance {
     }
 
     /**
-     * Gathers the current game state into a serializable object for clients.
+     * Gathers the current state of the game (robots, missiles, effects)
+     * into a serializable object suitable for broadcasting to clients via Socket.IO.
      * @returns {object} The current game state snapshot.
      */
     getGameState() {
+        // Collect all active missiles from all robots' lists
         const activeMissiles = [];
         this.robots.forEach(robot => {
-            activeMissiles.push(...robot.missiles);
+            // Only include missiles if the robot itself is considered active/part of state
+            // Or maybe always include them until they naturally expire/hit? Depends on rules.
+            // if (robot.isAlive) { // Optional: only include missiles from alive robots?
+                activeMissiles.push(...robot.missiles);
+            // }
         });
 
+        // Construct the state object
         const state = {
             gameId: this.gameId,
             // Map robot instances to plain data objects, including name
@@ -210,14 +239,17 @@ class GameInstance {
                 appearance: robot.appearance,
                 name: robot.name // Include the name stored on the robot instance
             })),
+            // Map missile instances to plain data objects
             missiles: activeMissiles.map(missile => ({
                 id: missile.id,
                 x: missile.x,
                 y: missile.y,
                 radius: missile.radius
+                // ownerId: missile.ownerId // Optional: include owner if needed client-side
             })),
-            explosions: this.explosionsToBroadcast, // Send explosions triggered this tick
-            timestamp: Date.now()
+            // Include any explosions triggered during this tick
+            explosions: this.explosionsToBroadcast,
+            timestamp: Date.now() // Include a server timestamp
         };
 
         // Note: Clearing explosionsToBroadcast moved to start of tick()
@@ -226,62 +258,72 @@ class GameInstance {
     }
 
     /**
-     * Performs a scan operation for a given robot.
+     * Performs a scan operation for a given robot, finding the nearest opponent within an arc.
+     * Called by the interpreter's safeScan method.
      * @param {ServerRobot} scanningRobot - The robot performing the scan.
-     * @param {number} direction - Center direction of the scan arc (degrees).
-     * @param {number} resolution - Width of the scan arc (degrees).
-     * @returns {object | null} Object with { distance, direction, id, name } of the closest detected robot, or null.
+     * @param {number} direction - The center direction of the scan arc (degrees, 0=East, 90=North).
+     * @param {number} resolution - The width of the scan arc (degrees).
+     * @returns {object | null} An object with { distance, direction, id, name } of the closest detected robot, or null if none found.
      */
     performScan(scanningRobot, direction, resolution) {
+        // Normalize inputs
         const scanDirection = ((Number(direction) % 360) + 360) % 360;
-        const halfResolution = Math.max(1, Number(resolution) / 2);
-        const scanRange = 800;
+        const halfResolution = Math.max(1, Number(resolution) / 2); // Ensure minimum 1 degree arc
+        const scanRange = 800; // Maximum scan distance
+
+        // Define scan arc boundaries in degrees [0, 360)
         let startAngleDeg = (scanDirection - halfResolution + 360) % 360;
         let endAngleDeg = (scanDirection + halfResolution + 360) % 360;
-        const wrapsAround = startAngleDeg > endAngleDeg;
+        const wrapsAround = startAngleDeg > endAngleDeg; // Check if arc crosses the 0/360 degree line
 
-        let closestTargetInfo = null;
-        let closestDistanceSq = scanRange * scanRange;
+        let closestTargetInfo = null; // Stores { distance, direction, id, name }
+        let closestDistanceSq = scanRange * scanRange; // Use squared distance for comparison efficiency
 
         this.robots.forEach(targetRobot => {
+            // Skip self and dead robots
             if (scanningRobot.id === targetRobot.id || !targetRobot.isAlive) {
                 return;
             }
 
             const dx = targetRobot.x - scanningRobot.x;
-            const dy = targetRobot.y - scanningRobot.y;
+            const dy = targetRobot.y - scanningRobot.y; // Use server coordinates
             const distanceSq = dx * dx + dy * dy;
 
-            if (distanceSq >= closestDistanceSq) {
+            // Early exit if target is further than current closest or out of max range
+            if (distanceSq >= closestDistanceSq || distanceSq > scanRange * scanRange) {
                 return;
             }
 
+            // Calculate angle to target: atan2(-dy, dx) for 0=East, 90=North convention
             let angleToTargetDeg = Math.atan2(-dy, dx) * 180 / Math.PI;
-            angleToTargetDeg = (angleToTargetDeg + 360) % 360;
+            angleToTargetDeg = (angleToTargetDeg + 360) % 360; // Normalize angle to [0, 360)
 
+            // Check if the calculated angle falls within the scan arc
             let inArc = false;
-            if (wrapsAround) {
+            if (wrapsAround) { // Arc crosses 0/360 (e.g., 350 to 10)
                 inArc = (angleToTargetDeg >= startAngleDeg || angleToTargetDeg <= endAngleDeg);
-            } else {
+            } else { // Arc does not wrap (e.g., 80 to 100)
                 inArc = (angleToTargetDeg >= startAngleDeg && angleToTargetDeg <= endAngleDeg);
             }
 
             if (inArc) {
+                // Found a new closest robot within the arc
                 closestDistanceSq = distanceSq;
                 closestTargetInfo = {
-                    distance: Math.sqrt(distanceSq),
-                    direction: angleToTargetDeg,
-                    id: targetRobot.id,
-                    name: targetRobot.name // Include name in scan result
+                    distance: Math.sqrt(distanceSq), // Calculate actual distance only for the final result
+                    direction: angleToTargetDeg, // Report angle using the 0=East convention
+                    id: targetRobot.id, // Include the ID of the detected robot
+                    name: targetRobot.name // Include the Name of the detected robot
                 };
             }
         });
 
-        return closestTargetInfo;
+        return closestTargetInfo; // Return data for the closest robot, or null if none found
     }
 
     /**
-     * Removes a player upon disconnection, marking their robot as inactive.
+     * Removes a player and marks their robot as inactive upon disconnection.
+     * Called by the GameManager.
      * @param {string} socketId - The ID of the disconnecting player's socket.
      */
     removePlayer(socketId) {
@@ -294,16 +336,22 @@ class GameInstance {
             // Mark the robot as inactive
             if (playerData.robot) {
                  playerData.robot.isAlive = false;
-                 playerData.robot.speed = 0;
+                 playerData.robot.speed = 0; // Stop movement
                  playerData.robot.targetSpeed = 0;
                  console.log(`[${this.gameId}] Marked robot for ${playerName} as inactive.`);
             }
 
-            playerData.socket.leave(this.gameId); // Ensure socket leaves the room
-            this.players.delete(socketId); // Remove from active player map
-            this.playerNames.delete(socketId); // Remove from name map
+            // Have the socket leave the Socket.IO room for this game
+            if (playerData.socket) {
+                 playerData.socket.leave(this.gameId);
+            }
+            // Remove player data from the active players map for this game
+            this.players.delete(socketId);
+            // Remove from name map
+            this.playerNames.delete(socketId);
 
-            // Check if removing this player triggers game over
+            // Check if removing this player triggers the game over condition
+            // (e.g., if only one player remains)
             this.checkGameOver();
         } else {
              console.warn(`[${this.gameId}] Tried to remove player ${socketId}, but they were not found in the player map.`);
@@ -311,7 +359,8 @@ class GameInstance {
     }
 
     /**
-     * Checks if the game instance has no active players left.
+     * Checks if the game instance has no active players left in its map.
+     * Used by GameManager to determine if the instance can be cleaned up.
      * @returns {boolean} True if the player map is empty, false otherwise.
      */
     isEmpty() {
@@ -320,8 +369,9 @@ class GameInstance {
 
     /**
      * Placeholder for queueing actions received directly from clients.
-     * @param {string} socketId - Player's socket ID.
-     * @param {object} action - Action object.
+     * Not used in the current server-side interpreter model.
+     * @param {string} socketId - The ID of the player sending the action.
+     * @param {object} action - The action object sent by the client.
      */
     queueAction(socketId, action) {
         const playerName = this.playerNames.get(socketId) || socketId;
