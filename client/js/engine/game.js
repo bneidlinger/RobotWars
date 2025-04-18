@@ -3,7 +3,8 @@
 /**
  * Client-side Game class for Robot Wars.
  * Manages the connection to the server, receives game state,
- * and renders the game arena based on server information.
+ * renders the game arena based on server information, and handles
+ * player game lifecycle and spectator mode transitions using the Controls state machine. // <-- Updated description
  * Does NOT run the simulation locally.
  */
 class Game {
@@ -22,7 +23,6 @@ class Game {
             this.arena = null; // Mark arena as unusable
         }
 
-
         // Store local representations of game state received from the server
         this.robots = []; // Data objects for robots, including appearance and name
         this.missiles = []; // Data objects for missiles (Arena will access this to draw)
@@ -32,7 +32,8 @@ class Game {
         this.animationFrame = null; // ID for requestAnimationFrame
         this.myPlayerId = null; // This client's unique ID
         this.lastServerState = null; // The most recent gameState received
-        this.gameId = null; // ID of the current server game instance
+        this.gameId = null; // ID of the current server game instance being played OR spectated
+        this.gameName = null; // Name of the current game being played OR spectated
     }
 
     /**
@@ -54,12 +55,20 @@ class Game {
     updateFromServer(gameState) {
         if (!gameState) return;
 
+        // Only update if the game ID matches the one we are playing/spectating
+        // Network.js should filter, but double-checking is safe.
+        if (gameState.gameId !== this.gameId) {
+             // console.warn(`Received gameState for ${gameState.gameId}, but current game is ${this.gameId}. Skipping.`);
+             return;
+        }
+
         this.lastServerState = gameState;
-        this.gameId = gameState.gameId;
+        // Update game name if it changed (unlikely but possible)
+        this.gameName = gameState.gameName || this.gameName || gameState.gameId; // Keep existing if not provided, fallback to ID
 
         // --- Update Robots ---
         if (gameState.robots) {
-            // Map server robot data to simple objects for rendering, including appearance and name
+            // Map server robot data to simple objects for rendering
             this.robots = gameState.robots.map(serverRobotData => ({
                 id: serverRobotData.id,
                 x: serverRobotData.x,
@@ -69,18 +78,13 @@ class Game {
                 color: serverRobotData.color,
                 isAlive: serverRobotData.isAlive,
                 radius: 15, // Assuming fixed radius for client rendering logic
-                appearance: serverRobotData.appearance || 'default', // Store appearance
-                // --- Corrected: Copy the name property from server data ---
-                name: serverRobotData.name || 'Unknown' // Copy name, fallback if missing
-                // --- End Correction ---
+                appearance: serverRobotData.appearance || 'default',
+                name: serverRobotData.name || 'Unknown'
             }));
-            // Update the Arena's list so it can draw them using the correct appearance and name
-            // Check if arena exists before trying to update it
             if (this.arena) {
                 this.arena.robots = this.robots;
             }
         } else {
-            // If no robot data, clear local list and arena's list
             this.robots = [];
             if (this.arena) {
                  this.arena.robots = [];
@@ -88,27 +92,21 @@ class Game {
         }
 
         // --- Update Missiles ---
-        // Store the missile data locally; Arena's draw() method will render them
         if (gameState.missiles) {
             this.missiles = gameState.missiles.map(serverMissileData => ({
                 id: serverMissileData.id,
                 x: serverMissileData.x,
                 y: serverMissileData.y,
-                radius: serverMissileData.radius,
-                // Note: Color is applied by Arena.drawMissiles
+                radius: serverMissileData.radius
             }));
         } else {
-            // If no missile data, clear local list
             this.missiles = [];
         }
 
         // --- Trigger Client-Side Explosions ---
-        // Check if the server sent any explosion events this tick
         if (this.arena && gameState.explosions && gameState.explosions.length > 0) {
             gameState.explosions.forEach(expData => {
-                // Tell the Arena instance to create the visual effect
                 if (typeof this.arena.createExplosion === 'function') {
-                    // console.log(`Client creating visual explosion for event ${expData.id}`); // Debug log
                     this.arena.createExplosion(expData.x, expData.y, expData.size);
                 }
             });
@@ -116,8 +114,8 @@ class Game {
 
         // --- Update UI Elements (Dashboard) ---
         if (window.dashboard && typeof window.dashboard.updateStats === 'function') {
-            // Pass the current robot data (which includes name, damage, status) to the dashboard
-            window.dashboard.updateStats(this.robots);
+             const context = { gameName: this.gameName };
+             window.dashboard.updateStats(this.robots, context);
         }
     }
 
@@ -126,157 +124,196 @@ class Game {
      * Delegates the actual drawing work to the Arena's draw() method.
      */
     clientRenderLoop() {
-        // Stop the loop if the game is no longer marked as running
         if (!this.running) return;
-
-        // Ensure arena exists before attempting to draw
         if (this.arena) {
-            // 1. Ask the Arena to draw everything based on the current state
-            this.arena.draw();
+            this.arena.draw(); // Arena accesses this.robots and this.missiles
         } else {
-             // If arena doesn't exist, stop the loop to prevent errors
              console.error("Render loop cannot run because Arena object is missing.");
              this.stop();
              return;
         }
-
-        // 2. Request the next frame to continue the animation loop
         this.animationFrame = requestAnimationFrame(this.clientRenderLoop.bind(this));
     }
 
     /**
      * Starts the client-side rendering loop.
-     * Typically called when the 'gameStart' event is received from the server.
+     * Typically called when 'gameStart' or 'spectateStart' is received.
      */
     startRenderLoop() {
-        if (this.running) return; // Prevent starting multiple loops
-        // Prevent starting if arena failed to initialize
+        if (this.running) return;
         if (!this.arena) {
              console.error("Cannot start render loop because Arena is not initialized.");
              return;
         }
         console.log("Starting client render loop...");
         this.running = true;
-        this.clientRenderLoop(); // Initiate the animation loop
+        this.clientRenderLoop();
     }
 
     /**
      * Stops the client-side rendering loop.
-     * Typically called on disconnection or when 'gameOver' is received from the server.
+     * Called on disconnection, 'gameOver', 'spectateGameOver', or before starting new game/spectate.
      */
     stop() {
         if (!this.running) return;
         console.log("Stopping client render loop.");
         this.running = false;
         if (this.animationFrame) {
-            cancelAnimationFrame(this.animationFrame); // Stop requesting new frames
+            cancelAnimationFrame(this.animationFrame);
             this.animationFrame = null;
         }
     }
 
-    // --- Game Lifecycle Handlers (Called by network.js based on server events) ---
-
-    /**
-     * Handles the 'gameStart' event from the server. Prepares the client for the match.
-     * @param {object} data - Data associated with the game start (e.g., game ID, player list with names/appearances).
-     */
-    handleGameStart(data) {
-        console.log("Game Start signal received:", data);
-        this.gameId = data.gameId;
-
-        // Reset local state from any previous game only if arena exists
+    /** Clears local game state (robots, missiles, etc.) and resets arena/dashboard */
+    clearLocalState() {
+        console.log("Clearing local game state (robots, missiles, arena, dashboard)...");
         if (this.arena) {
             this.arena.explosions = []; // Clear visual effects in arena
+            this.arena.robots = []; // Clear arena's robot list
+            this.arena.clear(); // Draw background/grid immediately
         }
         this.missiles = []; // Clear missile list in game state
         this.robots = []; // Clear robot list
-        if (this.arena) {
-            this.arena.robots = []; // Clear arena's robot list
-        }
         this.lastServerState = null; // Clear last known state
+        this.gameId = null; // Clear game ID/Name
+        this.gameName = null;
+        // Clear dashboard (pass empty context)
+        if (window.dashboard && typeof window.dashboard.updateStats === 'function') {
+            window.dashboard.updateStats([], {});
+        } else {
+            console.warn("Dashboard object or updateStats method not found during clearLocalState.");
+        }
+    }
 
-        // Log players in the game
+
+    // --- Game Lifecycle & Spectator Handlers (Called by network.js) ---
+
+    /**
+     * Handles the 'gameStart' event from the server. Prepares the client for playing the match.
+     * @param {object} data - Data associated with the game start { gameId, gameName, players }.
+     */
+    handleGameStart(data) {
+        console.log("Game Start signal received:", data);
+        this.stop();
+        this.clearLocalState();
+
+        this.gameId = data.gameId;
+        this.gameName = data.gameName || data.gameId; // Store game name
+
         if (data.players) {
             console.log("Players in this game:", data.players.map(p => `${p.name} (${p.appearance})`).join(', '));
         }
 
-        // Start rendering the game now that it's begun
         this.startRenderLoop();
 
-        // Update UI elements to reflect the "in-game" state
-        // Note: controls.js setReadyState(true) might have already done this,
-        // but this ensures consistency if game starts unexpectedly.
-        const readyButton = document.getElementById('btn-ready');
-        const appearanceSelect = document.getElementById('robot-appearance-select');
-        const playerNameInput = document.getElementById('playerName');
-        if (readyButton) {
-            readyButton.textContent = "Game in Progress...";
-            readyButton.disabled = true; // Disable ready/unready during game
-             // Optional: change color to indicate locked state
-             // readyButton.style.backgroundColor = '#555';
+        // --- Update Controls state to 'playing' ---
+        if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+             controls.setState('playing'); // Use the new state manager
+        } else {
+             console.warn("Controls object or setState method not found, UI may not lock correctly for game start.");
         }
-        if (appearanceSelect) {
-            appearanceSelect.disabled = true;
+
+        if (typeof window.updateLobbyStatus === 'function') {
+             window.updateLobbyStatus(`Playing Game: ${this.gameName}`);
         }
-         if (playerNameInput) {
-             playerNameInput.disabled = true;
-         }
-        // Consider making editor read-only during game
-        // if (typeof editor !== 'undefined') editor.setOption("readOnly", true);
     }
 
     /**
-     * Handles the 'gameOver' event from the server. Cleans up the client state and UI.
-     * @param {object} data - Data associated with the game end (e.g., reason, winnerId, winnerName).
+     * Handles the 'gameOver' event from the server (for players). Cleans up the client state and UI.
+     * @param {object} data - Data associated with the game end { gameId, winnerId, winnerName, reason }.
      */
     handleGameOver(data) {
-        console.log("Game Over signal received:", data);
+        console.log("Game Over signal received (as player):", data);
         this.stop(); // Stop the rendering loop
 
-        // --- Updated Winner Display ---
-        // Use winnerName if provided by the server, otherwise fallback to ID or 'None'.
-        let winnerDisplayName = 'None'; // Default
-        if (data.winnerName) {
-            winnerDisplayName = data.winnerName; // Use the name if available
-        } else if (data.winnerId) {
-            // Fallback to partial ID if name is missing but ID is present
-            winnerDisplayName = `ID: ${data.winnerId.substring(0, 6)}...`;
-        }
-        const message = `Game Over! ${data.reason || 'Match ended.'} Winner: ${winnerDisplayName}`;
+        // Display winner message
+        let winnerDisplayName = 'None';
+        if (data.winnerName) winnerDisplayName = data.winnerName;
+        else if (data.winnerId) winnerDisplayName = `ID: ${data.winnerId.substring(0, 6)}...`;
+
+        const endedGameName = this.gameName || data.gameId; // Use stored name if available
+        const message = `Game '${endedGameName}' Over! ${data.reason || 'Match ended.'} Winner: ${winnerDisplayName}`;
         alert(message); // Display name (or fallback) in alert
-        // --- End Updated Winner Display ---
 
-        // --- Reset UI Elements using Controls helper ---
-        // Ensure the global 'controls' object exists and reset its state
-        if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
-            controls.setReadyState(false); // Reset button text/state and enable inputs
+        // --- Update Controls state back to 'lobby' ---
+        if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+             controls.setState('lobby'); // Use the new state manager
         } else {
-            // Fallback if 'controls' object isn't available (shouldn't happen)
-            console.warn("Controls object not found, attempting manual UI reset for game over.");
-            const readyButton = document.getElementById('btn-ready');
-            const appearanceSelect = document.getElementById('robot-appearance-select');
-            const playerNameInput = document.getElementById('playerName');
-            const sampleCodeSelect = document.getElementById('sample-code');
-            const editorIsAvailable = typeof editor !== 'undefined';
-
-            if (readyButton) { readyButton.textContent = "Ready Up"; readyButton.disabled = false; readyButton.style.backgroundColor = '#4CAF50'; }
-            if (appearanceSelect) { appearanceSelect.disabled = false; }
-            if (playerNameInput) { playerNameInput.disabled = false; }
-            if (sampleCodeSelect) { sampleCodeSelect.disabled = false; }
-            if (editorIsAvailable) editor.setOption("readOnly", false);
-        }
-        // --- End Reset UI Elements ---
-
-        // Update lobby status (Network listener also does this, potentially redundant but safe)
-        if (typeof updateLobbyStatus === 'function') {
-             updateLobbyStatus('Game Over. Ready Up for another match!');
+            console.warn("Controls object or setState method not found, UI may not reset correctly after game over.");
         }
 
-        // Optional: Clear the display after a short delay if desired
-        // setTimeout(() => {
-        //      if(this.arena) this.arena.clear(); // Clear canvas if arena exists
-        //      if(window.dashboard) window.dashboard.updateStats([]); // Clear dashboard
-        // }, 2000);
+        // Update lobby status display
+        if (typeof window.updateLobbyStatus === 'function') {
+             window.updateLobbyStatus('Game Over. Ready Up for another match!');
+        }
+
+        // Clear the display after a short delay
+         setTimeout(() => {
+              this.clearLocalState();
+         }, 2000); // 2-second delay
+    }
+
+
+    // --- Spectator Mode Handlers ---
+
+    /**
+     * Handles the 'spectateStart' event from the server. Prepares the client for spectating.
+     * @param {object} spectateData - Data associated with spectating { gameId, gameName }.
+     */
+    handleSpectateStart(spectateData) {
+        console.log("Starting spectate mode for game:", spectateData);
+        this.stop(); // Ensure any previous rendering is stopped
+        this.clearLocalState(); // Clear state from any previous session
+
+        this.gameId = spectateData.gameId; // Store the ID of the game being spectated
+        this.gameName = spectateData.gameName || spectateData.gameId; // Store the name
+
+        // --- Update Controls state to 'spectating' ---
+        if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+            controls.setState('spectating'); // Use the new state manager
+        } else {
+            console.warn("Controls object or setState method not found, UI may not lock correctly for spectating.");
+        }
+
+        // Update UI (lobby status) to show spectating status
+        if (typeof window.updateLobbyStatus === 'function') {
+             window.updateLobbyStatus(`Spectating Game: ${this.gameName}`);
+        }
+
+        // Start rendering the spectated game
+        this.startRenderLoop();
+    }
+
+    /**
+     * Handles the 'spectateGameOver' event from the server. Transitions client back to lobby state.
+     * @param {object} gameOverData - Data associated with the game end { gameId, winnerId, winnerName, reason }.
+     */
+    handleSpectateEnd(gameOverData) {
+        console.log("Spectate mode ended:", gameOverData);
+        this.stop(); // Stop the rendering loop
+
+         // --- Update Controls state back to 'lobby' ---
+        if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+            controls.setState('lobby'); // Use the new state manager
+        } else {
+             console.warn("Controls object or setState method not found, UI may not reset correctly after spectating.");
+        }
+
+        // Update UI (lobby status) to show returned to lobby
+        if (typeof window.updateLobbyStatus === 'function') {
+             window.updateLobbyStatus('Returned to Lobby. Enter name & code, then Ready Up!');
+        }
+
+        // Display game over message to the spectator
+        let winnerDisplayName = gameOverData.winnerName || (gameOverData.winnerId ? `ID: ${gameOverData.winnerId.substring(0, 6)}...` : 'None');
+        const endedGameName = this.gameName || gameOverData.gameId; // Use stored name
+        const message = `Spectated game '${endedGameName}' finished!\nWinner: ${winnerDisplayName}. (${gameOverData.reason || 'Match ended.'})`;
+        alert(message);
+
+        // Clear the display and state after a shorter delay
+        setTimeout(() => {
+             this.clearLocalState();
+        }, 1500); // 1.5-second delay
     }
 
 } // End Game Class
