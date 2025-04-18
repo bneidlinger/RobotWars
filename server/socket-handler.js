@@ -1,70 +1,96 @@
 // server/socket-handler.js
 const GameManager = require('./game-manager');
 
+/**
+ * Initializes Socket.IO event handlers for the application.
+ * Manages player connections, disconnections, data submission, readiness signals, and chat.
+ * Delegates game logic to the GameManager.
+ * @param {SocketIO.Server} io - The Socket.IO server instance.
+ */
 function initializeSocketHandler(io) {
+    // Create a single instance of the GameManager to manage the application state
     const gameManager = new GameManager(io);
 
+    // Handle new client connections
     io.on('connection', (socket) => {
         console.log(`New client connected: ${socket.id}`);
 
-        // Add player to the pending list and assign ID
+        // Add player to the GameManager's pending list
         gameManager.addPlayer(socket);
+
+        // Assign a unique ID to the newly connected client
         socket.emit('assignId', socket.id);
 
-        // Notify everyone (including sender) about the new connection (basic event)
-        // We'll enhance this later with names once available
+        // Notify all clients (including sender) about the new connection
+        // Note: Name is not known yet, use partial ID.
         io.emit('lobbyEvent', { message: `Player ${socket.id.substring(0, 4)}... connected.` });
-        // Send initial lobby status update
-        gameManager.broadcastLobbyStatus(); // Add this method to GameManager
 
+        // Send the current lobby status (counts) to the new client and everyone else
+        gameManager.broadcastLobbyStatus();
+
+        // Handle client disconnections
         socket.on('disconnect', () => {
-            console.log(`Client disconnected: ${socket.id}`);
-            const playerName = gameManager.getPlayerName(socket.id) || socket.id.substring(0, 4)+'...'; // Get name before removal
+            // Try to get player name *before* removing them from GameManager
+            const playerName = gameManager.getPlayerName(socket.id) || socket.id.substring(0, 4)+'...';
+            console.log(`Client disconnected: ${playerName} (${socket.id})`);
+
+            // Remove the player from GameManager (handles pending list and active games)
             gameManager.removePlayer(socket.id);
-            // Notify remaining players about disconnection
+
+            // Notify remaining clients about the disconnection using the retrieved name
             io.emit('lobbyEvent', { message: `Player ${playerName} disconnected.` });
-            gameManager.broadcastLobbyStatus(); // Update lobby status after removal
+
+            // Update lobby status counts for all remaining clients
+            gameManager.broadcastLobbyStatus();
         });
 
-        // Listener for player submitting code, appearance, and name
+        // Handle player submitting their code, appearance, and name (implicitly marks them as Ready)
         socket.on('submitPlayerData', (data) => {
             // Validate received data structure
             if (data && typeof data.code === 'string' && typeof data.appearance === 'string' && typeof data.name === 'string') {
 
-                // Sanitize/validate name server-side
+                // Sanitize/validate name server-side (trim, length, default, basic HTML prevention)
                 const name = data.name.trim();
-                const sanitizedName = name.substring(0, 16) || `Anon_${socket.id.substring(0,4)}`; // Limit length, fallback if empty after trim
-                const finalName = sanitizedName.replace(/</g, "<").replace(/>/g, ">"); // Basic HTML tag prevention
+                const sanitizedName = name.substring(0, 16) || `Anon_${socket.id.substring(0,4)}`;
+                const finalName = sanitizedName.replace(/</g, "<").replace(/>/g, ">");
 
                 console.log(`[Socket ${socket.id}] Received Player Data: Name='${finalName}', Appearance='${data.appearance}'`);
 
-                // Pass code, appearance, and the *sanitized* name to the game manager
+                // Pass validated data to GameManager to update player state and try matchmaking
                 gameManager.handlePlayerCode(socket.id, data.code, data.appearance, finalName);
 
-                // Notify lobby that player is ready (we'll refine this with explicit ready later)
-                io.emit('lobbyEvent', { message: `Player ${finalName} is ready!` });
-                gameManager.broadcastLobbyStatus(); // Update counts
+                // Broadcast updated lobby status (GameManager emits "Player X is ready!" event)
+                gameManager.broadcastLobbyStatus();
 
             } else {
                 console.warn(`[Socket ${socket.id}] Received invalid playerData format:`, data);
-                // Optionally send an error back to the client
+                // Optionally send an error back to the specific client
                 socket.emit('submissionError', { message: 'Invalid data format received by server.' });
             }
         });
 
-        // Listener for chat messages from a client
+        // Handle player explicitly marking themselves as "Not Ready"
+        socket.on('playerUnready', () => {
+            console.log(`[Socket ${socket.id}] Received 'playerUnready' signal.`);
+            // Update player status in GameManager (will also broadcast status update)
+            gameManager.setPlayerReadyStatus(socket.id, false);
+        });
+
+        // Handle incoming chat messages from a client
         socket.on('chatMessage', (data) => {
             if (data && typeof data.text === 'string') {
+                // Get sender's current name from GameManager
                 const senderName = gameManager.getPlayerName(socket.id) || `Anon_${socket.id.substring(0,4)}`;
-                const messageText = data.text.trim().substring(0, 100); // Limit message length
+                // Trim and limit message length
+                const messageText = data.text.trim().substring(0, 100);
 
                 if (messageText) { // Ensure message isn't empty after trimming
-                    // Basic sanitization (prevent simple HTML injection)
+                    // Basic sanitization (prevent simple HTML/script injection)
                     const sanitizedText = messageText.replace(/</g, "<").replace(/>/g, ">");
 
                     console.log(`[Chat] ${senderName}: ${sanitizedText}`);
 
-                    // Broadcast the chat message to ALL connected clients
+                    // Broadcast the sanitized chat message to ALL connected clients
                     io.emit('chatUpdate', {
                         sender: senderName,
                         text: sanitizedText
@@ -76,19 +102,15 @@ function initializeSocketHandler(io) {
         });
 
 
-        // Listener for player actions (currently unused but kept for potential future)
+        // Listener for player actions during a game (currently unused but kept for potential future)
         // socket.on('robotAction', (action) => {
         //     gameManager.handlePlayerAction(socket.id, action);
         // });
 
-        // Optional: Listener for explicit ready/unready signal (Phase 2 - Priority 3)
-        // socket.on('playerReady', (isReady) => {
-        //    gameManager.setPlayerReadyStatus(socket.id, isReady);
-        // });
-
-        // Optional: Listener for reset request (maybe used with explicit ready)
+        // Optional: Listener for explicit reset request (might be used with ready system later)
         // socket.on('playerResetRequest', () => {
-        //     gameManager.handlePlayerReset(socket.id); // Needs implementation in GameManager
+        //     // Could call setPlayerReadyStatus(socket.id, false) or a dedicated reset method
+        //     gameManager.handlePlayerReset(socket.id);
         // });
 
     }); // End io.on('connection')

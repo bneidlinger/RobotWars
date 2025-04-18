@@ -70,9 +70,9 @@ class Game {
                 isAlive: serverRobotData.isAlive,
                 radius: 15, // Assuming fixed radius for client rendering logic
                 appearance: serverRobotData.appearance || 'default', // Store appearance
-                // --- FIX: Copy the name property from server data ---
+                // --- Corrected: Copy the name property from server data ---
                 name: serverRobotData.name || 'Unknown' // Copy name, fallback if missing
-                // --- End FIX ---
+                // --- End Correction ---
             }));
             // Update the Arena's list so it can draw them using the correct appearance and name
             // Check if arena exists before trying to update it
@@ -132,7 +132,6 @@ class Game {
         // Ensure arena exists before attempting to draw
         if (this.arena) {
             // 1. Ask the Arena to draw everything based on the current state
-            //    (Arena accesses game.robots and game.missiles internally if needed by its draw method)
             this.arena.draw();
         } else {
              // If arena doesn't exist, stop the loop to prevent errors
@@ -205,18 +204,22 @@ class Game {
         this.startRenderLoop();
 
         // Update UI elements to reflect the "in-game" state
-        const runButton = document.getElementById('btn-run');
+        // Note: controls.js setReadyState(true) might have already done this,
+        // but this ensures consistency if game starts unexpectedly.
+        const readyButton = document.getElementById('btn-ready');
         const appearanceSelect = document.getElementById('robot-appearance-select');
         const playerNameInput = document.getElementById('playerName');
-        if (runButton) {
-            runButton.textContent = "Game in Progress...";
-            runButton.disabled = true;
+        if (readyButton) {
+            readyButton.textContent = "Game in Progress...";
+            readyButton.disabled = true; // Disable ready/unready during game
+             // Optional: change color to indicate locked state
+             // readyButton.style.backgroundColor = '#555';
         }
         if (appearanceSelect) {
-            appearanceSelect.disabled = true; // Disable changing appearance during game
+            appearanceSelect.disabled = true;
         }
          if (playerNameInput) {
-             playerNameInput.disabled = true; // Disable changing name during game
+             playerNameInput.disabled = true;
          }
         // Consider making editor read-only during game
         // if (typeof editor !== 'undefined') editor.setOption("readOnly", true);
@@ -243,27 +246,28 @@ class Game {
         alert(message); // Display name (or fallback) in alert
         // --- End Updated Winner Display ---
 
-        // --- Reset UI Elements ---
-        const runButton = document.getElementById('btn-run');
-        const appearanceSelect = document.getElementById('robot-appearance-select');
-        const playerNameInput = document.getElementById('playerName'); // Get player name input
+        // --- Reset UI Elements using Controls helper ---
+        // Ensure the global 'controls' object exists and reset its state
+        if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
+            controls.setReadyState(false); // Reset button text/state and enable inputs
+        } else {
+            // Fallback if 'controls' object isn't available (shouldn't happen)
+            console.warn("Controls object not found, attempting manual UI reset for game over.");
+            const readyButton = document.getElementById('btn-ready');
+            const appearanceSelect = document.getElementById('robot-appearance-select');
+            const playerNameInput = document.getElementById('playerName');
+            const sampleCodeSelect = document.getElementById('sample-code');
+            const editorIsAvailable = typeof editor !== 'undefined';
 
-        if (runButton) {
-            // TODO: Change text to "Ready Up" when explicit ready is implemented
-            runButton.textContent = "Run Simulation";
-            runButton.disabled = false;
+            if (readyButton) { readyButton.textContent = "Ready Up"; readyButton.disabled = false; readyButton.style.backgroundColor = '#4CAF50'; }
+            if (appearanceSelect) { appearanceSelect.disabled = false; }
+            if (playerNameInput) { playerNameInput.disabled = false; }
+            if (sampleCodeSelect) { sampleCodeSelect.disabled = false; }
+            if (editorIsAvailable) editor.setOption("readOnly", false);
         }
-         if (appearanceSelect) {
-            appearanceSelect.disabled = false; // Re-enable appearance selection
-        }
-         // Re-enable the player name input field
-         if (playerNameInput) {
-             playerNameInput.disabled = false;
-         }
-        // if (typeof editor !== 'undefined') editor.setOption("readOnly", false); // Allow editing again
         // --- End Reset UI Elements ---
 
-        // Update lobby status (example)
+        // Update lobby status (Network listener also does this, potentially redundant but safe)
         if (typeof updateLobbyStatus === 'function') {
              updateLobbyStatus('Game Over. Ready Up for another match!');
         }

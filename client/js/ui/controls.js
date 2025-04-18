@@ -2,8 +2,8 @@
 
 /**
  * Controls handler for Robot Wars.
- * Manages button interactions (Run/Ready Up, Reset), code loading, appearance selection,
- * and player name input, sending relevant data to the server via the network handler.
+ * Manages button interactions (Ready Up/Unready, Reset), code loading, appearance selection,
+ * and player name input, sending relevant data/signals to the server via the network handler.
  */
 class Controls {
     /**
@@ -14,6 +14,8 @@ class Controls {
     constructor(game, network) {
         this.game = game;
         this.network = network; // Store network reference
+        // Client-side flag to track if the user *thinks* they are ready
+        this.isClientReady = false;
         if (!this.game || !this.network) {
              console.error("Controls initialized without valid game or network reference!");
         }
@@ -26,67 +28,61 @@ class Controls {
      * Sets up event listeners for UI elements like buttons and selects.
      */
     setupEventListeners() {
-        // Get references to the DOM elements
-        const runButton = document.getElementById('btn-run');
+        // Get references to the DOM elements, using the new ID for the ready button
+        const readyButton = document.getElementById('btn-ready'); // Changed ID from btn-run
         const resetButton = document.getElementById('btn-reset');
         const sampleCodeSelect = document.getElementById('sample-code');
         const appearanceSelect = document.getElementById('robot-appearance-select');
-        const playerNameInput = document.getElementById('playerName'); // Get the name input
+        const playerNameInput = document.getElementById('playerName');
 
         // Check if elements exist to prevent errors
-        if (!runButton || !resetButton || !sampleCodeSelect || !appearanceSelect || !playerNameInput) {
-            console.error("One or more control elements (button, select, player name input) not found in the DOM!");
+        if (!readyButton || !resetButton || !sampleCodeSelect || !appearanceSelect || !playerNameInput) {
+            console.error("One or more control elements (button#btn-ready, select, player name input) not found in the DOM!");
             return; // Stop setup if elements are missing
         }
 
-        // --- Run Button Listener ---
-        // TODO: Update button text to "Ready Up" later when implementing explicit ready system
-        runButton.addEventListener('click', () => {
-            console.log('Run/Ready button clicked');
-
-            // Get code from the CodeMirror editor (global variable 'editor')
-            const playerCode = (typeof editor !== 'undefined') ? editor.getValue() : '';
-            if (!playerCode) {
-                alert("Code editor is empty!");
+        // --- Ready/Unready Button Listener ---
+        readyButton.addEventListener('click', () => {
+            // Check network connection first
+            if (!this.network || !this.network.socket || !this.network.socket.connected) {
+                console.error("Network handler not available or not connected in Controls.");
+                alert("Cannot connect to the server. Please check connection and refresh.");
                 return;
             }
 
-            // Get the selected appearance value from the dropdown
-            const chosenAppearance = appearanceSelect.value || 'default'; // Use 'default' as fallback
+            // Toggle ready state
+            if (!this.isClientReady) {
+                // --- Action: Ready Up ---
+                console.log('Ready Up button clicked');
 
-            // --- Get Player Name ---
-            const nameValue = playerNameInput.value.trim();
-            // Use entered name, or generate a default if empty
-            const finalPlayerName = nameValue || `Anon_${Math.random().toString(16).slice(2, 6)}`;
-            // Update input field in case we generated a default (optional)
-            // playerNameInput.value = finalPlayerName;
-            // --- End Get Player Name ---
+                // Validate inputs before sending
+                const playerCode = (typeof editor !== 'undefined') ? editor.getValue() : '';
+                if (!playerCode) { alert("Code editor is empty!"); return; }
 
-            // Save name to localStorage
-            this.savePlayerName(finalPlayerName);
+                const nameValue = playerNameInput.value.trim();
+                if (!nameValue) { alert("Please enter a player name."); return; }
 
-            // Check network connection and call the appropriate network method
-            if (this.network && this.network.socket && this.network.socket.connected) {
-                console.log(`Submitting Data - Name: ${finalPlayerName}, Appearance: ${chosenAppearance}`);
+                const finalPlayerName = nameValue; // Already trimmed
+                const chosenAppearance = appearanceSelect.value || 'default';
 
-                // Send code, appearance, AND name data to the server
+                // Save name locally
+                this.savePlayerName(finalPlayerName);
+
+                // Send data to server (server will mark player as ready)
                 this.network.sendCodeAndAppearance(playerCode, chosenAppearance, finalPlayerName);
 
-                // Provide user feedback & disable controls
-                runButton.disabled = true;
-                runButton.textContent = "Waiting for Match...";
-                appearanceSelect.disabled = true; // Disable appearance change while waiting/playing
-                playerNameInput.disabled = true; // Disable name input while waiting/playing
-
-                // Optionally disable code editor too
-                // if (typeof editor !== 'undefined') editor.setOption("readOnly", true);
+                // Update UI immediately to waiting state
+                this.setReadyState(true); // Use helper to update UI
 
             } else {
-                // Handle cases where network is not available
-                console.error("Network handler not available or not connected in Controls.");
-                alert("Cannot connect to the server. Please check connection and refresh.");
-                // Reset button state if submission failed (controls remain enabled)
-                // No need to explicitly re-enable here as they weren't disabled
+                // --- Action: Unready ---
+                console.log('Unready button clicked');
+
+                // Send signal to server to mark as unready
+                this.network.sendUnreadySignal(); // Call network function
+
+                // Update UI immediately back to unready state
+                this.setReadyState(false); // Use helper to update UI
             }
         });
 
@@ -94,8 +90,15 @@ class Controls {
         resetButton.addEventListener('click', () => {
             console.log('Reset button clicked');
 
-            // Stop client-side rendering loop if running (might be overkill if game stop handles it)
-            // this.game.stop(); // Consider if this is needed or if handleGameOver covers it
+            // If client was ready, send unready signal to server
+            if (this.isClientReady) {
+                 if (this.network && this.network.socket && this.network.socket.connected) {
+                    this.network.sendUnreadySignal();
+                 }
+            }
+
+            // Force UI and client state back to unready/editable
+            this.setReadyState(false);
 
             // Clear the local canvas presentation
             if (this.game.arena) {
@@ -107,19 +110,12 @@ class Controls {
                  window.dashboard.updateStats([]); // Clear stats panel
             }
 
-            // Re-enable UI elements for a new submission/ready up
-            runButton.disabled = false;
-            runButton.textContent = "Run Simulation"; // Or "Ready Up"
-            appearanceSelect.disabled = false; // Allow changing appearance again
-            playerNameInput.disabled = false; // Allow changing name again
-
-            // if (typeof editor !== 'undefined') editor.setOption("readOnly", false);
-
-            // TODO: Optionally send a message to the server indicating the player wants to leave/reset
-            //       Especially important if they were 'Ready' in a lobby system.
-            // if (this.network && this.network.socket && this.network.socket.connected) {
-            //     this.network.socket.emit('playerResetRequest'); // Or 'playerUnready'
-            // }
+             // Notify user in log
+             if (typeof window.addEventLogMessage === 'function') {
+                 window.addEventLogMessage('UI and ready status reset.', 'info');
+             }
+             // Optionally clear code editor?
+             // if (typeof editor !== 'undefined') editor.setValue('');
         });
 
         // --- Sample Code Loader Listener ---
@@ -128,26 +124,73 @@ class Controls {
             // Check if the loadSampleCode function exists (defined in editor.js)
             if (sample && typeof loadSampleCode === 'function') {
                 loadSampleCode(sample);
-                // Reset the run button state if a new sample is loaded, potentially enabling it
-                // Does NOT affect name input or appearance select state
-                if (runButton.disabled && !this.game.running) { // Only reset if disabled AND game not running
-                     runButton.disabled = false;
-                     runButton.textContent = "Run Simulation"; // Or "Ready Up"
-                     // Also re-enable other inputs if they were disabled pre-game
-                     appearanceSelect.disabled = false;
-                     playerNameInput.disabled = false;
-                     // if (typeof editor !== 'undefined') editor.setOption("readOnly", false);
+
+                // If client was ready, loading new code should make them unready
+                if (this.isClientReady) {
+                     // Send unready signal to server since code changed
+                     if (this.network && this.network.socket && this.network.socket.connected) {
+                        this.network.sendUnreadySignal();
+                     }
+                     // Update UI locally
+                     this.setReadyState(false);
+                     if (typeof window.addEventLogMessage === 'function') {
+                         window.addEventLogMessage('Loaded sample code. Status set to Not Ready.', 'info');
+                     }
                 }
             }
-        });
+        }.bind(this)); // Bind 'this' to access Controls instance state
 
-        // --- Player Name Persistence Listener (Optional but recommended) ---
-        // Save name when the input loses focus (blur event)
+        // --- Player Name Persistence Listener ---
+        // Save name when the input loses focus
         playerNameInput.addEventListener('blur', () => {
             this.savePlayerName(playerNameInput.value.trim());
         });
 
     } // End setupEventListeners
+
+
+    /**
+     * Helper function to manage UI element states based on readiness.
+     * @param {boolean} isReady - The desired ready state.
+     */
+    setReadyState(isReady) {
+        this.isClientReady = isReady; // Update the internal flag
+
+        // Get elements
+        const readyButton = document.getElementById('btn-ready');
+        const appearanceSelect = document.getElementById('robot-appearance-select');
+        const playerNameInput = document.getElementById('playerName');
+        const sampleCodeSelect = document.getElementById('sample-code');
+        const editorIsAvailable = typeof editor !== 'undefined';
+
+        // Update UI based on the state
+        if (isReady) {
+            // Set UI to "Waiting / Unready" state
+            if (readyButton) {
+                readyButton.textContent = "Waiting... (Click to Unready)";
+                readyButton.style.backgroundColor = '#FFA500'; // Orange indicator
+                readyButton.disabled = false; // Keep button enabled to allow unreadying
+            }
+            // Disable other inputs
+            if (appearanceSelect) appearanceSelect.disabled = true;
+            if (playerNameInput) playerNameInput.disabled = true;
+            if (sampleCodeSelect) sampleCodeSelect.disabled = true;
+            if (editorIsAvailable) editor.setOption("readOnly", true); // Make editor read-only
+        } else {
+            // Set UI to "Not Ready / Ready Up" state
+            if (readyButton) {
+                readyButton.textContent = "Ready Up";
+                readyButton.style.backgroundColor = '#4CAF50'; // Green indicator
+                readyButton.disabled = false; // Button is always enabled unless game in progress
+            }
+            // Enable other inputs
+            if (appearanceSelect) appearanceSelect.disabled = false;
+            if (playerNameInput) playerNameInput.disabled = false;
+            if (sampleCodeSelect) sampleCodeSelect.disabled = false;
+            if (editorIsAvailable) editor.setOption("readOnly", false); // Make editor editable
+        }
+    }
+
 
     /**
      * Saves the player name to localStorage.
@@ -155,8 +198,13 @@ class Controls {
      */
     savePlayerName(name) {
         if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('robotWarsPlayerName', name);
-            // console.log('Player name saved:', name); // Debug log
+            // Avoid saving empty string or just whitespace
+            if (name && name.trim()) {
+                localStorage.setItem('robotWarsPlayerName', name.trim());
+            } else {
+                // Optionally clear if name is empty
+                // localStorage.removeItem('robotWarsPlayerName');
+            }
         }
     }
 

@@ -2,7 +2,7 @@
 
 /**
  * Handles client-side network communication with the server using Socket.IO.
- * Connects to the server, sends player data (including name),
+ * Connects to the server, sends player data (including name), readiness signals,
  * receives game state updates, and handles lobby/chat events.
  */
 class Network {
@@ -48,6 +48,10 @@ class Network {
                 console.warn('Disconnected from server:', reason);
                 if (this.game) {
                     this.game.stop(); // Stop rendering if disconnected
+                    // Also reset client ready state if disconnected unexpectedly
+                    if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
+                         controls.setReadyState(false);
+                    }
                 }
                 // Update UI
                  if (typeof window.updateLobbyStatus === 'function') {
@@ -57,13 +61,13 @@ class Network {
                     window.addEventLogMessage(`Disconnected from server: ${reason}`, 'error');
                  }
                 alert("Disconnected from server: " + reason);
-                // Attempt to reset UI state
-                const runButton = document.getElementById('btn-run');
-                const appearanceSelect = document.getElementById('robot-appearance-select');
-                const playerNameInput = document.getElementById('playerName');
-                if (runButton) { runButton.textContent = "Run Simulation"; runButton.disabled = false; }
-                if (appearanceSelect) { appearanceSelect.disabled = false; }
-                if (playerNameInput) { playerNameInput.disabled = false; }
+                // Attempt to reset UI state (redundant if setReadyState(false) worked)
+                // const runButton = document.getElementById('btn-ready'); // Use correct ID
+                // const appearanceSelect = document.getElementById('robot-appearance-select');
+                // const playerNameInput = document.getElementById('playerName');
+                // if (runButton) { runButton.textContent = "Ready Up"; runButton.disabled = false; runButton.style.backgroundColor = '#4CAF50'; }
+                // if (appearanceSelect) { appearanceSelect.disabled = false; }
+                // if (playerNameInput) { playerNameInput.disabled = false; }
             });
 
             // Server assigns a unique ID to this client
@@ -87,14 +91,17 @@ class Network {
                  if (this.game && typeof this.game.handleGameStart === 'function') {
                      this.game.handleGameStart(data);
                  }
-                 // Update lobby status
+                 // Update lobby status - Game class handleGameStart should update button text now
                  if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Game in progress...');
-                 // Optional: clear log on game start
-                 // if (typeof window.clearEventLog === 'function') window.clearEventLog();
+                 // The game object should ideally handle UI state changes related to game start
+                 // if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
+                 //    controls.setReadyState(true); // Visually lock controls? Or let game.js handle?
+                 // }
              });
 
             // Server signals that the game has ended
              this.socket.on('gameOver', (data) => {
+                 // Game class handleGameOver should reset UI state, including ready state
                  if (this.game && typeof this.game.handleGameOver === 'function') {
                      this.game.handleGameOver(data);
                  }
@@ -113,12 +120,17 @@ class Network {
                 if (data.robotId === this.playerId) {
                      alert(`Your Robot Code Error:\n${data.message}\n\nYou might need to reset and fix your code.`);
                      // Re-enable controls after a code error so they can fix and resubmit
-                     const runButton = document.getElementById('btn-run');
-                     const appearanceSelect = document.getElementById('robot-appearance-select');
-                     const playerNameInput = document.getElementById('playerName');
-                     if (runButton) { runButton.textContent = "Run Simulation"; runButton.disabled = false; }
-                     if (appearanceSelect) { appearanceSelect.disabled = false; }
-                     if (playerNameInput) { playerNameInput.disabled = false; }
+                     // Use the controls helper function if possible
+                     if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
+                         controls.setReadyState(false);
+                     } else { // Fallback
+                         const readyButton = document.getElementById('btn-ready');
+                         const appearanceSelect = document.getElementById('robot-appearance-select');
+                         const playerNameInput = document.getElementById('playerName');
+                         if (readyButton) { readyButton.textContent = "Ready Up"; readyButton.disabled = false; readyButton.style.backgroundColor = '#4CAF50';}
+                         if (appearanceSelect) { appearanceSelect.disabled = false; }
+                         if (playerNameInput) { playerNameInput.disabled = false; }
+                     }
                      if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Code error detected. Please fix and Ready Up again.');
                  }
             });
@@ -134,12 +146,9 @@ class Network {
                  }
                 alert("Failed to connect to the game server. Please ensure it's running and refresh the page.");
                 // Reset UI elements if connection fails initially
-                 const runButton = document.getElementById('btn-run');
-                 const appearanceSelect = document.getElementById('robot-appearance-select');
-                 const playerNameInput = document.getElementById('playerName');
-                 if (runButton) { runButton.textContent = "Run Simulation"; runButton.disabled = false; }
-                 if (appearanceSelect) { appearanceSelect.disabled = false; }
-                 if (playerNameInput) { playerNameInput.disabled = false; }
+                if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
+                     controls.setReadyState(false);
+                 }
             });
 
 
@@ -147,7 +156,7 @@ class Network {
             this.socket.on('lobbyEvent', (data) => {
                 // Check if the global function exists before calling
                 if (data && data.message && typeof window.addEventLogMessage === 'function') {
-                    window.addEventLogMessage(data.message, 'event'); // Use 'event' type styling
+                    window.addEventLogMessage(data.message, data.type || 'event'); // Use type if provided by server
                 }
             });
 
@@ -184,7 +193,8 @@ class Network {
 
     /**
      * Sends the player's robot code, chosen appearance, and name to the server.
-     * Called by the Controls class when the 'Run/Ready' button is clicked.
+     * Called by the Controls class when the 'Ready Up' button is clicked.
+     * The server handles setting the player's ready state upon receiving this.
      * @param {string} code - The robot AI code written by the player.
      * @param {string} appearance - The identifier for the chosen robot appearance.
      * @param {string} name - The player's chosen name.
@@ -194,13 +204,10 @@ class Network {
         if (!this.socket || !this.socket.connected) {
              console.error("Socket not available or not connected. Cannot send player data.");
              alert("Not connected to server. Please check connection and try again.");
-             // Optionally try to re-enable UI if send fails
-             const runButton = document.getElementById('btn-run');
-             const appearanceSelect = document.getElementById('robot-appearance-select');
-             const playerNameInput = document.getElementById('playerName');
-             if (runButton) runButton.disabled = false;
-             if (appearanceSelect) appearanceSelect.disabled = false;
-             if (playerNameInput) playerNameInput.disabled = false;
+             // Reset button state locally if send fails
+             if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
+                controls.setReadyState(false);
+             }
              return;
         }
 
@@ -212,6 +219,24 @@ class Network {
              name: name // Include the name field
         });
     }
+
+    /**
+     * Sends a signal to the server indicating the player is no longer ready.
+     * Called by the Controls class when the 'Unready' button is clicked or state changes.
+     */
+    sendUnreadySignal() {
+        if (!this.socket || !this.socket.connected) {
+            console.error("Socket not connected. Cannot send unready signal.");
+            // Optionally add message to event log
+            if(typeof window.addEventLogMessage === 'function') {
+                window.addEventLogMessage("Cannot unready: Not connected.", "error");
+            }
+            return;
+        }
+        console.log("Sending 'playerUnready' signal to server.");
+        this.socket.emit('playerUnready'); // Emit the specific event
+    }
+
 
     /**
      * Sends a chat message to the server.
