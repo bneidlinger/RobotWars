@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Wars</title>
+    <link rel="stylesheet" href="css/main.css">
+    <!-- Code Mirror for the editor -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/monokai.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Robot Wars</h1>
+            <nav>
+                <select id="robot-appearance-select" title="Choose Robot Appearance">
+                    <option value="default">Default Bot</option>
+                    <option value="tank">Tank Bot</option>
+                    <option value="spike">Spike Bot</option>
+                    <option value="tri">Tri Bot</option>
+                    <!-- Add more options later -->
+                </select>
+                <button id="btn-run">Run Simulation</button>
+                <button id="btn-reset">Reset</button>
+                <select id="sample-code">
+                    <option value="">Load Sample Code...</option>
+                    <option value="simple-tank">Simple Tank</option>
+                    <option value="scanner-bot">Scanner Bot</option>
+                    <option value="aggressive-bot">Aggressive Bot</option>
+                </select>
+            </nav>
+        </header>
+
+        <main>
+            <div class="game-container">
+                <canvas id="arena" width="600" height="600"></canvas>
+                <div class="stats-panel">
+                    <h3>Robot Stats</h3>
+                    <div id="robot-stats"></div>
+                </div>
+            </div>
+
+            <div class="editor-container">
+                <h3>Robot Code Editor</h3>
+                <textarea id="code-editor"></textarea>
+                <div class="api-help">
+                    <h4>API Reference</h4>
+                    <ul>
+                        <li><code>drive(direction, speed)</code> - Move your robot</li>
+                        <li><code>scan(angle, resolution)</code> - Scan for enemies</li>
+                        <li><code>fire(direction, power)</code> - Fire a missile</li>
+                        <li><code>damage()</code> - Get current damage level</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+
+ <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- Other Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+
+    <!-- Game Engine -->
+    <script src="js/engine/arena.js"></script>
+    <script src="js/engine/robot.js"></script>
+    <script src="js/engine/interpreter.js"></script>
+    <script src="js/engine/collision.js"></script>
+    <script src="js/engine/game.js"></script>
+
+    <!-- UI Components -->
+    <script src="js/ui/editor.js"></script>
+    <script src="js/ui/dashboard.js"></script>
+    <script src="js/ui/controls.js"></script>
+
+    <!-- Network Handler -->
+    <script src="js/network.js"></script>  <!-- ADD THIS LINE -->
+
+    <!-- Main Application -->
+    <script src="js/main.js"></script> <!-- This should be last -->
+</body>
+</html>
