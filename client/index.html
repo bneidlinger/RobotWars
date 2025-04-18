@@ -44,8 +44,8 @@
 
         <main>
             <div class="game-container">
-                <!-- Canvas with fixed dimensions -->
-                <canvas id="arena" width="600" height="600"></canvas>
+                <!-- Canvas with updated dimensions -->
+                <canvas id="arena" width="900" height="900"></canvas>
                 <div class="stats-panel">
                     <h3>Robot Stats</h3>
                     <!-- Dashboard elements (title, list) are created/managed by dashboard.js -->
@@ -57,7 +57,7 @@
 
             <div class="editor-container">
                 <h3>Robot Code Editor</h3>
-                <textarea id="code-editor"></textarea>
+                <!-- START CHANGE: Moved API Help block -->
                 <div class="api-help">
                     <h4>API Reference</h4>
                     <ul>
@@ -70,6 +70,10 @@
                         <li><code>getDirection()</code> - Get current direction (degrees)</li>
                     </ul>
                 </div>
+                <!-- END CHANGE: Moved API Help block -->
+
+                <textarea id="code-editor"></textarea>
+
             </div>
         </main>
 

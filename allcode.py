@@ -17,6 +17,7 @@ def export_project_files(project_dir, output_file):
         "client/js/engine/robot.js",
         "client/js/ui/controls.js",
         "client/js/ui/dashboard.js",
+        "client/js/ui/history.js",
         "client/js/ui/editor.js",
         "client/js/ui/lobby.js",
         "client/js/main.js",

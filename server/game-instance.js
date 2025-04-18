@@ -5,8 +5,8 @@ const ServerCollisionSystem = require('./server-collision'); // Handles collisio
 
 // --- Game Simulation Constants ---
 const TICK_RATE = 30; // Updates per second
-const ARENA_WIDTH = 600; // Match canvas size
-const ARENA_HEIGHT = 600; // Match canvas size
+const ARENA_WIDTH = 900; // Match canvas size
+const ARENA_HEIGHT = 900; // Match canvas size
 
 /**
  * Represents a single active game match on the server.

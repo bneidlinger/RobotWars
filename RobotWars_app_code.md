@@ -34,15 +34,14 @@
 
 body {
     /* --- 80s Retro Font --- */
-    /* Use VT323 for the primary body text, adjust size carefully */
     font-family: 'VT323', monospace;
-    font-size: 20px; /* STARTING POINT for VT323 - Tweak this! */
+    font-size: 20px; /* Base size for VT323 */
     /* --- End Retro Font --- */
 
     /* Keep modern dark theme */
     background-color: #1e1e1e;
     color: #e0e0e0;
-    line-height: 1.6; /* Keep line-height for readability */
+    line-height: 1.6;
 }
 
 .container {
@@ -62,21 +61,18 @@ header {
 
 header h1 {
     /* --- 80s Retro Font --- */
-    /* Use Press Start 2P for the main title, significantly smaller size needed */
     font-family: 'Press Start 2P', cursive;
-    font-size: 1.8rem; /* STARTING POINT for Press Start 2P - Tweak this! (Maybe 28px-32px?) */
+    font-size: 1.8rem; /* Adjust if needed */
     /* --- End Retro Font --- */
 
-    /* Keep modern color */
     color: #4CAF50;
-    /* Remove default H1 margin if the font adds too much space */
     margin: 0;
 }
 
 nav {
     display: flex;
     gap: 10px;
-    align-items: center; /* Align items vertically */
+    align-items: center;
 }
 
 /* Keep modern button and select styling */
@@ -84,15 +80,14 @@ button, select {
     background-color: #4CAF50;
     color: white;
     border: none;
-    padding: 8px 16px; /* Keep original padding */
-    border-radius: 4px; /* Keep rounded corners */
+    padding: 8px 16px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.2s; /* Keep transition */
+    transition: background-color 0.2s;
 
     /* --- 80s Retro Font --- */
-    /* Apply VT323 font to buttons/selects */
     font-family: 'VT323', monospace;
-    font-size: 15px; /* STARTING POINT - Slightly smaller than body maybe? Tweak this! */
+    font-size: 15px; /* Adjust if needed */
     /* --- End Retro Font --- */
 }
 
@@ -100,25 +95,47 @@ button:hover, select:hover {
     background-color: #45a049;
 }
 
+/* Style disabled buttons */
+button:disabled {
+    background-color: #555; /* Darker grey when disabled */
+    color: #aaa;
+    cursor: not-allowed;
+}
+button:disabled:hover {
+    background-color: #555; /* Prevent hover effect when disabled */
+}
+
+
 /* Keep modern select specific styling */
 select {
     background-color: #333;
 }
+select:disabled {
+    background-color: #555;
+    color: #aaa;
+    cursor: not-allowed;
+}
 
-/* Style the new player name input similarly to the select */
+/* Style the player name input */
 input#playerName {
      /* --- 80s Retro Font --- */
     font-family: 'VT323', monospace;
-    font-size: 15px; /* Match button/select size - Tweak this! */
+    font-size: 15px; /* Match button/select size */
      /* --- End Retro Font --- */
 
     background-color: #333;
     color: #e0e0e0;
-    border: 1px solid #555; /* Subtle border */
-    padding: 8px; /* Match button vertical padding */
+    border: 1px solid #555;
+    padding: 8px;
     border-radius: 4px;
-    margin-right: 5px; /* Keep spacing */
+    margin-right: 5px;
 }
+input#playerName:disabled {
+    background-color: #555;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
 
 /* Keep modern grid layout */
 main {
@@ -131,18 +148,16 @@ main {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    /* align-items: center; */ /* Removed centering for now unless needed */
 }
 
 #arena {
     /* Keep modern arena styling */
     background-color: #2c2c2c;
     border: 2px solid #444;
-    border-radius: 8px; /* Keep rounded corners */
-    /* width: 100%; */ /* REMOVED - Let HTML attributes define the size (FIXED EARLIER) */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Keep subtle shadow */
-    max-width: 100%; /* Keep responsiveness */
-    /* Ensure canvas aligns well if container has padding/alignment */
+    border-radius: 8px;
+    /* width/height set by HTML attributes */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 100%;
     display: block; /* Helps prevent extra space below */
 }
 
@@ -150,19 +165,20 @@ main {
 .stats-panel {
     background-color: #333;
     padding: 15px;
-    border-radius: 8px; /* Keep rounded corners */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Keep subtle shadow */
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Apply retro font to panel titles */
-.stats-panel h3, .editor-container h3, .api-help h4 {
+.stats-panel h3, .editor-container h3, .api-help h4, #lobby-area h3, #game-history-log h4 {
      /* --- 80s Retro Font --- */
-    font-family: 'VT323', monospace; /* Use VT323 */
-    font-size: 18px; /* Slightly larger than body - Tweak this! */
+    font-family: 'VT323', monospace;
+    font-size: 18px; /* Adjust if needed */
      /* --- End Retro Font --- */
-     margin-bottom: 10px; /* Add some space below titles */
+     margin-bottom: 10px;
      color: #4CAF50; /* Match header color accent */
 }
+
 
 .editor-container {
     display: flex;
@@ -170,54 +186,164 @@ main {
     gap: 15px;
 }
 
+/* CodeMirror Styling */
 .CodeMirror {
-    height: 400px;
-    border-radius: 8px; /* Keep rounded corners */
+    height: 400px; /* Adjust height as needed */
+    border-radius: 8px;
+    border: 1px solid #444; /* Subtle border */
 
     /* --- 80s Retro Font --- */
-    font-family: 'VT323', monospace; /* Use VT323 for code */
-    font-size: 16px; /* STARTING POINT for code - Readability is key, tweak this! */
+    font-family: 'VT323', monospace;
+    font-size: 16px; /* Adjust for readability */
     /* --- End Retro Font --- */
-
-    /* Ensure the theme provides background/text color */
-    /* Assuming theme: 'monokai' handles the rest */
 }
+/* Style CodeMirror when read-only */
+.CodeMirror-readonly .CodeMirror-cursor {
+    display: none !important; /* Hide cursor when read-only */
+}
+.CodeMirror-readonly {
+    background-color: #2a2a2a !important; /* Slightly different background when read-only */
+}
+
 
 /* Keep modern API help styling */
 .api-help {
     background-color: #333;
     padding: 15px;
-    border-radius: 8px; /* Keep rounded corners */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Keep subtle shadow */
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .api-help ul {
-    list-style-position: inside; /* Keep bullets neat */
+    list-style-position: inside;
     padding-left: 5px;
 }
 
 .api-help li {
-    margin-bottom: 5px; /* Space out API items */
+    margin-bottom: 5px;
 }
 
 /* Style code snippets within API help */
 .api-help code {
     /* --- 80s Retro Font --- */
-    /* Use VT323 here too for consistency */
     font-family: 'VT323', monospace;
-    /* font-size: 15px; */ /* Inherit size or slightly smaller */
+    /* Inherit size or slightly smaller */
     /* --- End Retro Font --- */
 
     background-color: #444; /* Keep modern snippet style */
     padding: 2px 4px;
-    border-radius: 3px; /* Keep subtle rounding */
+    border-radius: 3px;
     color: #f0f0f0; /* Lighter color for code */
 }
 
-/* Keep modern responsive design */
+
+/* --- Lobby Area Grid Layout --- */
+#lobby-area {
+    margin-top: 20px;
+    background: #333;
+    padding: 15px;
+    border-radius: 8px;
+    display: grid; /* Use grid */
+    grid-template-columns: 1fr 1fr; /* Two equal columns */
+    gap: 20px; /* Space between columns */
+    border-top: 2px solid #444; /* Add a separator from main content */
+}
+
+/* Styles for elements within the first column of the lobby area */
+#lobby-area > div:first-child {
+    /* Styles specific to the first column if needed */
+}
+
+/* Styles for elements within the second column (Game History) */
+#lobby-area > div:last-child {
+    /* Styles specific to the second column if needed */
+}
+
+#lobby-status {
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #e0e0e0;
+}
+
+#event-log {
+    height: 150px; /* Adjust height as needed */
+    overflow-y: scroll;
+    border: 1px solid #555;
+    margin-bottom: 10px;
+    padding: 5px;
+    background: #222;
+    font-size: 14px;
+    font-family: 'VT323', monospace;
+}
+
+#chat-area {
+    display: flex;
+    gap: 5px;
+}
+
+#chat-input {
+    flex-grow: 1;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background: #2a2a2a;
+    color: #e0e0e0;
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+}
+
+#send-chat {
+    /* Inherits general button styles */
+    /* Add specific overrides if needed */
+    padding: 8px 16px; /* Match other buttons */
+    font-size: 15px;
+}
+
+
+/* --- Game History Log Styling --- */
+#game-history-log {
+    /* Container takes up the second grid column */
+    font-family: 'VT323', monospace; /* Use retro font */
+}
+
+/* #game-history-log h4 already styled by shared header styles */
+
+#game-history-list {
+    /* Style the list area */
+    height: 195px; /* Roughly match event log height, adjusted for less padding */
+    overflow-y: auto; /* Scroll if content exceeds height */
+    background: #222; /* Match event log background */
+    border: 1px solid #555; /* Match event log border */
+    padding: 8px;
+    font-size: 14px; /* Match event log font size */
+}
+
+#game-history-list > div { /* Style individual history entries */
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed #444; /* Separator line */
+    color: #cccccc; /* Slightly dimmer than chat */
+    word-wrap: break-word; /* Prevent long names from breaking layout */
+}
+
+#game-history-list > div:last-child { /* Remove border from last item */
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+/* --- Responsive Adjustments --- */
 @media (max-width: 900px) {
     main {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Stack game and editor */
+    }
+}
+
+@media (max-width: 768px) { /* Adjust breakpoint if needed */
+    #lobby-area {
+        grid-template-columns: 1fr; /* Stack lobby columns */
+    }
+    #game-history-log {
+         margin-top: 20px; /* Add space when stacked */
     }
 }
 ```
@@ -694,7 +820,8 @@ class CollisionSystem {
 /**
  * Client-side Game class for Robot Wars.
  * Manages the connection to the server, receives game state,
- * and renders the game arena based on server information.
+ * renders the game arena based on server information, and handles
+ * player game lifecycle and spectator mode transitions using the Controls state machine. // <-- Updated description
  * Does NOT run the simulation locally.
  */
 class Game {
@@ -713,7 +840,6 @@ class Game {
             this.arena = null; // Mark arena as unusable
         }
 
-
         // Store local representations of game state received from the server
         this.robots = []; // Data objects for robots, including appearance and name
         this.missiles = []; // Data objects for missiles (Arena will access this to draw)
@@ -723,7 +849,8 @@ class Game {
         this.animationFrame = null; // ID for requestAnimationFrame
         this.myPlayerId = null; // This client's unique ID
         this.lastServerState = null; // The most recent gameState received
-        this.gameId = null; // ID of the current server game instance
+        this.gameId = null; // ID of the current server game instance being played OR spectated
+        this.gameName = null; // Name of the current game being played OR spectated
     }
 
     /**
@@ -745,12 +872,20 @@ class Game {
     updateFromServer(gameState) {
         if (!gameState) return;
 
+        // Only update if the game ID matches the one we are playing/spectating
+        // Network.js should filter, but double-checking is safe.
+        if (gameState.gameId !== this.gameId) {
+             // console.warn(`Received gameState for ${gameState.gameId}, but current game is ${this.gameId}. Skipping.`);
+             return;
+        }
+
         this.lastServerState = gameState;
-        this.gameId = gameState.gameId;
+        // Update game name if it changed (unlikely but possible)
+        this.gameName = gameState.gameName || this.gameName || gameState.gameId; // Keep existing if not provided, fallback to ID
 
         // --- Update Robots ---
         if (gameState.robots) {
-            // Map server robot data to simple objects for rendering, including appearance and name
+            // Map server robot data to simple objects for rendering
             this.robots = gameState.robots.map(serverRobotData => ({
                 id: serverRobotData.id,
                 x: serverRobotData.x,
@@ -760,18 +895,13 @@ class Game {
                 color: serverRobotData.color,
                 isAlive: serverRobotData.isAlive,
                 radius: 15, // Assuming fixed radius for client rendering logic
-                appearance: serverRobotData.appearance || 'default', // Store appearance
-                // --- Corrected: Copy the name property from server data ---
-                name: serverRobotData.name || 'Unknown' // Copy name, fallback if missing
-                // --- End Correction ---
+                appearance: serverRobotData.appearance || 'default',
+                name: serverRobotData.name || 'Unknown'
             }));
-            // Update the Arena's list so it can draw them using the correct appearance and name
-            // Check if arena exists before trying to update it
             if (this.arena) {
                 this.arena.robots = this.robots;
             }
         } else {
-            // If no robot data, clear local list and arena's list
             this.robots = [];
             if (this.arena) {
                  this.arena.robots = [];
@@ -779,27 +909,21 @@ class Game {
         }
 
         // --- Update Missiles ---
-        // Store the missile data locally; Arena's draw() method will render them
         if (gameState.missiles) {
             this.missiles = gameState.missiles.map(serverMissileData => ({
                 id: serverMissileData.id,
                 x: serverMissileData.x,
                 y: serverMissileData.y,
-                radius: serverMissileData.radius,
-                // Note: Color is applied by Arena.drawMissiles
+                radius: serverMissileData.radius
             }));
         } else {
-            // If no missile data, clear local list
             this.missiles = [];
         }
 
         // --- Trigger Client-Side Explosions ---
-        // Check if the server sent any explosion events this tick
         if (this.arena && gameState.explosions && gameState.explosions.length > 0) {
             gameState.explosions.forEach(expData => {
-                // Tell the Arena instance to create the visual effect
                 if (typeof this.arena.createExplosion === 'function') {
-                    // console.log(`Client creating visual explosion for event ${expData.id}`); // Debug log
                     this.arena.createExplosion(expData.x, expData.y, expData.size);
                 }
             });
@@ -807,8 +931,8 @@ class Game {
 
         // --- Update UI Elements (Dashboard) ---
         if (window.dashboard && typeof window.dashboard.updateStats === 'function') {
-            // Pass the current robot data (which includes name, damage, status) to the dashboard
-            window.dashboard.updateStats(this.robots);
+             const context = { gameName: this.gameName };
+             window.dashboard.updateStats(this.robots, context);
         }
     }
 
@@ -817,157 +941,196 @@ class Game {
      * Delegates the actual drawing work to the Arena's draw() method.
      */
     clientRenderLoop() {
-        // Stop the loop if the game is no longer marked as running
         if (!this.running) return;
-
-        // Ensure arena exists before attempting to draw
         if (this.arena) {
-            // 1. Ask the Arena to draw everything based on the current state
-            this.arena.draw();
+            this.arena.draw(); // Arena accesses this.robots and this.missiles
         } else {
-             // If arena doesn't exist, stop the loop to prevent errors
              console.error("Render loop cannot run because Arena object is missing.");
              this.stop();
              return;
         }
-
-        // 2. Request the next frame to continue the animation loop
         this.animationFrame = requestAnimationFrame(this.clientRenderLoop.bind(this));
     }
 
     /**
      * Starts the client-side rendering loop.
-     * Typically called when the 'gameStart' event is received from the server.
+     * Typically called when 'gameStart' or 'spectateStart' is received.
      */
     startRenderLoop() {
-        if (this.running) return; // Prevent starting multiple loops
-        // Prevent starting if arena failed to initialize
+        if (this.running) return;
         if (!this.arena) {
              console.error("Cannot start render loop because Arena is not initialized.");
              return;
         }
         console.log("Starting client render loop...");
         this.running = true;
-        this.clientRenderLoop(); // Initiate the animation loop
+        this.clientRenderLoop();
     }
 
     /**
      * Stops the client-side rendering loop.
-     * Typically called on disconnection or when 'gameOver' is received from the server.
+     * Called on disconnection, 'gameOver', 'spectateGameOver', or before starting new game/spectate.
      */
     stop() {
         if (!this.running) return;
         console.log("Stopping client render loop.");
         this.running = false;
         if (this.animationFrame) {
-            cancelAnimationFrame(this.animationFrame); // Stop requesting new frames
+            cancelAnimationFrame(this.animationFrame);
             this.animationFrame = null;
         }
     }
 
-    // --- Game Lifecycle Handlers (Called by network.js based on server events) ---
-
-    /**
-     * Handles the 'gameStart' event from the server. Prepares the client for the match.
-     * @param {object} data - Data associated with the game start (e.g., game ID, player list with names/appearances).
-     */
-    handleGameStart(data) {
-        console.log("Game Start signal received:", data);
-        this.gameId = data.gameId;
-
-        // Reset local state from any previous game only if arena exists
+    /** Clears local game state (robots, missiles, etc.) and resets arena/dashboard */
+    clearLocalState() {
+        console.log("Clearing local game state (robots, missiles, arena, dashboard)...");
         if (this.arena) {
             this.arena.explosions = []; // Clear visual effects in arena
+            this.arena.robots = []; // Clear arena's robot list
+            this.arena.clear(); // Draw background/grid immediately
         }
         this.missiles = []; // Clear missile list in game state
         this.robots = []; // Clear robot list
-        if (this.arena) {
-            this.arena.robots = []; // Clear arena's robot list
-        }
         this.lastServerState = null; // Clear last known state
+        this.gameId = null; // Clear game ID/Name
+        this.gameName = null;
+        // Clear dashboard (pass empty context)
+        if (window.dashboard && typeof window.dashboard.updateStats === 'function') {
+            window.dashboard.updateStats([], {});
+        } else {
+            console.warn("Dashboard object or updateStats method not found during clearLocalState.");
+        }
+    }
 
-        // Log players in the game
+
+    // --- Game Lifecycle & Spectator Handlers (Called by network.js) ---
+
+    /**
+     * Handles the 'gameStart' event from the server. Prepares the client for playing the match.
+     * @param {object} data - Data associated with the game start { gameId, gameName, players }.
+     */
+    handleGameStart(data) {
+        console.log("Game Start signal received:", data);
+        this.stop();
+        this.clearLocalState();
+
+        this.gameId = data.gameId;
+        this.gameName = data.gameName || data.gameId; // Store game name
+
         if (data.players) {
             console.log("Players in this game:", data.players.map(p => `${p.name} (${p.appearance})`).join(', '));
         }
 
-        // Start rendering the game now that it's begun
         this.startRenderLoop();
 
-        // Update UI elements to reflect the "in-game" state
-        // Note: controls.js setReadyState(true) might have already done this,
-        // but this ensures consistency if game starts unexpectedly.
-        const readyButton = document.getElementById('btn-ready');
-        const appearanceSelect = document.getElementById('robot-appearance-select');
-        const playerNameInput = document.getElementById('playerName');
-        if (readyButton) {
-            readyButton.textContent = "Game in Progress...";
-            readyButton.disabled = true; // Disable ready/unready during game
-             // Optional: change color to indicate locked state
-             // readyButton.style.backgroundColor = '#555';
+        // --- Update Controls state to 'playing' ---
+        if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+             controls.setState('playing'); // Use the new state manager
+        } else {
+             console.warn("Controls object or setState method not found, UI may not lock correctly for game start.");
         }
-        if (appearanceSelect) {
-            appearanceSelect.disabled = true;
+
+        if (typeof window.updateLobbyStatus === 'function') {
+             window.updateLobbyStatus(`Playing Game: ${this.gameName}`);
         }
-         if (playerNameInput) {
-             playerNameInput.disabled = true;
-         }
-        // Consider making editor read-only during game
-        // if (typeof editor !== 'undefined') editor.setOption("readOnly", true);
     }
 
     /**
-     * Handles the 'gameOver' event from the server. Cleans up the client state and UI.
-     * @param {object} data - Data associated with the game end (e.g., reason, winnerId, winnerName).
+     * Handles the 'gameOver' event from the server (for players). Cleans up the client state and UI.
+     * @param {object} data - Data associated with the game end { gameId, winnerId, winnerName, reason }.
      */
     handleGameOver(data) {
-        console.log("Game Over signal received:", data);
+        console.log("Game Over signal received (as player):", data);
         this.stop(); // Stop the rendering loop
 
-        // --- Updated Winner Display ---
-        // Use winnerName if provided by the server, otherwise fallback to ID or 'None'.
-        let winnerDisplayName = 'None'; // Default
-        if (data.winnerName) {
-            winnerDisplayName = data.winnerName; // Use the name if available
-        } else if (data.winnerId) {
-            // Fallback to partial ID if name is missing but ID is present
-            winnerDisplayName = `ID: ${data.winnerId.substring(0, 6)}...`;
-        }
-        const message = `Game Over! ${data.reason || 'Match ended.'} Winner: ${winnerDisplayName}`;
+        // Display winner message
+        let winnerDisplayName = 'None';
+        if (data.winnerName) winnerDisplayName = data.winnerName;
+        else if (data.winnerId) winnerDisplayName = `ID: ${data.winnerId.substring(0, 6)}...`;
+
+        const endedGameName = this.gameName || data.gameId; // Use stored name if available
+        const message = `Game '${endedGameName}' Over! ${data.reason || 'Match ended.'} Winner: ${winnerDisplayName}`;
         alert(message); // Display name (or fallback) in alert
-        // --- End Updated Winner Display ---
 
-        // --- Reset UI Elements using Controls helper ---
-        // Ensure the global 'controls' object exists and reset its state
-        if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
-            controls.setReadyState(false); // Reset button text/state and enable inputs
+        // --- Update Controls state back to 'lobby' ---
+        if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+             controls.setState('lobby'); // Use the new state manager
         } else {
-            // Fallback if 'controls' object isn't available (shouldn't happen)
-            console.warn("Controls object not found, attempting manual UI reset for game over.");
-            const readyButton = document.getElementById('btn-ready');
-            const appearanceSelect = document.getElementById('robot-appearance-select');
-            const playerNameInput = document.getElementById('playerName');
-            const sampleCodeSelect = document.getElementById('sample-code');
-            const editorIsAvailable = typeof editor !== 'undefined';
-
-            if (readyButton) { readyButton.textContent = "Ready Up"; readyButton.disabled = false; readyButton.style.backgroundColor = '#4CAF50'; }
-            if (appearanceSelect) { appearanceSelect.disabled = false; }
-            if (playerNameInput) { playerNameInput.disabled = false; }
-            if (sampleCodeSelect) { sampleCodeSelect.disabled = false; }
-            if (editorIsAvailable) editor.setOption("readOnly", false);
-        }
-        // --- End Reset UI Elements ---
-
-        // Update lobby status (Network listener also does this, potentially redundant but safe)
-        if (typeof updateLobbyStatus === 'function') {
-             updateLobbyStatus('Game Over. Ready Up for another match!');
+            console.warn("Controls object or setState method not found, UI may not reset correctly after game over.");
         }
 
-        // Optional: Clear the display after a short delay if desired
-        // setTimeout(() => {
-        //      if(this.arena) this.arena.clear(); // Clear canvas if arena exists
-        //      if(window.dashboard) window.dashboard.updateStats([]); // Clear dashboard
-        // }, 2000);
+        // Update lobby status display
+        if (typeof window.updateLobbyStatus === 'function') {
+             window.updateLobbyStatus('Game Over. Ready Up for another match!');
+        }
+
+        // Clear the display after a short delay
+         setTimeout(() => {
+              this.clearLocalState();
+         }, 2000); // 2-second delay
+    }
+
+
+    // --- Spectator Mode Handlers ---
+
+    /**
+     * Handles the 'spectateStart' event from the server. Prepares the client for spectating.
+     * @param {object} spectateData - Data associated with spectating { gameId, gameName }.
+     */
+    handleSpectateStart(spectateData) {
+        console.log("Starting spectate mode for game:", spectateData);
+        this.stop(); // Ensure any previous rendering is stopped
+        this.clearLocalState(); // Clear state from any previous session
+
+        this.gameId = spectateData.gameId; // Store the ID of the game being spectated
+        this.gameName = spectateData.gameName || spectateData.gameId; // Store the name
+
+        // --- Update Controls state to 'spectating' ---
+        if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+            controls.setState('spectating'); // Use the new state manager
+        } else {
+            console.warn("Controls object or setState method not found, UI may not lock correctly for spectating.");
+        }
+
+        // Update UI (lobby status) to show spectating status
+        if (typeof window.updateLobbyStatus === 'function') {
+             window.updateLobbyStatus(`Spectating Game: ${this.gameName}`);
+        }
+
+        // Start rendering the spectated game
+        this.startRenderLoop();
+    }
+
+    /**
+     * Handles the 'spectateGameOver' event from the server. Transitions client back to lobby state.
+     * @param {object} gameOverData - Data associated with the game end { gameId, winnerId, winnerName, reason }.
+     */
+    handleSpectateEnd(gameOverData) {
+        console.log("Spectate mode ended:", gameOverData);
+        this.stop(); // Stop the rendering loop
+
+         // --- Update Controls state back to 'lobby' ---
+        if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+            controls.setState('lobby'); // Use the new state manager
+        } else {
+             console.warn("Controls object or setState method not found, UI may not reset correctly after spectating.");
+        }
+
+        // Update UI (lobby status) to show returned to lobby
+        if (typeof window.updateLobbyStatus === 'function') {
+             window.updateLobbyStatus('Returned to Lobby. Enter name & code, then Ready Up!');
+        }
+
+        // Display game over message to the spectator
+        let winnerDisplayName = gameOverData.winnerName || (gameOverData.winnerId ? `ID: ${gameOverData.winnerId.substring(0, 6)}...` : 'None');
+        const endedGameName = this.gameName || gameOverData.gameId; // Use stored name
+        const message = `Spectated game '${endedGameName}' finished!\nWinner: ${winnerDisplayName}. (${gameOverData.reason || 'Match ended.'})`;
+        alert(message);
+
+        // Clear the display and state after a shorter delay
+        setTimeout(() => {
+             this.clearLocalState();
+        }, 1500); // 1.5-second delay
     }
 
 } // End Game Class
@@ -1302,8 +1465,9 @@ class Missile {
 
 /**
  * Controls handler for Robot Wars.
- * Manages button interactions (Ready Up/Unready, Reset), code loading, appearance selection,
- * and player name input, sending relevant data/signals to the server via the network handler.
+ * Manages UI state ('lobby', 'waiting', 'playing', 'spectating'), button interactions,
+ * code loading, appearance selection, player name input, and sends relevant data/signals
+ * to the server via the network handler.
  */
 class Controls {
     /**
@@ -1314,22 +1478,141 @@ class Controls {
     constructor(game, network) {
         this.game = game;
         this.network = network; // Store network reference
-        // Client-side flag to track if the user *thinks* they are ready
-        this.isClientReady = false;
+        // UI State Machine: 'lobby', 'waiting', 'playing', 'spectating'
+        this.uiState = 'lobby'; // Initial state
+        this.isClientReady = false; // Still track if ready *within* lobby/waiting states
+
         if (!this.game || !this.network) {
              console.error("Controls initialized without valid game or network reference!");
         }
         this.setupEventListeners();
-        this.loadPlayerName(); // Load saved name on init
+        this.loadPlayerName();
+        this.updateUIForState(); // Set initial UI based on 'lobby' state
         console.log('Controls initialized with game and network references');
     }
+
+    /** Sets the internal state and updates the UI accordingly */
+    setState(newState) {
+        // List of valid states
+        const validStates = ['lobby', 'waiting', 'playing', 'spectating'];
+        if (!validStates.includes(newState)) {
+            console.error(`Attempted to set invalid UI state: ${newState}`);
+            return;
+        }
+
+        if (this.uiState === newState) {
+             // console.log(`Controls UI State already '${newState}'. No change.`); // Optional log
+             return; // No change needed
+        }
+
+        console.log(`Controls UI State changing from '${this.uiState}' to '${newState}'`);
+        this.uiState = newState;
+
+        // Reset internal ready flag when leaving waiting state or entering non-lobby states
+        if (newState !== 'waiting') {
+            this.isClientReady = false;
+        }
+
+        this.updateUIForState();
+    }
+
+    /** Updates all relevant UI elements based on the current this.uiState */
+    updateUIForState() {
+        // Get elements
+        const readyButton = document.getElementById('btn-ready');
+        const appearanceSelect = document.getElementById('robot-appearance-select');
+        const playerNameInput = document.getElementById('playerName');
+        const sampleCodeSelect = document.getElementById('sample-code');
+        const resetButton = document.getElementById('btn-reset');
+        const editorIsAvailable = typeof editor !== 'undefined';
+
+        // Defaults (most restrictive)
+        let readyButtonText = "Loading...";
+        let readyButtonColor = '#777';
+        let readyButtonDisabled = true;
+        let inputsDisabled = true;
+        let editorReadOnly = true;
+
+        switch (this.uiState) {
+            case 'lobby': // Can interact, ready button shows "Ready Up"
+                readyButtonText = "Ready Up";
+                readyButtonColor = '#4CAF50'; // Green
+                readyButtonDisabled = false;
+                inputsDisabled = false;
+                editorReadOnly = false;
+                break;
+
+            case 'waiting': // Can only click "Unready"
+                readyButtonText = "Waiting... (Click to Unready)";
+                readyButtonColor = '#FFA500'; // Orange
+                readyButtonDisabled = false; // Must be enabled to unready
+                inputsDisabled = true; // Other inputs locked
+                editorReadOnly = true;
+                break;
+
+            case 'playing': // All interaction disabled
+                readyButtonText = "Game in Progress...";
+                readyButtonColor = '#777'; // Grey
+                readyButtonDisabled = true;
+                inputsDisabled = true;
+                editorReadOnly = true;
+                break;
+
+            case 'spectating': // All interaction disabled
+                readyButtonText = "Spectating...";
+                readyButtonColor = '#4682B4'; // Steel Blue
+                readyButtonDisabled = true;
+                inputsDisabled = true;
+                editorReadOnly = true;
+                break;
+
+            default:
+                 console.error("Invalid uiState during UI update:", this.uiState);
+                 // Keep defaults (disabled) in case of error
+                 readyButtonText = "Error";
+                 break;
+        }
+
+        // Apply UI changes
+        if (readyButton) {
+            readyButton.textContent = readyButtonText;
+            readyButton.style.backgroundColor = readyButtonColor;
+            readyButton.disabled = readyButtonDisabled;
+        } else { console.warn("Ready button not found during UI update."); }
+
+        if (appearanceSelect) { appearanceSelect.disabled = inputsDisabled; }
+         else { console.warn("Appearance select not found during UI update."); }
+
+        if (playerNameInput) { playerNameInput.disabled = inputsDisabled; }
+         else { console.warn("Player name input not found during UI update."); }
+
+        if (sampleCodeSelect) { sampleCodeSelect.disabled = inputsDisabled; }
+         else { console.warn("Sample code select not found during UI update."); }
+
+        if (resetButton) { resetButton.disabled = inputsDisabled; } // Reset follows other inputs now
+         else { console.warn("Reset button not found during UI update."); }
+
+        try {
+            if (editorIsAvailable) {
+                editor.setOption("readOnly", editorReadOnly);
+            } else if (this.uiState !== 'lobby') { // Only warn if editor should be RO but isn't available
+                 // console.warn("CodeMirror editor not available for readOnly update."); // Can be noisy
+            }
+        } catch (e) {
+             console.error("Error setting CodeMirror readOnly option:", e);
+        }
+
+
+        // console.log(`UI Updated for state: ${this.uiState}. Inputs Disabled: ${inputsDisabled}, Ready Button Disabled: ${readyButtonDisabled}`); // Debug log
+    }
+
 
     /**
      * Sets up event listeners for UI elements like buttons and selects.
      */
     setupEventListeners() {
-        // Get references to the DOM elements, using the new ID for the ready button
-        const readyButton = document.getElementById('btn-ready'); // Changed ID from btn-run
+        // Get references to the DOM elements
+        const readyButton = document.getElementById('btn-ready');
         const resetButton = document.getElementById('btn-reset');
         const sampleCodeSelect = document.getElementById('sample-code');
         const appearanceSelect = document.getElementById('robot-appearance-select');
@@ -1345,151 +1628,129 @@ class Controls {
         readyButton.addEventListener('click', () => {
             // Check network connection first
             if (!this.network || !this.network.socket || !this.network.socket.connected) {
-                console.error("Network handler not available or not connected in Controls.");
-                alert("Cannot connect to the server. Please check connection and refresh.");
-                return;
+                 console.error("Network handler not available or not connected in Controls.");
+                 alert("Not connected to server. Please check connection and refresh.");
+                 return;
             }
 
-            // Toggle ready state
-            if (!this.isClientReady) {
+            // Action depends on current state
+            if (this.uiState === 'lobby') {
                 // --- Action: Ready Up ---
-                console.log('Ready Up button clicked');
-
-                // Validate inputs before sending
+                console.log('Ready Up button clicked (State: lobby)');
                 const playerCode = (typeof editor !== 'undefined') ? editor.getValue() : '';
-                if (!playerCode) { alert("Code editor is empty!"); return; }
-
                 const nameValue = playerNameInput.value.trim();
-                if (!nameValue) { alert("Please enter a player name."); return; }
-
-                const finalPlayerName = nameValue; // Already trimmed
                 const chosenAppearance = appearanceSelect.value || 'default';
 
-                // Save name locally
+                // Validate inputs before sending
+                if (!playerCode) { alert("Code editor is empty!"); return; }
+                if (!nameValue) { alert("Please enter a player name."); return; }
+
+                // Basic name sanitization (redundant with server but good practice)
+                const finalPlayerName = nameValue.substring(0, 24).replace(/<[^>]*>/g, "");
+                 if (!finalPlayerName) { alert("Invalid player name."); return; }
+                 playerNameInput.value = finalPlayerName; // Update input field with sanitized name
+
                 this.savePlayerName(finalPlayerName);
-
-                // Send data to server (server will mark player as ready)
                 this.network.sendCodeAndAppearance(playerCode, chosenAppearance, finalPlayerName);
+                this.isClientReady = true; // Set internal ready flag
+                this.setState('waiting'); // Transition UI to waiting state
 
-                // Update UI immediately to waiting state
-                this.setReadyState(true); // Use helper to update UI
-
-            } else {
+            } else if (this.uiState === 'waiting') {
                 // --- Action: Unready ---
-                console.log('Unready button clicked');
-
-                // Send signal to server to mark as unready
-                this.network.sendUnreadySignal(); // Call network function
-
-                // Update UI immediately back to unready state
-                this.setReadyState(false); // Use helper to update UI
+                console.log('Unready button clicked (State: waiting)');
+                this.network.sendUnreadySignal();
+                this.isClientReady = false; // Clear internal ready flag
+                this.setState('lobby'); // Transition UI back to lobby state
+            } else {
+                 // Button should be disabled in playing/spectating states, but log if clicked somehow
+                 console.warn(`Ready button clicked in unexpected/disabled state: ${this.uiState}. Ignoring.`);
             }
         });
 
         // --- Reset Button Listener ---
         resetButton.addEventListener('click', () => {
-            console.log('Reset button clicked');
-
-            // If client was ready, send unready signal to server
-            if (this.isClientReady) {
-                 if (this.network && this.network.socket && this.network.socket.connected) {
-                    this.network.sendUnreadySignal();
-                 }
+            // Only allow reset in lobby state
+            if (this.uiState !== 'lobby') {
+                 console.warn(`Reset clicked in non-lobby state: ${this.uiState}. Ignoring.`);
+                 return;
             }
-
-            // Force UI and client state back to unready/editable
-            this.setReadyState(false);
+            console.log('Reset button clicked (State: lobby)');
+            // No need to send unready signal to server if already in lobby state
 
             // Clear the local canvas presentation
-            if (this.game.arena) {
+            if (this.game && this.game.arena && typeof this.game.arena.clear === 'function') {
                 this.game.arena.clear(); // Clears and draws background/grid
             }
 
             // Reset robot stats display locally
-            if (window.dashboard) {
-                 window.dashboard.updateStats([]); // Clear stats panel
+            if (window.dashboard && typeof window.dashboard.updateStats === 'function') {
+                 window.dashboard.updateStats([], {}); // Clear stats panel with empty context
             }
 
              // Notify user in log
              if (typeof window.addEventLogMessage === 'function') {
-                 window.addEventLogMessage('UI and ready status reset.', 'info');
+                 window.addEventLogMessage('UI reset.', 'info');
              }
-             // Optionally clear code editor?
-             // if (typeof editor !== 'undefined') editor.setValue('');
+             // Optionally clear code editor or reset to default?
+             // if (typeof editor !== 'undefined') editor.setValue('// Reset Code...');
         });
 
         // --- Sample Code Loader Listener ---
         sampleCodeSelect.addEventListener('change', function() { // Using function for 'this' context
+            // Only allow loading in lobby state
+            if (this.uiState !== 'lobby') {
+                 console.warn(`Sample code change attempt in non-lobby state: ${this.uiState}. Ignoring.`);
+                 this.value = ''; // Reset dropdown to default option
+                 return;
+            }
+
             const sample = this.value;
             // Check if the loadSampleCode function exists (defined in editor.js)
             if (sample && typeof loadSampleCode === 'function') {
                 loadSampleCode(sample);
-
-                // If client was ready, loading new code should make them unready
-                if (this.isClientReady) {
-                     // Send unready signal to server since code changed
-                     if (this.network && this.network.socket && this.network.socket.connected) {
-                        this.network.sendUnreadySignal();
-                     }
-                     // Update UI locally
-                     this.setReadyState(false);
-                     if (typeof window.addEventLogMessage === 'function') {
-                         window.addEventLogMessage('Loaded sample code. Status set to Not Ready.', 'info');
-                     }
-                }
+                // Log that sample was loaded
+                 if (typeof window.addEventLogMessage === 'function') {
+                     window.addEventLogMessage(`Loaded sample code: ${sample}`, 'info');
+                 }
+                 // Reset dropdown back to default after loading to avoid confusion
+                 // this.value = ''; // Optional: reset select after loading
+            } else if (!sample) {
+                // User selected the "Load Sample Code..." option, do nothing.
+            } else {
+                 console.error("loadSampleCode function not found!");
             }
         }.bind(this)); // Bind 'this' to access Controls instance state
 
         // --- Player Name Persistence Listener ---
         // Save name when the input loses focus
         playerNameInput.addEventListener('blur', () => {
-            this.savePlayerName(playerNameInput.value.trim());
+            // Only allow editing/saving in lobby state
+            if (this.uiState === 'lobby') {
+                const nameValue = playerNameInput.value.trim();
+                // Sanitize again on blur
+                const finalPlayerName = nameValue.substring(0, 24).replace(/<[^>]*>/g, "");
+                playerNameInput.value = finalPlayerName; // Update field with sanitized version
+                this.savePlayerName(finalPlayerName);
+            }
         });
+
+        // Also save on Enter press in name field
+         playerNameInput.addEventListener('keypress', (event) => {
+             if (event.key === 'Enter') {
+                  // Only process if in lobby state
+                 if (this.uiState === 'lobby') {
+                     event.preventDefault(); // Prevent potential form submission
+                     playerNameInput.blur(); // Trigger the blur event to save
+                 }
+             }
+         });
 
     } // End setupEventListeners
 
 
-    /**
-     * Helper function to manage UI element states based on readiness.
-     * @param {boolean} isReady - The desired ready state.
-     */
-    setReadyState(isReady) {
-        this.isClientReady = isReady; // Update the internal flag
-
-        // Get elements
-        const readyButton = document.getElementById('btn-ready');
-        const appearanceSelect = document.getElementById('robot-appearance-select');
-        const playerNameInput = document.getElementById('playerName');
-        const sampleCodeSelect = document.getElementById('sample-code');
-        const editorIsAvailable = typeof editor !== 'undefined';
-
-        // Update UI based on the state
-        if (isReady) {
-            // Set UI to "Waiting / Unready" state
-            if (readyButton) {
-                readyButton.textContent = "Waiting... (Click to Unready)";
-                readyButton.style.backgroundColor = '#FFA500'; // Orange indicator
-                readyButton.disabled = false; // Keep button enabled to allow unreadying
-            }
-            // Disable other inputs
-            if (appearanceSelect) appearanceSelect.disabled = true;
-            if (playerNameInput) playerNameInput.disabled = true;
-            if (sampleCodeSelect) sampleCodeSelect.disabled = true;
-            if (editorIsAvailable) editor.setOption("readOnly", true); // Make editor read-only
-        } else {
-            // Set UI to "Not Ready / Ready Up" state
-            if (readyButton) {
-                readyButton.textContent = "Ready Up";
-                readyButton.style.backgroundColor = '#4CAF50'; // Green indicator
-                readyButton.disabled = false; // Button is always enabled unless game in progress
-            }
-            // Enable other inputs
-            if (appearanceSelect) appearanceSelect.disabled = false;
-            if (playerNameInput) playerNameInput.disabled = false;
-            if (sampleCodeSelect) sampleCodeSelect.disabled = false;
-            if (editorIsAvailable) editor.setOption("readOnly", false); // Make editor editable
-        }
-    }
+    // --- The methods setReadyState, setPlayingState, setSpectatingState ---
+    // --- have been REMOVED. Use controls.setState('lobby' | 'waiting' | 'playing' | 'spectating') ---
+    // --- from game.js or other relevant places. ---
 
 
     /**
@@ -1499,25 +1760,33 @@ class Controls {
     savePlayerName(name) {
         if (typeof localStorage !== 'undefined') {
             // Avoid saving empty string or just whitespace
-            if (name && name.trim()) {
-                localStorage.setItem('robotWarsPlayerName', name.trim());
+            const trimmedName = name ? name.trim() : '';
+            if (trimmedName) {
+                localStorage.setItem('robotWarsPlayerName', trimmedName);
+                 // console.log(`Saved name: ${trimmedName}`); // Debug log
             } else {
-                // Optionally clear if name is empty
-                // localStorage.removeItem('robotWarsPlayerName');
+                // Clear if name is effectively empty
+                 localStorage.removeItem('robotWarsPlayerName');
+                 // console.log("Cleared saved name."); // Debug log
             }
         }
     }
 
     /**
      * Loads the player name from localStorage and populates the input field.
+     * Sanitizes the loaded name.
      */
     loadPlayerName() {
         const playerNameInput = document.getElementById('playerName');
         if (playerNameInput && typeof localStorage !== 'undefined') {
             const savedName = localStorage.getItem('robotWarsPlayerName');
             if (savedName) {
-                playerNameInput.value = savedName;
-                console.log('Player name loaded:', savedName);
+                // Sanitize loaded name just in case it was manipulated
+                 const finalPlayerName = savedName.substring(0, 24).replace(/<[^>]*>/g, "");
+                playerNameInput.value = finalPlayerName;
+                console.log('Player name loaded:', finalPlayerName);
+            } else {
+                 console.log('No player name found in localStorage.');
             }
         }
     }
@@ -1539,6 +1808,12 @@ class Controls {
 class Dashboard {
     constructor() {
         this.statsPanel = document.getElementById('robot-stats');
+        this.gameTitleElement = null; // Element to display game name (optional)
+        this.statsContainer = null; // Container for the actual robot stats divs
+
+        // Try to find/create a title element and stats container within the panel
+        this.createLayoutElements();
+
         if (!this.statsPanel) {
             console.error("Dashboard stats panel element '#robot-stats' not found!");
         } else {
@@ -1546,55 +1821,129 @@ class Dashboard {
         }
     }
 
+    /** Create or find the elements for title and stats list */
+    createLayoutElements() {
+        if (!this.statsPanel) return;
+
+        // Title Element
+        this.gameTitleElement = document.getElementById('dashboard-game-title');
+        if (!this.gameTitleElement) {
+            this.gameTitleElement = document.createElement('div');
+            this.gameTitleElement.id = 'dashboard-game-title';
+            // Style the title element (adjust as needed)
+            this.gameTitleElement.style.fontWeight = 'bold';
+            this.gameTitleElement.style.marginBottom = '10px';
+            this.gameTitleElement.style.paddingBottom = '5px';
+            this.gameTitleElement.style.borderBottom = '1px solid #555';
+            this.gameTitleElement.style.color = '#4CAF50'; // Match theme accent
+            this.gameTitleElement.style.fontFamily = "'VT323', monospace"; // Use retro font
+            this.gameTitleElement.style.fontSize = '18px'; // Adjust size
+            this.gameTitleElement.style.display = 'none'; // Hidden initially
+            // Prepend it to the stats panel
+            this.statsPanel.insertBefore(this.gameTitleElement, this.statsPanel.firstChild);
+        }
+
+        // Stats Container Element
+        this.statsContainer = document.getElementById('robot-stats-list');
+        if (!this.statsContainer) {
+            this.statsContainer = document.createElement('div');
+            this.statsContainer.id = 'robot-stats-list';
+            // Append it after the title (or as the only child if title failed)
+            this.statsPanel.appendChild(this.statsContainer);
+        }
+    }
+
     /**
      * Update robot stats display based on the provided robot data.
      * @param {Array<object>} robots - Array of robot data objects received from the server state.
      *                                  Each object should have id, name, damage, color, isAlive.
+     * @param {object} [context={}] - Optional context object (e.g., { gameName }).
      */
-    updateStats(robots) {
-        // Guard against missing panel or invalid input
-        if (!this.statsPanel || !Array.isArray(robots)) {
-            // Optionally clear the panel if robots array is invalid/empty
-            if (this.statsPanel) this.statsPanel.innerHTML = '<div>No robot data available.</div>';
+    updateStats(robots, context = {}) {
+        // Ensure container exists
+        if (!this.statsContainer) {
+            console.warn("Stats container not found in dashboard.");
             return;
         }
 
-        let statsHTML = '';
+        // Update Game Title display
+        if (this.gameTitleElement) {
+            const showTitle = context.gameName && robots && robots.length > 0;
+            this.gameTitleElement.textContent = showTitle ? `Stats for: ${context.gameName}` : '';
+            this.gameTitleElement.style.display = showTitle ? '' : 'none';
+        }
+
+        // Clear previous stats from the container
+        this.statsContainer.innerHTML = ''; // Simple way to clear children
+
+        // Guard against invalid input
+        if (!Array.isArray(robots)) {
+            const noDataDiv = document.createElement('div');
+            noDataDiv.textContent = 'Invalid robot data received.';
+            this.statsContainer.appendChild(noDataDiv);
+            return;
+        }
+
+        // --- Efficient DOM Update ---
+        // Use a fragment to minimize reflows when adding multiple stats
+        const fragment = document.createDocumentFragment();
 
         if (robots.length === 0) {
-            statsHTML = '<div>Waiting for game to start...</div>';
+            const waitingDiv = document.createElement('div');
+            waitingDiv.textContent = context.gameName ? 'Game ended or no robots active.' : 'Waiting for game to start...';
+            fragment.appendChild(waitingDiv);
         } else {
             robots.forEach(robot => {
                 // Default values and checks for robustness
-                const damageValue = (typeof robot.damage === 'number') ? robot.damage : 100; // Assume max damage if invalid
-                const isAlive = robot.isAlive !== undefined ? robot.isAlive : (damageValue < 100); // Derive if needed
+                const damageValue = (typeof robot.damage === 'number') ? robot.damage : 100;
+                const isAlive = robot.isAlive !== undefined ? robot.isAlive : (damageValue < 100);
 
                 const status = isAlive ? 'Active' : 'Destroyed';
-                const statusColor = isAlive ? '#2ecc71' : '#e74c3c'; // Green for active, Red for destroyed
+                const statusColor = isAlive ? '#2ecc71' : '#e74c3c';
 
-                // Safely get Robot Name or fallback to ID
-                let robotIdDisplay = '????'; // Default if ID is missing/invalid
+                let robotIdDisplay = '????';
                 if (robot.id && typeof robot.id === 'string') {
-                    robotIdDisplay = robot.id.substring(0, 4); // Get first 4 chars of ID
+                    robotIdDisplay = robot.id.substring(0, 4);
                 }
-                const robotName = robot.name || `ID: ${robotIdDisplay}...`; // Use name or fallback ID display
+                const robotName = robot.name || `ID: ${robotIdDisplay}...`;
 
-                // Safely format damage percentage
                 const damageDisplay = (typeof robot.damage === 'number') ? robot.damage.toFixed(0) : 'N/A';
 
-                // Construct HTML for this robot's stats
-                statsHTML += `
-                    <div class="robot-stat" style="border-left: 3px solid ${robot.color || '#888'}; margin-bottom: 10px; padding: 5px;">
-                        <div><strong>${robotName}</strong></div>
-                        <div>Damage: ${damageDisplay}%</div>
-                        <div>Status: <span style="color: ${statusColor}">${status}</span></div>
-                    </div>
-                `;
+                // Create elements for this robot's stats
+                const statDiv = document.createElement('div');
+                statDiv.className = 'robot-stat'; // Add class for potential CSS styling
+                statDiv.style.borderLeft = `3px solid ${robot.color || '#888'}`;
+                statDiv.style.marginBottom = '10px';
+                statDiv.style.padding = '5px';
+                // Ensure consistent font for stats
+                statDiv.style.fontFamily = "'VT323', monospace";
+                statDiv.style.fontSize = '16px'; // Adjust as needed
+
+                const nameDiv = document.createElement('div');
+                const nameStrong = document.createElement('strong');
+                nameStrong.textContent = robotName;
+                nameDiv.appendChild(nameStrong);
+
+                const damageDiv = document.createElement('div');
+                damageDiv.textContent = `Damage: ${damageDisplay}%`;
+
+                const statusDiv = document.createElement('div');
+                const statusSpan = document.createElement('span');
+                statusSpan.style.color = statusColor;
+                statusSpan.textContent = status;
+                statusDiv.appendChild(document.createTextNode('Status: '));
+                statusDiv.appendChild(statusSpan);
+
+                statDiv.appendChild(nameDiv);
+                statDiv.appendChild(damageDiv);
+                statDiv.appendChild(statusDiv);
+
+                fragment.appendChild(statDiv);
             });
         }
 
-        // Update the panel content
-        this.statsPanel.innerHTML = statsHTML;
+        // Append the fragment containing new stats to the dedicated container
+        this.statsContainer.appendChild(fragment);
     }
 }
 
@@ -1604,9 +1953,66 @@ document.addEventListener('DOMContentLoaded', () => {
     window.dashboard = new Dashboard();
     // Clear stats initially or show a waiting message
     if(window.dashboard) {
-         window.dashboard.updateStats([]); // Pass empty array to show initial message
+         window.dashboard.updateStats([], {}); // Pass empty array and context
     }
 });
+```
+
+## client/js/ui/history.js
+
+```code
+// client/js/ui/history.js
+
+/**
+ * Updates the game history log display on the page.
+ * @param {Array<object>} historyArray - An array of completed game objects from the server,
+ *                                      expected format: [{name, winnerName, players, endTime}, ...]
+ *                                      (Assumed to be sorted newest first by the server)
+ */
+function updateGameHistory(historyArray) {
+    const historyListElement = document.getElementById('game-history-list');
+
+    if (!historyListElement) {
+        console.warn("Game history list element '#game-history-list' not found.");
+        return;
+    }
+
+    // Clear previous history entries
+    historyListElement.innerHTML = '';
+
+    if (!Array.isArray(historyArray) || historyArray.length === 0) {
+        const noHistoryDiv = document.createElement('div');
+        noHistoryDiv.textContent = 'No games finished yet.';
+        historyListElement.appendChild(noHistoryDiv);
+        return;
+    }
+
+    // Use a document fragment for potentially better performance
+    const fragment = document.createDocumentFragment();
+
+    historyArray.forEach(gameResult => {
+        const entryDiv = document.createElement('div');
+        // Format the output string
+        const winnerText = gameResult.winnerName ? gameResult.winnerName : 'None';
+        entryDiv.textContent = `Game '${gameResult.name || 'Unknown'}' finished. Winner: ${winnerText}`;
+        // You could add more details here, like players involved, using gameResult.players
+
+        fragment.appendChild(entryDiv);
+    });
+
+    // Append the populated fragment to the list element
+    historyListElement.appendChild(fragment);
+}
+
+// Make the function globally accessible
+window.updateGameHistory = updateGameHistory;
+
+console.log("History UI functions initialized (history.js).");
+
+// Initial clear or placeholder (optional, CSS handles initial state)
+// document.addEventListener('DOMContentLoaded', () => {
+//     updateGameHistory([]); // Clear on load
+// });
 ```
 
 ## client/js/ui/editor.js
@@ -2003,7 +2409,8 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Handles client-side network communication with the server using Socket.IO.
  * Connects to the server, sends player data (including name), readiness signals,
- * receives game state updates, and handles lobby/chat events.
+ * receives game state updates, handles spectating, processes lobby/chat events,
+ * and receives game history updates. // <-- Updated description
  */
 class Network {
     /**
@@ -2014,6 +2421,11 @@ class Network {
         this.socket = null; // Will hold the Socket.IO socket instance
         this.playerId = null; // This client's unique ID assigned by the server
         this.game = game; // Reference to the main game object to pass updates
+        // --- Spectator State ---
+        this.isSpectating = false;
+        this.spectatingGameId = null;
+        this.spectatingGameName = null; // Store name for display
+        // --- End Spectator State ---
         if (!this.game) {
             console.error("Network handler initialized without a valid game reference!");
         }
@@ -2025,49 +2437,63 @@ class Network {
     connect() {
         try {
             // Connect to the Socket.io server. Assumes server is on the same host/port.
-            this.socket = io(); // Connects to the server that served the page by default
+            // Added reconnection options for robustness
+            this.socket = io({
+                 reconnectionAttempts: 5, // Try to reconnect 5 times
+                 reconnectionDelay: 1000, // Start with 1 second delay
+                 reconnectionDelayMax: 5000 // Max delay 5 seconds
+            });
 
             // --- Socket.IO Event Listeners ---
 
-            // On successful connection
+            // On successful connection/reconnection
             this.socket.on('connect', () => {
-                console.log('Successfully connected to server with Socket ID:', this.socket.id);
-                // Notify UI about connection status
-                if (typeof window.updateLobbyStatus === 'function') {
-                    window.updateLobbyStatus('Connected. Enter name & code, then Ready Up!');
+                console.log('Successfully connected/reconnected to server with Socket ID:', this.socket.id);
+                // Reset spectator state on fresh connect (server will tell us if we should spectate)
+                this.isSpectating = false;
+                this.spectatingGameId = null;
+                this.spectatingGameName = null;
+
+                // Reset Controls UI to lobby state upon successful connection
+                if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+                    controls.setState('lobby');
+                } else {
+                    console.warn("Controls object or setState not found on connect, UI might be incorrect.");
                 }
-                 // Clear log on connect and add welcome message
-                 if (typeof window.clearEventLog === 'function') window.clearEventLog();
+
+                // Notify UI about connection status - Lobby/Spectate status will be updated by subsequent events
+                 if (typeof window.updateLobbyStatus === 'function') {
+                     window.updateLobbyStatus('Connected. Waiting for server info...');
+                 }
                  if (typeof window.addEventLogMessage === 'function') {
-                    window.addEventLogMessage("Welcome! Connect to chat and wait for players...", "info");
+                    window.addEventLogMessage("--> Connected to server.", "event");
                  }
             });
 
             // On disconnection from the server
             this.socket.on('disconnect', (reason) => {
                 console.warn('Disconnected from server:', reason);
+                 // Stop rendering if game or spectating was active
                 if (this.game) {
-                    this.game.stop(); // Stop rendering if disconnected
-                    // Also reset client ready state if disconnected unexpectedly
-                    if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
-                         controls.setReadyState(false);
-                    }
+                    this.game.stop();
                 }
+                // Reset spectator state
+                this.isSpectating = false;
+                this.spectatingGameId = null;
+                this.spectatingGameName = null;
+
+                // Attempt to reset controls UI state (though it might be disabled on reconnect anyway)
+                 if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+                     controls.setState('lobby'); // Attempt reset to lobby visually
+                 }
+
                 // Update UI
                  if (typeof window.updateLobbyStatus === 'function') {
-                     window.updateLobbyStatus(`Disconnected: ${reason}`);
+                     window.updateLobbyStatus(`Disconnected: ${reason}. Reconnecting...`);
                  }
                  if (typeof window.addEventLogMessage === 'function') {
-                    window.addEventLogMessage(`Disconnected from server: ${reason}`, 'error');
+                    window.addEventLogMessage(`Disconnected: ${reason}. Attempting to reconnect...`, "error");
                  }
-                alert("Disconnected from server: " + reason);
-                // Attempt to reset UI state (redundant if setReadyState(false) worked)
-                // const runButton = document.getElementById('btn-ready'); // Use correct ID
-                // const appearanceSelect = document.getElementById('robot-appearance-select');
-                // const playerNameInput = document.getElementById('playerName');
-                // if (runButton) { runButton.textContent = "Ready Up"; runButton.disabled = false; runButton.style.backgroundColor = '#4CAF50'; }
-                // if (appearanceSelect) { appearanceSelect.disabled = false; }
-                // if (playerNameInput) { playerNameInput.disabled = false; }
             });
 
             // Server assigns a unique ID to this client
@@ -2077,110 +2503,212 @@ class Network {
                 if (this.game && typeof this.game.setPlayerId === 'function') {
                     this.game.setPlayerId(id);
                 }
+                 // After getting ID, if not spectating, prompt for Ready Up
+                 if (!this.isSpectating && typeof window.updateLobbyStatus === 'function') {
+                      // Check if UI is currently in the lobby state
+                      if (typeof controls !== 'undefined' && controls.uiState === 'lobby') {
+                         window.updateLobbyStatus('Enter name & code, then Ready Up!');
+                      }
+                 }
             });
 
-            // Receives game state updates from the server during the match
-            this.socket.on('gameStateUpdate', (gameState) => {
-                if (this.game && typeof this.game.updateFromServer === 'function') {
-                     this.game.updateFromServer(gameState);
+             // --- START Spectator Event Handlers ---
+            this.socket.on('spectateStart', (data) => {
+                console.log('Received spectateStart:', data);
+                if (this.game && typeof this.game.handleSpectateStart === 'function') {
+                    this.isSpectating = true; // Set state BEFORE calling handler
+                    this.spectatingGameId = data.gameId;
+                    this.spectatingGameName = data.gameName || data.gameId; // Store name
+                    this.game.handleSpectateStart(data); // Pass game info to game handler
+                    if (typeof window.addEventLogMessage === 'function') {
+                        window.addEventLogMessage(`Started spectating game: ${this.spectatingGameName}`, 'event');
+                    }
+                } else {
+                    console.error("Game object or handleSpectateStart method not available!");
                 }
             });
 
-            // Server signals that the game is starting
+            this.socket.on('spectateGameOver', (data) => {
+                console.log('Received spectateGameOver:', data);
+                 // Check if we are actually spectating the game that ended
+                if (this.isSpectating && this.spectatingGameId === data.gameId) {
+                     if (this.game && typeof this.game.handleSpectateEnd === 'function') {
+                         this.game.handleSpectateEnd(data); // Pass winner info etc.
+                         if (typeof window.addEventLogMessage === 'function') {
+                             const endedGameName = this.spectatingGameName || data.gameId; // Use stored name
+                             window.addEventLogMessage(`Spectated game '${endedGameName}' over! Winner: ${data.winnerName || 'None'}`, 'event');
+                         }
+                     } else {
+                         console.error("Game object or handleSpectateEnd method not available!");
+                     }
+                     // Reset spectator state AFTER calling handler
+                     this.isSpectating = false;
+                     this.spectatingGameId = null;
+                     this.spectatingGameName = null;
+                 } else {
+                    console.log(`Received spectateGameOver for irrelevant game ${data.gameId}. Current spectate: ${this.spectatingGameId}. Ignoring.`);
+                 }
+            });
+            // --- END Spectator Event Handlers ---
+
+            // Receives game state updates from the server during the match OR while spectating
+            this.socket.on('gameStateUpdate', (gameState) => {
+                // Update game state whether playing or spectating
+                if (this.game && typeof this.game.updateFromServer === 'function') {
+                     // Determine the relevant game ID based on current state
+                     const relevantGameId = this.isSpectating ? this.spectatingGameId : this.game.gameId;
+                     if (relevantGameId && relevantGameId === gameState.gameId) {
+                        this.game.updateFromServer(gameState);
+                     } else {
+                         // This can happen briefly during transitions, usually safe to ignore.
+                         // console.log(`Received gameStateUpdate for irrelevant game ${gameState.gameId}`);
+                     }
+                }
+            });
+
+            // Server signals that the game is starting (for players)
             this.socket.on('gameStart', (data) => {
+                 // Ignore if spectating
+                 if (this.isSpectating) {
+                     console.log("Received gameStart while spectating, ignoring.");
+                     return;
+                 }
                  if (this.game && typeof this.game.handleGameStart === 'function') {
-                     this.game.handleGameStart(data);
+                     // State check inside handler is safer if events race
+                     this.game.handleGameStart(data); // This will update gameId and gameName
                  }
                  // Update lobby status - Game class handleGameStart should update button text now
-                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Game in progress...');
-                 // The game object should ideally handle UI state changes related to game start
-                 // if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
-                 //    controls.setReadyState(true); // Visually lock controls? Or let game.js handle?
-                 // }
+                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus(`Playing Game: ${data.gameName || data.gameId}`);
+                 if (typeof window.addEventLogMessage === 'function') {
+                     window.addEventLogMessage(`Your game '${data.gameName || data.gameId}' is starting!`, 'event');
+                 }
              });
 
-            // Server signals that the game has ended
+            // Server signals that the game has ended (for players)
              this.socket.on('gameOver', (data) => {
-                 // Game class handleGameOver should reset UI state, including ready state
-                 if (this.game && typeof this.game.handleGameOver === 'function') {
-                     this.game.handleGameOver(data);
+                 // Ignore if spectating
+                 if (this.isSpectating) {
+                     console.log("Received gameOver while spectating, ignoring (expecting spectateGameOver).");
+                     return;
                  }
-                 // Update lobby status after game over
-                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Game Over. Ready Up for another match!');
+
+                 // Check if this gameOver matches the game we *think* we are playing
+                 if (this.game && this.game.gameId === data.gameId) {
+                     if (typeof this.game.handleGameOver === 'function') {
+                         this.game.handleGameOver(data); // This should reset controls UI state
+                     }
+                     // Update lobby status after game over
+                     if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Game Over. Ready Up for another match!');
+                      if (typeof window.addEventLogMessage === 'function') {
+                         const endedGameName = this.game.gameName || data.gameId;
+                         window.addEventLogMessage(`Your game '${endedGameName}' finished! Winner: ${data.winnerName || 'None'}`, 'event');
+                     }
+                 } else {
+                      console.warn(`Received gameOver for game ${data.gameId}, but current game is ${this.game ? this.game.gameId : 'None'}. Ignoring.`);
+                 }
              });
 
             // Server reports an error in the robot's code (compilation or runtime)
             this.socket.on('codeError', (data) => {
                 console.error(`Received Code Error for Robot ${data.robotId}:`, data.message);
-                // Add error to event log
                 if (typeof window.addEventLogMessage === 'function') {
-                    window.addEventLogMessage(`Code Error (Robot ${data.robotId.substring(0,4)}...): ${data.message}`, 'error');
+                    const robotIdentifier = (data.robotId === this.playerId) ? "Your Robot" : `Robot ${data.robotId.substring(0,4)}...`;
+                    window.addEventLogMessage(`Code Error (${robotIdentifier}): ${data.message}`, 'error');
                 }
-                // Display error to the user if it's their robot
-                if (data.robotId === this.playerId) {
+                // Display error and reset UI only if it's our robot AND we are not spectating
+                if (data.robotId === this.playerId && !this.isSpectating) {
                      alert(`Your Robot Code Error:\n${data.message}\n\nYou might need to reset and fix your code.`);
-                     // Re-enable controls after a code error so they can fix and resubmit
-                     // Use the controls helper function if possible
-                     if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
-                         controls.setReadyState(false);
-                     } else { // Fallback
-                         const readyButton = document.getElementById('btn-ready');
-                         const appearanceSelect = document.getElementById('robot-appearance-select');
-                         const playerNameInput = document.getElementById('playerName');
-                         if (readyButton) { readyButton.textContent = "Ready Up"; readyButton.disabled = false; readyButton.style.backgroundColor = '#4CAF50';}
-                         if (appearanceSelect) { appearanceSelect.disabled = false; }
-                         if (playerNameInput) { playerNameInput.disabled = false; }
+                     // Reset Controls UI to lobby state
+                     if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+                         controls.setState('lobby');
                      }
                      if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Code error detected. Please fix and Ready Up again.');
                  }
             });
 
-            // Handle connection errors (e.g., server is down)
+             // Server reports a critical game error (e.g., during tick)
+             this.socket.on('gameError', (data) => {
+                 console.error("Received critical game error from server:", data);
+                 alert(`A critical error occurred in the game: ${data.message}\nThe game may have ended.`);
+                 if (typeof window.addEventLogMessage === 'function') {
+                     window.addEventLogMessage(`SERVER GAME ERROR: ${data.message}`, 'error');
+                 }
+                  // Assume game is over, reset UI state if playing (spectators handle via spectateGameOver implicitly)
+                 if (!this.isSpectating && typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+                     controls.setState('lobby'); // Reset to lobby state
+                 }
+                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Game Error Occurred. Ready Up again.');
+                  if (this.game) this.game.stop(); // Stop rendering
+             });
+
+
+            // Handle connection errors (e.g., server is down initially)
             this.socket.on('connect_error', (err) => {
                 console.error("Connection Error:", err.message, err);
                  if (typeof window.updateLobbyStatus === 'function') {
                      window.updateLobbyStatus(`Connection Failed: ${err.message}`);
                  }
                  if (typeof window.addEventLogMessage === 'function') {
-                    window.addEventLogMessage(`Connection Error: ${err.message}`, 'error');
+                    window.addEventLogMessage(`Connection Error: ${err.message}. Retrying...`, 'error');
                  }
-                alert("Failed to connect to the game server. Please ensure it's running and refresh the page.");
                 // Reset UI elements if connection fails initially
-                if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
-                     controls.setReadyState(false);
+                 if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
+                     controls.setState('lobby');
                  }
             });
 
+            // Handle failed reconnection attempts
+             this.socket.on('reconnect_failed', () => {
+                 console.error('Reconnection failed after multiple attempts.');
+                 if (typeof window.updateLobbyStatus === 'function') {
+                     window.updateLobbyStatus('Connection Failed Permanently. Please refresh.');
+                 }
+                 if (typeof window.addEventLogMessage === 'function') {
+                     window.addEventLogMessage('Could not reconnect to the server. Please refresh the page.', 'error');
+                 }
+                 alert('Failed to reconnect to the server. Please refresh the page.');
+             });
 
-            // --- Lobby/Chat Event Listeners ---
+
+            // --- Lobby/Chat/History Event Listeners ---
             this.socket.on('lobbyEvent', (data) => {
-                // Check if the global function exists before calling
                 if (data && data.message && typeof window.addEventLogMessage === 'function') {
-                    window.addEventLogMessage(data.message, data.type || 'event'); // Use type if provided by server
+                    window.addEventLogMessage(data.message, data.type || 'event');
                 }
             });
 
             this.socket.on('lobbyStatusUpdate', (data) => {
-                // Check if the global function exists before calling
-                if (data && typeof window.updateLobbyStatus === 'function') {
+                // Do not update lobby status text if playing or spectating (those modes have different status texts)
+                 // Check controls state instead of game.running directly
+                 const isIdle = typeof controls !== 'undefined' && (controls.uiState === 'lobby' || controls.uiState === 'waiting');
+
+                if (isIdle && data && typeof window.updateLobbyStatus === 'function') {
                     let statusText = `Waiting: ${data.waiting !== undefined ? data.waiting : 'N/A'}`;
                     if (data.ready !== undefined) {
-                        // Display ready count relative to required players (assuming 2)
                         statusText += ` / Ready: ${data.ready}/2`;
                     }
-                     window.updateLobbyStatus(statusText); // Update the status display
+                     window.updateLobbyStatus(statusText);
                 }
             });
 
             this.socket.on('chatUpdate', (data) => {
-                // Check if the global function exists before calling
                 if (data && data.sender && data.text && typeof window.addEventLogMessage === 'function') {
-                    // Format chat message differently in the log
-                    window.addEventLogMessage(`${data.sender}: ${data.text}`, 'chat'); // Use 'chat' type styling
+                    window.addEventLogMessage(`${data.sender}: ${data.text}`, 'chat');
                 }
             });
-            // --- End Lobby/Chat Listeners ---
 
+            // --- Game History Listener ---
+            this.socket.on('gameHistoryUpdate', (historyData) => {
+                // console.log('Received game history update:', historyData); // Debug log
+                if (typeof window.updateGameHistory === 'function') {
+                    window.updateGameHistory(historyData);
+                } else {
+                    console.warn("updateGameHistory function not found!");
+                }
+            });
+            // --- End Game History Listener ---
+
+            // --- End Lobby/Chat/History Listeners ---
 
         } catch (error) {
              console.error("Error initializing Socket.IO connection:", error);
@@ -2194,47 +2722,66 @@ class Network {
     /**
      * Sends the player's robot code, chosen appearance, and name to the server.
      * Called by the Controls class when the 'Ready Up' button is clicked.
-     * The server handles setting the player's ready state upon receiving this.
      * @param {string} code - The robot AI code written by the player.
      * @param {string} appearance - The identifier for the chosen robot appearance.
      * @param {string} name - The player's chosen name.
      */
     sendCodeAndAppearance(code, appearance, name) {
-        // Ensure the socket exists and is connected before attempting to send
-        if (!this.socket || !this.socket.connected) {
-             console.error("Socket not available or not connected. Cannot send player data.");
-             alert("Not connected to server. Please check connection and try again.");
-             // Reset button state locally if send fails
-             if (typeof controls !== 'undefined' && typeof controls.setReadyState === 'function') {
-                controls.setReadyState(false);
+        // This check relies on the controls state machine now
+        // Allow if state is 'lobby'
+        const canSend = typeof controls !== 'undefined' && controls.uiState === 'lobby';
+
+        if (!canSend) {
+             console.warn("Attempted to send player data while not in 'lobby' state. Ignoring.");
+             if(typeof window.addEventLogMessage === 'function') {
+                 window.addEventLogMessage("Cannot ready up now.", "error");
              }
              return;
         }
 
+        // Ensure the socket exists and is connected
+        if (!this.socket || !this.socket.connected) {
+             console.error("Socket not available or not connected. Cannot send player data.");
+             alert("Not connected to server. Please check connection and try again.");
+             // Controls state should revert via disconnect/connect_error handlers if needed
+             return;
+        }
+
         console.log(`Sending player data to server: { name: '${name}', appearance: '${appearance}', code: ... }`);
-        // Emit a 'submitPlayerData' event with an object containing all data
         this.socket.emit('submitPlayerData', {
              code: code,
              appearance: appearance,
-             name: name // Include the name field
+             name: name
         });
     }
 
     /**
      * Sends a signal to the server indicating the player is no longer ready.
-     * Called by the Controls class when the 'Unready' button is clicked or state changes.
+     * Called by the Controls class when the 'Unready' button is clicked.
      */
     sendUnreadySignal() {
+         // This check relies on the controls state machine now
+         // Allow if state is 'waiting'
+         const canSend = typeof controls !== 'undefined' && controls.uiState === 'waiting';
+
+         if (!canSend) {
+             console.warn("Attempted to send unready signal while not in 'waiting' state. Ignoring.");
+              if(typeof window.addEventLogMessage === 'function') {
+                 window.addEventLogMessage("Cannot unready now.", "error");
+             }
+             return;
+         }
+
         if (!this.socket || !this.socket.connected) {
             console.error("Socket not connected. Cannot send unready signal.");
-            // Optionally add message to event log
             if(typeof window.addEventLogMessage === 'function') {
                 window.addEventLogMessage("Cannot unready: Not connected.", "error");
             }
+            // Controls state should revert via disconnect/connect_error handlers if needed
             return;
         }
         console.log("Sending 'playerUnready' signal to server.");
-        this.socket.emit('playerUnready'); // Emit the specific event
+        this.socket.emit('playerUnready');
     }
 
 
@@ -2287,7 +2834,7 @@ class Network {
             <h1>Robot Wars</h1>
             <nav>
                 <!-- Player Name Input Field -->
-                <input type="text" id="playerName" placeholder="Enter Name" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: #e0e0e0; margin-right: 5px;">
+                <input type="text" id="playerName" placeholder="Enter Name" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: #e0e0e0; margin-right: 5px;" maxlength="24"> <!-- Added maxlength -->
                 <!-- End Player Name Input -->
 
                 <select id="robot-appearance-select" title="Choose Robot Appearance">
@@ -2295,9 +2842,8 @@ class Network {
                     <option value="tank">Tank Bot</option>
                     <option value="spike">Spike Bot</option>
                     <option value="tri">Tri Bot</option>
-                    <!-- Add more options later -->
                 </select>
-                <button id="btn-ready">Ready Up</button>
+                <button id="btn-ready">Ready Up</button> <!-- State managed by controls.js -->
                 <button id="btn-reset">Reset</button>
                 <select id="sample-code">
                     <option value="">Load Sample Code...</option>
@@ -2314,8 +2860,9 @@ class Network {
                 <canvas id="arena" width="600" height="600"></canvas>
                 <div class="stats-panel">
                     <h3>Robot Stats</h3>
+                    <!-- Dashboard elements (title, list) are created/managed by dashboard.js -->
                     <div id="robot-stats">
-                        <!-- Stats will be populated by dashboard.js -->
+                        <!-- Initial placeholder content might be added by dashboard.js -->
                     </div>
                 </div>
             </div>
@@ -2329,55 +2876,64 @@ class Network {
                         <li><code>drive(direction, speed)</code> - Move your robot</li>
                         <li><code>scan(angle, resolution)</code> - Scan for enemies</li>
                         <li><code>fire(direction, power)</code> - Fire a missile</li>
-                        <li><code>damage()</code> - Get current damage level</li>
-                        <!-- Add new API methods if any -->
+                        <li><code>damage()</code> - Get current damage level (0-100)</li>
                         <li><code>getX()</code> - Get current X coordinate</li>
                         <li><code>getY()</code> - Get current Y coordinate</li>
-                        <li><code>getDirection()</code> - Get current direction</li>
+                        <li><code>getDirection()</code> - Get current direction (degrees)</li>
                     </ul>
                 </div>
             </div>
         </main>
 
-        <!-- Placeholder for Lobby/Chat elements - Add these next -->
-        <div id="lobby-area" style="margin-top: 20px; background: #333; padding: 15px; border-radius: 8px;">
-             <h3 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Lobby Status</h3>
-             <div id="lobby-status" style="margin-bottom: 10px;">Connecting...</div>
-             <div id="event-log" style="height: 150px; overflow-y: scroll; border: 1px solid #555; margin-bottom: 10px; padding: 5px; background: #222; font-size: 14px; font-family: 'VT323', monospace;">Event Log Loading...</div>
-             <div id="chat-area" style="display: flex; gap: 5px;">
-                 <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;">
-                 <button id="send-chat" style="background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'VT323', monospace; font-size: 15px;">Send</button>
+        <!-- Lobby Area - Using CSS Grid -->
+        <div id="lobby-area"> <!-- style is now in main.css -->
+             <div> <!-- Column 1: Status, Log, Chat -->
+                 <h3 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Lobby Status</h3>
+                 <div id="lobby-status" style="margin-bottom: 10px;">Connecting...</div>
+                 <div id="event-log" style="height: 150px; overflow-y: scroll; border: 1px solid #555; margin-bottom: 10px; padding: 5px; background: #222; font-size: 14px; font-family: 'VT323', monospace;">Event Log Loading...</div>
+                 <div id="chat-area" style="display: flex; gap: 5px;">
+                     <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;" maxlength="100"> <!-- Added maxlength -->
+                     <button id="send-chat" style="background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'VT323', monospace; font-size: 15px;">Send</button>
+                 </div>
+             </div>
+
+             <div> <!-- Column 2: Game History -->
+                 <div id="game-history-log"> <!-- Outer container for styling/header -->
+                     <h4 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Recent Game Results</h4>
+                     <!-- The actual list element that history.js targets -->
+                     <div id="game-history-list" style="/* Styles are in main.css */">
+                         <!-- History will appear here -->
+                         <div>No games finished yet.</div>
+                     </div>
+                 </div>
              </div>
         </div>
-        <!-- End Lobby/Chat elements -->
+        <!-- End Lobby Area -->
 
     </div> <!-- End .container -->
 
-    <!-- Socket.IO -->
+    <!-- Socket.IO Client Library -->
     <script src="/socket.io/socket.io.js"></script>
-    <!-- Other Libraries -->
+    <!-- CodeMirror Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
 
-    <!-- Game Engine -->
+    <!-- Game Engine Scripts -->
     <script src="js/engine/arena.js"></script>
-    <!-- Note: engine/robot.js, interpreter.js, collision.js are likely unused on client now -->
-    <!-- <script src="js/engine/robot.js"></script> -->
-    <!-- <script src="js/engine/interpreter.js"></script> -->
-    <!-- <script src="js/engine/collision.js"></script> -->
     <script src="js/engine/game.js"></script>
 
-    <!-- UI Components -->
+    <!-- UI Component Scripts -->
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
     <script src="js/ui/controls.js"></script>
     <script src="js/ui/lobby.js"></script>
+    <script src="js/ui/history.js"></script> <!-- History script added -->
 
-    <!-- Network Handler -->
+    <!-- Network Handler Script -->
     <script src="js/network.js"></script>
 
-    <!-- Main Application -->
-    <script src="js/main.js"></script> <!-- This should be last -->
+    <!-- Main Application Entry Point -->
+    <script src="js/main.js"></script> <!-- This should always be the last script -->
 </body>
 </html>
 ```
@@ -2398,6 +2954,7 @@ const ARENA_HEIGHT = 600; // Match canvas size
 /**
  * Represents a single active game match on the server.
  * Manages the game state, robots, interpreter, collisions, game loop,
+ * broadcasts state to players and spectators, // <-- Added spectator mention
  * and notifies the GameManager upon game completion via a callback.
  */
 class GameInstance {
@@ -2406,9 +2963,10 @@ class GameInstance {
      * @param {string} gameId - A unique identifier for this game.
      * @param {SocketIO.Server} io - The main Socket.IO server instance.
      * @param {Array<{socket: SocketIO.Socket, code: string, appearance: string, name: string, isReady: boolean}>} playersData - Array of player data.
-     * @param {Function} gameOverCallback - Function provided by GameManager to call when the game ends. Expects winnerData object.
+     * @param {Function} gameOverCallback - Function provided by GameManager to call when the game ends. Expects (gameId, winnerData) object.
+     * @param {string} gameName - Thematic name for the game (Added for Phase 3)
      */
-    constructor(gameId, io, playersData, gameOverCallback) { // Added gameOverCallback parameter
+    constructor(gameId, io, playersData, gameOverCallback, gameName = '') { // Added gameName
         this.gameId = gameId;
         this.io = io; // Socket.IO server instance for broadcasting
         this.players = new Map(); // Map: socket.id -> { socket, robot, code, appearance, name }
@@ -2422,8 +2980,13 @@ class GameInstance {
         this.explosionsToBroadcast = [];
         // Store the callback function provided by GameManager
         this.gameOverCallback = gameOverCallback;
+        // Store game name (added for Phase 3)
+        this.gameName = gameName || `Game ${gameId}`; // Use provided name or generate default
+        // Define the spectator room name for this instance
+        this.spectatorRoom = `spectator-${this.gameId}`;
 
-        console.log(`[${gameId}] Initializing Game Instance...`);
+
+        console.log(`[${this.gameId} - '${this.gameName}'] Initializing Game Instance...`); // Added name to log
 
         // Initialize players and their robots based on received data
         playersData.forEach((playerData, index) => {
@@ -2453,25 +3016,25 @@ class GameInstance {
             // Store name in the separate map for quick lookups
             this.playerNames.set(playerData.socket.id, playerData.name);
 
-            console.log(`[${gameId}] Added player ${playerData.name} (${playerData.socket.id}) (Appearance: ${playerData.appearance}) with Robot ${robot.id}`);
+            console.log(`[${this.gameId} - '${this.gameName}'] Added player ${playerData.name} (${playerData.socket.id}) (Appearance: ${playerData.appearance}) with Robot ${robot.id}`);
 
             // Add the player's socket to the dedicated Socket.IO room for this game
             playerData.socket.join(this.gameId);
-            console.log(`[${gameId}] Player ${playerData.name} joined Socket.IO room.`);
+            console.log(`[${this.gameId} - '${this.gameName}'] Player ${playerData.name} joined Socket.IO room.`);
         });
 
         // Initialize the interpreter AFTER all robots and player data are set up
         // Pass the players map which now includes the name for potential use in error messages etc.
         this.interpreter.initialize(this.robots, this.players);
 
-        console.log(`[${gameId}] Game Instance Initialization complete.`);
+        console.log(`[${this.gameId} - '${this.gameName}'] Game Instance Initialization complete.`);
     }
 
     /**
      * Starts the main game loop interval.
      */
     startGameLoop() {
-        console.log(`[${this.gameId}] Starting game loop (Tick Rate: ${TICK_RATE}/s).`);
+        console.log(`[${this.gameId} - '${this.gameName}'] Starting game loop (Tick Rate: ${TICK_RATE}/s).`);
         this.lastTickTime = Date.now();
 
         if (this.gameLoopInterval) clearInterval(this.gameLoopInterval);
@@ -2490,12 +3053,13 @@ class GameInstance {
      * Stops the main game loop interval and performs cleanup.
      */
     stopGameLoop() {
-        console.log(`[${this.gameId}] Stopping game loop.`);
+        console.log(`[${this.gameId} - '${this.gameName}'] Stopping game loop.`);
         if (this.gameLoopInterval) {
             clearInterval(this.gameLoopInterval);
             this.gameLoopInterval = null;
         }
         this.interpreter.stop(); // Clean up interpreter state
+        // Note: Spectator room cleanup will happen in GameManager when the instance is removed
     }
 
     /**
@@ -2512,11 +3076,12 @@ class GameInstance {
 
             // 2. Update Robot and Missile Physics/Movement
             this.robots.forEach(robot => {
+                // Pass arena dimensions to robot update
                 robot.update(deltaTime, ARENA_WIDTH, ARENA_HEIGHT);
             });
 
             // 3. Check for and Resolve Collisions
-            this.collisionSystem.checkAllCollisions();
+            this.collisionSystem.checkAllCollisions(); // Needs access to ARENA dimensions if boundary checks move there
 
             // 4. Check for Game Over Condition
             if (this.checkGameOver()) {
@@ -2527,20 +3092,26 @@ class GameInstance {
             // --- State Broadcasting ---
             // 5. Gather the current state of all entities for clients.
             const gameState = this.getGameState();
-            // 6. Broadcast the state to all clients in this game's room.
-            this.io.to(this.gameId).emit('gameStateUpdate', gameState);
+
+            // 6. Broadcast the state to ALL clients in this game's room AND the spectator room.
+            this.io.to(this.gameId).to(this.spectatorRoom).emit('gameStateUpdate', gameState);
 
         } catch (error) {
-             console.error(`[${this.gameId}] CRITICAL ERROR during tick:`, error);
+             console.error(`[${this.gameId} - '${this.gameName}'] CRITICAL ERROR during tick:`, error);
              // Consider stopping the game or notifying players
-             // this.stopGameLoop();
-             // this.io.to(this.gameId).emit('gameError', { message: 'Critical server error during game tick.' });
+             this.stopGameLoop(); // Stop loop on critical error
+             // Notify players and spectators of the error
+             this.io.to(this.gameId).to(this.spectatorRoom).emit('gameError', { message: `Critical server error during game tick for '${this.gameName}'. Game aborted.` });
+             // Manually trigger game over callback with no winner due to error
+             if (typeof this.gameOverCallback === 'function') {
+                 this.gameOverCallback(this.gameId, { winnerId: null, winnerName: 'None', reason: 'Server Error' });
+             }
         }
     }
 
     /**
      * Checks if the game has reached an end condition (e.g., only one robot left alive).
-     * If the game is over, it stops the loop, notifies clients in the game room,
+     * If the game is over, it stops the loop, notifies clients (players AND spectators),
      * and calls the GameManager's game over callback.
      * @returns {boolean} True if the game is over, false otherwise.
      */
@@ -2554,25 +3125,32 @@ class GameInstance {
 
             // Prepare winner data object
             const winnerData = {
+                gameId: this.gameId, // Add gameId for context on client/server
                 winnerId: winnerRobot ? winnerRobot.id : null,
                 winnerName: winnerRobot ? winnerRobot.name : 'None', // Get name from robot instance
                 reason: winnerRobot ? "Last robot standing!" : "Mutual Destruction!"
             };
 
-            console.log(`[${this.gameId}] Game Over detected. Reason: ${winnerData.reason}. Winner: ${winnerData.winnerName} (${winnerData.winnerId || 'N/A'})`);
+            console.log(`[${this.gameId} - '${this.gameName}'] Game Over detected. Reason: ${winnerData.reason}. Winner: ${winnerData.winnerName} (${winnerData.winnerId || 'N/A'})`);
 
-            // Notify clients *in this game room* directly about the game end
+            // Notify players *in the game room* about the game end
             this.io.to(this.gameId).emit('gameOver', winnerData);
 
+            // Notify spectators *in the spectator room* about the game end
+            this.io.to(this.spectatorRoom).emit('spectateGameOver', winnerData);
+            console.log(`[${this.gameId} - '${this.gameName}'] Notified spectator room ${this.spectatorRoom} of game over.`);
+
+            // Stop the simulation loop for this game instance.
+            this.stopGameLoop();
+
             // Call the GameManager callback to handle lobby events etc.
+            // Pass gameId along with winnerData for context in GameManager
             if (typeof this.gameOverCallback === 'function') {
-                this.gameOverCallback(winnerData); // Notify GameManager
+                this.gameOverCallback(this.gameId, winnerData); // Pass gameId now
             } else {
                 console.warn(`[${this.gameId}] gameOverCallback is not a function!`);
             }
 
-            // Stop the simulation loop for this game instance.
-            this.stopGameLoop();
             return true; // Game is over
         }
         return false; // Game continues
@@ -2593,27 +3171,28 @@ class GameInstance {
             size: size,
         };
         this.explosionsToBroadcast.push(explosionData);
+        // Send explosion data immediately? Or bundle with gameStateUpdate?
+        // Bundling is generally more efficient. Already handled in getGameState.
     }
 
     /**
      * Gathers the current state of the game (robots, missiles, effects)
      * into a serializable object suitable for broadcasting to clients via Socket.IO.
+     * Includes the gameName. // <-- Added gameName
      * @returns {object} The current game state snapshot.
      */
     getGameState() {
         // Collect all active missiles from all robots' lists
         const activeMissiles = [];
         this.robots.forEach(robot => {
-            // Only include missiles if the robot itself is considered active/part of state
-            // Or maybe always include them until they naturally expire/hit? Depends on rules.
-            // if (robot.isAlive) { // Optional: only include missiles from alive robots?
-                activeMissiles.push(...robot.missiles);
-            // }
+            // Keep collecting missiles even if robot just died, until they hit/expire
+            activeMissiles.push(...robot.missiles);
         });
 
         // Construct the state object
         const state = {
             gameId: this.gameId,
+            gameName: this.gameName, // Include game name in state updates
             // Map robot instances to plain data objects, including name
             robots: this.robots.map(robot => ({
                 id: robot.id,
@@ -2631,15 +3210,15 @@ class GameInstance {
                 id: missile.id,
                 x: missile.x,
                 y: missile.y,
-                radius: missile.radius
-                // ownerId: missile.ownerId // Optional: include owner if needed client-side
+                radius: missile.radius,
+                ownerId: missile.ownerId // Include owner ID
             })),
             // Include any explosions triggered during this tick
             explosions: this.explosionsToBroadcast,
             timestamp: Date.now() // Include a server timestamp
         };
 
-        // Note: Clearing explosionsToBroadcast moved to start of tick()
+        // Clearing explosionsToBroadcast moved to start of tick()
 
         return state;
     }
@@ -2716,7 +3295,7 @@ class GameInstance {
     removePlayer(socketId) {
         // Use the playerNames map for logging
         const playerName = this.playerNames.get(socketId) || socketId.substring(0,4)+'...';
-        console.log(`[${this.gameId}] Handling removal of player ${playerName} (${socketId}).`);
+        console.log(`[${this.gameId} - '${this.gameName}'] Handling removal of player ${playerName} (${socketId}).`);
 
         const playerData = this.players.get(socketId);
         if (playerData) {
@@ -2725,13 +3304,14 @@ class GameInstance {
                  playerData.robot.isAlive = false;
                  playerData.robot.speed = 0; // Stop movement
                  playerData.robot.targetSpeed = 0;
-                 console.log(`[${this.gameId}] Marked robot for ${playerName} as inactive.`);
+                 console.log(`[${this.gameId} - '${this.gameName}'] Marked robot for ${playerName} as inactive.`);
             }
 
             // Have the socket leave the Socket.IO room for this game
-            if (playerData.socket) {
-                 playerData.socket.leave(this.gameId);
-            }
+            // This happens automatically on disconnect, but leave() is useful if removing manually
+            // if (playerData.socket) {
+            //      playerData.socket.leave(this.gameId);
+            // }
             // Remove player data from the active players map for this game
             this.players.delete(socketId);
             // Remove from name map
@@ -2741,7 +3321,7 @@ class GameInstance {
             // (e.g., if only one player remains)
             this.checkGameOver();
         } else {
-             console.warn(`[${this.gameId}] Tried to remove player ${socketId}, but they were not found in the player map.`);
+             console.warn(`[${this.gameId} - '${this.gameName}'] Tried to remove player ${socketId}, but they were not found in the player map.`);
         }
     }
 
@@ -2754,16 +3334,24 @@ class GameInstance {
         return this.players.size === 0;
     }
 
-    /**
-     * Placeholder for queueing actions received directly from clients.
-     * Not used in the current server-side interpreter model.
-     * @param {string} socketId - The ID of the player sending the action.
-     * @param {object} action - The action object sent by the client.
-     */
+    // Placeholder for queueAction - remains unchanged
     queueAction(socketId, action) {
         const playerName = this.playerNames.get(socketId) || socketId;
         console.warn(`[${this.gameId}] queueAction called but not implemented for player ${playerName}. Action:`, action);
     }
+
+    // --- New method for cleanup ---
+    /**
+     * Cleans up resources associated with this game instance, specifically the spectator room.
+     * Called by GameManager before deleting the instance.
+     */
+    cleanup() {
+        console.log(`[${this.gameId} - '${this.gameName}'] Cleaning up instance. Making sockets leave spectator room: ${this.spectatorRoom}`);
+        // Force any remaining sockets out of the spectator room
+        // This helps ensure spectators disconnected uncleanly are removed from the room state
+        this.io.socketsLeave(this.spectatorRoom);
+    }
+
 }
 
 module.exports = GameInstance;
@@ -2778,6 +3366,9 @@ const GameInstance = require('./game-instance'); // Manages a single game match
 /**
  * Manages the overall flow of players joining, waiting, and starting games.
  * Handles storing player data (including names, readiness), matchmaking,
+ * game naming, tracking active/finished games, cleaning up old instances,
+ * transitioning lobby players to spectators, moving participants back to lobby, // <-- Added participant move
+ * broadcasting game history, // <-- Added history broadcast
  * and broadcasting lobby events and status updates.
  */
 class GameManager {
@@ -2806,27 +3397,53 @@ class GameManager {
         // Simple counter to generate unique game IDs.
         this.gameIdCounter = 0;
 
+        // --- Added for Game Tracking (Phase 3, P2) ---
+        // Optional: Stores recently completed games (volatile)
+        // Key: gameId, Value: {name, winnerName, players: [{id, name}], endTime}
+        this.recentlyCompletedGames = new Map();
+        this.maxCompletedGames = 10; // Limit history size
+        // --- End Game Tracking ---
+
         console.log("[GameManager] Initialized.");
     }
 
     /**
      * Adds a newly connected player to the waiting list with default values.
-     * Called by socket-handler upon connection.
+     * Called by socket-handler upon connection *if no games are active*,
+     * OR when moving spectators/participants back to lobby state. // <-- Added context
      * @param {SocketIO.Socket} socket - The socket object for the connected player.
      */
     addPlayer(socket) {
-        const initialName = `Player_${socket.id.substring(0, 4)}`;
-        console.log(`[GameManager] Player ${socket.id} (${initialName}) connected and is waiting.`);
+        // Avoid adding if already pending (e.g., multiple moves during cleanup)
+        if (this.pendingPlayers.has(socket.id)) {
+            // console.log(`[GameManager] Player ${socket.id} is already pending. Skipping add.`); // Optional Log
+            return;
+        }
+        // Try to retain existing name if available (e.g. from Controls state or previous game)
+        // Keep simple for now: assign default or last known name if easy.
+        const initialName = `Player_${socket.id.substring(0, 4)}`; // Default for now
+        console.log(`[GameManager] Adding player ${socket.id} (${initialName}) back to pending list.`);
         // Add player to the pending list with default name and not ready status.
         this.pendingPlayers.set(socket.id, {
             socket: socket,
-            code: null,
-            appearance: 'default',
-            name: initialName, // Assign initial default name
-            isReady: false // Player is not ready initially
+            code: null, // Code needs resubmission
+            appearance: 'default', // Appearance might need reset client-side or resubmission
+            name: initialName, // Use default - client should retain and resubmit on ready
+            isReady: false // Player is NOT ready initially when returning to lobby
         });
-        // Note: lobbyEvent ('Player connected') and broadcastLobbyStatus() are called from socket-handler immediately after addPlayer
     }
+
+    /**
+     * Generates a unique, thematic name for a new game.
+     * @returns {string} A generated game name (e.g., "Dimension C-137").
+     */
+    generateGameName() {
+        // Simple sequential naming, can be expanded later
+        const baseId = 137 + this.gameIdCounter; // R&M style starting point
+        return `Sector Z-${baseId}`;
+        // Alternative: `Quadrant ${String.fromCharCode(65 + (this.gameIdCounter % 26))}-${Math.floor(this.gameIdCounter / 26) + 1}`
+    }
+
 
     /**
      * Retrieves the name of a player based on their socket ID.
@@ -2856,9 +3473,7 @@ class GameManager {
             }
         }
 
-        // Player not found or name missing
-        // console.warn(`[GameManager] Failed to find name for socket ID: ${socketId}`); // Optional: Reduce noise
-        return null;
+        return null; // Player not found or name missing
     }
 
 
@@ -2875,8 +3490,10 @@ class GameManager {
         const playerData = this.pendingPlayers.get(socketId);
 
         if (!playerData) {
-            console.log(`[GameManager] Received data from unknown or already in-game player: ${socketId}`);
-            return; // Ignore if player isn't in the pending list
+            // This check now correctly prevents submission if player is in playerGameMap OR not in pendingPlayers
+            console.log(`[GameManager] Received data from non-pending player: ${socketId}. Ignoring.`);
+            // Server should have sent error message via socket-handler check
+            return;
         }
 
         // Update player data *before* emitting events using the potentially new name
@@ -2893,7 +3510,9 @@ class GameManager {
         // Attempt to start match immediately after player readies up
         this._tryStartMatch();
 
-        // Note: broadcastLobbyStatus() is called from socket-handler after this method completes
+        // Broadcast lobby status after attempting match start
+        // (Moved from socket-handler to ensure it happens after _tryStartMatch completes)
+        this.broadcastLobbyStatus();
     }
 
     /**
@@ -2913,16 +3532,16 @@ class GameManager {
                 // Emit lobby event about the change
                 this.io.emit('lobbyEvent', { message: `Player ${playerData.name} is ${isReady ? 'now ready' : 'no longer ready'}.` });
 
-                // If player becomes ready (e.g., future "ready" button without code submit), try to start match
+                // If player becomes ready, try to start match
                 if (isReady) {
                     this._tryStartMatch();
                 }
-
                  // Broadcast updated lobby status regardless of state change direction
                  this.broadcastLobbyStatus();
             }
         } else {
-            console.warn(`[GameManager] Tried to set ready status for unknown pending player ${socketId}`);
+            // This might happen if player unreadies exactly as game starts/ends, ignore.
+            console.warn(`[GameManager] Tried to set ready status for unknown pending player ${socketId}. Ignoring.`);
         }
     }
 
@@ -2940,96 +3559,236 @@ class GameManager {
         if (readyPlayers.length >= requiredPlayers) {
             console.log(`[GameManager] ${readyPlayers.length}/${requiredPlayers} players ready. Starting new game...`);
 
-            // Select the players for the new game (e.g., take the first N ready players found)
+            // Select the players for the new game
             const playersForGame = readyPlayers.slice(0, requiredPlayers);
 
             // Remove these selected players from the pending list *before* creating the game instance
             playersForGame.forEach(p => this.pendingPlayers.delete(p.socket.id));
 
-            // Create and start the new game instance
-            this.createGame(playersForGame); // Pass the array of player data objects
+            // Create and start the new game instance (handles moving others to spectate)
+            this.createGame(playersForGame);
+
+            // Broadcast the new lobby status (pending list should now be smaller or empty)
+            // (Moved broadcast call to end of createGame and handlePlayerCode to ensure it runs after state changes)
         } else {
             // Not enough players ready, just log status
-            console.log(`[GameManager] Waiting for more players. ${readyPlayers.length}/${requiredPlayers} ready.`);
-            // Status will be updated via broadcastLobbyStatus called from socket-handler or setPlayerReadyStatus
+            // console.log(`[GameManager] Waiting for more players. ${readyPlayers.length}/${requiredPlayers} ready.`); // Optional log
         }
     }
 
     /**
      * Creates a new GameInstance, adds it to the active games list,
-     * maps players to the game, starts the game loop, and emits lobby event.
+     * maps players to the game, starts the game loop, transitions remaining lobby players
+     * to spectators, emits lobby events, and broadcasts lobby status.
      * @param {Array<{socket: SocketIO.Socket, code: string, appearance: string, name: string, isReady: boolean}>} playersData - Array of player data objects for the new game.
      */
     createGame(playersData) {
         const gameId = `game-${this.gameIdCounter++}`;
+        const gameName = this.generateGameName();
         const playerInfo = playersData.map(p => `${p.name}(${p.socket.id.substring(0,4)})`).join(', ');
-        console.log(`[GameManager] Creating game ${gameId} for players: ${playerInfo}`);
+        console.log(`[GameManager] Creating game ${gameId} ('${gameName}') for players: ${playerInfo}`);
 
-        // Emit Lobby Event: Game Starting
         const playerNames = playersData.map(p => p.name).join(' vs ');
-        this.io.emit('lobbyEvent', { message: `Game starting: ${playerNames}!` });
+        this.io.emit('lobbyEvent', { message: `Game '${gameName}' starting: ${playerNames}!` });
+
+        let gameInstance;
 
         try {
-            // Create the GameInstance, passing the necessary data and the gameOver callback method reference
-            const gameInstance = new GameInstance(gameId, this.io, playersData, (winnerData) => {
-                this.handleGameOverEvent(winnerData);
-            });
+            // Create the GameInstance
+            gameInstance = new GameInstance(
+                gameId, this.io, playersData,
+                (endedGameId, winnerData) => { this.handleGameOverEvent(endedGameId, winnerData); },
+                gameName
+            );
 
             // Store the active game instance
             this.activeGames.set(gameId, gameInstance);
 
-            // Map each player's socket ID to this game ID and notify them individually
+            // Map participants to the game and notify them
             playersData.forEach(player => {
                 this.playerGameMap.set(player.socket.id, gameId);
-
-                // Notify the client that their specific game is starting
-                player.socket.emit('gameStart', {
-                    gameId: gameId,
-                    players: playersData.map(p => ({ // Send info about all players in this match
-                        id: p.socket.id,
-                        name: p.name,
-                        appearance: p.appearance
-                     }))
-                });
-                console.log(`[GameManager] Notified player ${player.name} that game ${gameId} is starting.`);
+                 if (player.socket.connected) { // Check connection before emitting
+                     player.socket.emit('gameStart', {
+                         gameId: gameId, gameName: gameName,
+                         players: playersData.map(p => ({ id: p.socket.id, name: p.name, appearance: p.appearance }))
+                     });
+                     console.log(`[GameManager] Notified player ${player.name} that game ${gameId} ('${gameName}') is starting.`);
+                 } else {
+                     console.warn(`[GameManager] Player ${player.name} disconnected before gameStart emit.`);
+                 }
             });
+
+            // --- START: Transition remaining lobby players to spectators ---
+            const spectatorRoom = `spectator-${gameId}`;
+            // IMPORTANT: Create a *copy* of the values before iterating and modifying the map
+            const remainingPendingPlayers = Array.from(this.pendingPlayers.values());
+
+            if (remainingPendingPlayers.length > 0) {
+                console.log(`[GameManager] Moving ${remainingPendingPlayers.length} remaining pending players to spectate game ${gameId} ('${gameName}').`);
+                remainingPendingPlayers.forEach(pendingPlayer => {
+                    const spectatorSocket = pendingPlayer.socket;
+                    const spectatorId = spectatorSocket.id;
+                    const spectatorName = pendingPlayer.name;
+
+                    // Double-check if the player still exists in pendingPlayers before modifying
+                    if (this.pendingPlayers.has(spectatorId)) {
+                        if (spectatorSocket.connected) {
+                             spectatorSocket.join(spectatorRoom);
+                             spectatorSocket.emit('spectateStart', { gameId: gameId, gameName: gameName });
+                             this.pendingPlayers.delete(spectatorId); // Remove AFTER emitting/joining
+                             console.log(`[GameManager] Moved pending player ${spectatorName} (${spectatorId}) to spectate.`);
+                        } else {
+                             console.log(`[GameManager] Pending player ${spectatorName} (${spectatorId}) disconnected before spectate move. Removing.`);
+                             this.pendingPlayers.delete(spectatorId);
+                        }
+                    } else {
+                         console.log(`[GameManager] Player ${spectatorName} (${spectatorId}) no longer pending. Skipping spectate move.`);
+                    }
+                });
+            }
+            // --- END: Transition remaining lobby players ---
 
             // Start the simulation loop for the new game instance
             gameInstance.startGameLoop();
 
+            // Broadcast lobby status AFTER game is created and players/spectators moved
+            this.broadcastLobbyStatus();
+
         } catch (error) {
-            console.error(`[GameManager] Error creating game ${gameId}:`, error);
-            // Emit Lobby Event: Game Creation Failed
-            this.io.emit('lobbyEvent', { message: `Failed to start game for ${playerInfo}. Please try again.`, type: 'error' }); // Add type for styling
-            // Handle game creation error: Put players back in pending, mark as not ready
+            console.error(`[GameManager] Error creating game ${gameId} ('${gameName}'):`, error);
+            this.io.emit('lobbyEvent', { message: `Failed to start game '${gameName}' for ${playerInfo}. Please try again.`, type: 'error' });
+            // Put original players back in pending if game creation failed
             playersData.forEach(player => {
-                 player.isReady = false; // Ensure they aren't immediately picked again if error was transient
-                 this.pendingPlayers.set(player.socket.id, player); // Put back in the queue
-                 // Notify player individually about the error
-                 player.socket.emit('gameError', { message: "Failed to create game instance. Please Ready Up again." });
+                 player.isReady = false; // Mark as not ready
+                 this.addPlayer(player.socket); // Add back to pending list safely
+                 if(player.socket.connected) {
+                    player.socket.emit('gameError', { message: `Failed to create game instance '${gameName}'. Please Ready Up again.` });
+                 }
             });
-             // Broadcast updated lobby status after failed game creation and putting players back
-             this.broadcastLobbyStatus();
+            // Clean up partially created game if needed
+            if (this.activeGames.has(gameId)) { this.activeGames.delete(gameId); }
+            playersData.forEach(player => { this.playerGameMap.delete(player.socket.id); });
+            // Broadcast lobby status after failure handling
+            this.broadcastLobbyStatus();
         }
-    }
+    } // End createGame
 
     /**
      * Handles the game over event triggered by a GameInstance callback.
-     * Emits a lobby event announcing the winner.
+     * Emits lobby events, moves spectators AND participants back to the lobby,
+     * cleans up player mapping, removes the game instance, logs the result,
+     * and broadcasts the updated game history. // <-- Added history broadcast
+     * @param {string} gameId - The ID of the game that just ended.
      * @param {object} winnerData - Object containing winner details { winnerId, winnerName, reason }.
      */
-    handleGameOverEvent(winnerData) {
+    async handleGameOverEvent(gameId, winnerData) {
+        const gameInstance = this.activeGames.get(gameId);
+        const gameName = gameInstance ? gameInstance.gameName : `Game ${gameId}`;
+
         const winnerName = winnerData.winnerName || 'No one';
         const reason = winnerData.reason || 'Match ended.';
-        console.log(`[GameManager] Received game over event. Winner: ${winnerName}`);
-        // Broadcast game over message to everyone in the lobby
-        this.io.emit('lobbyEvent', { message: `Game over! Winner: ${winnerName}. (${reason})` });
-        // Lobby status automatically updates as players disconnect or re-ready for the next game
+        console.log(`[GameManager] Received game over event for ${gameId} ('${gameName}'). Winner: ${winnerName}`);
+
+        this.io.emit('lobbyEvent', { message: `Game '${gameName}' over! Winner: ${winnerName}. (${reason})` });
+
+        if (!gameInstance) {
+            console.warn(`[GameManager] handleGameOverEvent called for ${gameId}, but instance not found. Skipping cleanup.`);
+            this.broadcastLobbyStatus();
+            return;
+        }
+
+        // --- Move Spectators Back to Lobby ---
+        const spectatorRoom = `spectator-${gameId}`;
+        try {
+            const spectatorSockets = await this.io.in(spectatorRoom).fetchSockets();
+            console.log(`[GameManager] Found ${spectatorSockets.length} spectators for game ${gameId}. Moving to lobby.`);
+            spectatorSockets.forEach(spectatorSocket => {
+                if (spectatorSocket.connected) {
+                    console.log(`[GameManager] Moving spectator ${spectatorSocket.id} from room ${spectatorRoom} back to lobby.`);
+                    spectatorSocket.leave(spectatorRoom); // Leave room first
+                    this.addPlayer(spectatorSocket);    // Then add to pending safely
+                } else {
+                    console.log(`[GameManager] Spectator ${spectatorSocket.id} disconnected before move.`);
+                }
+            });
+        } catch (err) {
+             console.error(`[GameManager] Error fetching/moving spectators for ${gameId}:`, err);
+        }
+        // --- End Spectator Move ---
+
+        // --- Clean up Player Mappings AND Move Participants to Lobby ---
+        const playerIds = Array.from(gameInstance.players.keys());
+        console.log(`[GameManager] Cleaning up mappings and moving participants to lobby for game ${gameId}:`, playerIds);
+        playerIds.forEach(playerId => {
+            this.playerGameMap.delete(playerId); // Remove from active game map first
+            console.log(`[GameManager] Removed player ${playerId} from playerGameMap.`);
+
+            // Get the socket object for the participant
+            const playerData = gameInstance.players.get(playerId);
+            const playerSocket = playerData ? playerData.socket : null;
+
+            // Add participant back to the pending list if still connected
+            if (playerSocket && playerSocket.connected) {
+                 console.log(`[GameManager] Adding participant ${playerId} back to pendingPlayers.`);
+                 this.addPlayer(playerSocket); // Add them back to the lobby list safely
+            } else {
+                 console.log(`[GameManager] Participant ${playerId} not found or disconnected. Cannot add back to lobby.`);
+            }
+        });
+        // --- End Participant Cleanup/Move ---
+
+        // --- Optional: Log completed game ---
+        // Ensure gameInstance and playerNames exist before trying to access them
+        if (gameInstance && gameInstance.playerNames) {
+            const completedGameData = {
+                name: gameName,
+                winnerName: winnerName,
+                players: Array.from(gameInstance.playerNames.entries()).map(([id, name]) => ({ id, name })),
+                endTime: Date.now()
+            };
+            this.recentlyCompletedGames.set(gameId, completedGameData);
+            while (this.recentlyCompletedGames.size > this.maxCompletedGames) {
+                const oldestGameId = this.recentlyCompletedGames.keys().next().value;
+                this.recentlyCompletedGames.delete(oldestGameId);
+                console.log(`[GameManager] Pruned oldest completed game log: ${oldestGameId}`);
+            }
+            console.log(`[GameManager] Logged completed game: ${gameId} ('${gameName}')`);
+        } else {
+            console.warn(`[GameManager] Could not log completed game ${gameId}, instance or playerNames missing.`);
+        }
+        // --- End Game Logging ---
+
+        // --- Clean up Game Instance Resources & Remove ---
+        try {
+            if (gameInstance) gameInstance.cleanup(); // Check if instance exists before cleanup
+        } catch(err) {
+            console.error(`[GameManager] Error during gameInstance.cleanup() for ${gameId}:`, err);
+        }
+        this.activeGames.delete(gameId); // Remove from active games map AFTER cleanup
+        console.log(`[GameManager] Game instance ${gameId} ('${gameName}') fully removed.`);
+        // --- End Instance Cleanup ---
+
+        // Broadcast status now that spectators AND participants are back in pending
+        this.broadcastLobbyStatus();
+
+        // --- Broadcast Updated Game History ---
+        this.broadcastGameHistory(); // Call helper function
+        // --- End History Broadcast ---
     }
+
+     /** Helper function to broadcast the current game history */
+     broadcastGameHistory() {
+         // Convert map values to an array, sort by endTime descending (newest first)
+         const historyArray = Array.from(this.recentlyCompletedGames.values())
+                                 .sort((a, b) => b.endTime - a.endTime); // Sort newest first
+         // console.log(`[GameManager] Broadcasting game history (${historyArray.length} entries).`); // Optional Log
+         this.io.emit('gameHistoryUpdate', historyArray);
+     }
 
     /**
      * Removes a disconnected or leaving player from the system.
-     * Handles removing them from pending lists or active games, and updates matchmaking state.
+     * Handles removing them from pending lists or active games, updates matchmaking state,
+     * and cleans up game instances if they become empty due to disconnection *during* the game.
      * Called by socket-handler upon 'disconnect'.
      * @param {string} socketId - The ID of the player's socket.
      */
@@ -3045,36 +3804,35 @@ class GameManager {
         if (gameId) {
             const game = this.activeGames.get(gameId);
             if (game) {
-                console.log(`[GameManager] Removing player ${playerName || socketId} from active game ${gameId}.`);
+                console.log(`[GameManager] Removing player ${playerName || socketId} from active game ${gameId} ('${game.gameName}') due to disconnect/leave.`);
                 game.removePlayer(socketId); // Tell the GameInstance to handle internal cleanup
 
-                // If the game becomes empty after removal, clean up the game instance itself.
+                // If the game becomes empty *DURING PLAY* after removal, clean up the game instance itself.
                 if (game.isEmpty()) {
-                    console.log(`[GameManager] Game ${gameId} is now empty. Destroying game instance.`);
-                    game.stopGameLoop(); // Ensure loop is stopped before deleting reference
+                    console.log(`[GameManager] Active game ${gameId} ('${game.gameName}') has no players left after disconnect. Triggering cleanup.`);
+                    try { if (game.cleanup) game.cleanup(); } catch(e){ console.error("Error cleaning up empty game", e); }
                     this.activeGames.delete(gameId);
+                    console.log(`[GameManager] Game instance ${gameId} removed from active games.`);
                 }
             } else {
-                 // Should not happen if map is consistent, but good to log.
                  console.warn(`[GameManager] Player ${playerName || socketId} mapped to non-existent game ${gameId}. Cleaning up map.`);
             }
             // Remove the player from the game map regardless.
             this.playerGameMap.delete(socketId);
         }
 
-        // Log removal type and potentially re-evaluate matchmaking
+        // Log removal type and potentially re-evaluate matchmaking if they were pending
         if (wasPending) {
             console.log(`[GameManager] Player ${playerName || socketId} removed from pending list.`);
-             // If a waiting/ready player leaves, check if a different game can now start
              this._tryStartMatch();
         } else if (gameId) {
-             console.log(`[GameManager] Player ${playerName || socketId} removed from active game ${gameId}.`);
+             // Logged above
         } else {
-             // Player was neither pending nor in the active game map (e.g., connected but never readied up?)
+             // Player was neither pending nor in the active game map (e.g., spectator disconnect)
              console.log(`[GameManager] Removed player ${playerName || socketId} (was not pending or in active game map).`);
         }
 
-        // Note: broadcastLobbyStatus is called from socket-handler *after* removePlayer completes
+        // Lobby status will be broadcast by the calling disconnect handler
     }
 
     /**
@@ -3856,7 +4614,8 @@ const GameManager = require('./game-manager');
 
 /**
  * Initializes Socket.IO event handlers for the application.
- * Manages player connections, disconnections, data submission, readiness signals, and chat.
+ * Manages player connections, disconnections, data submission, readiness signals, chat,
+ * routes players to spectate if games are in progress, and sends initial game history. // <-- Added history mention
  * Delegates game logic to the GameManager.
  * @param {SocketIO.Server} io - The Socket.IO server instance.
  */
@@ -3866,20 +4625,65 @@ function initializeSocketHandler(io) {
 
     // Handle new client connections
     io.on('connection', (socket) => {
-        console.log(`New client connected: ${socket.id}`);
+        console.log(`New client connecting: ${socket.id}`);
 
-        // Add player to the GameManager's pending list
-        gameManager.addPlayer(socket);
-
-        // Assign a unique ID to the newly connected client
+        // Assign ID immediately (needed for client state & potential spectator join)
         socket.emit('assignId', socket.id);
 
-        // Notify all clients (including sender) about the new connection
-        // Note: Name is not known yet, use partial ID.
-        io.emit('lobbyEvent', { message: `Player ${socket.id.substring(0, 4)}... connected.` });
+        // --- SPECTATOR CHECK ---
+        let wasSpectator = false; // Flag if routed to spectate initially
+        if (gameManager.activeGames.size > 0) {
+            // Simple logic: pick the first active game found
+            try {
+                const [gameId, gameInstance] = gameManager.activeGames.entries().next().value;
+                const gameName = gameInstance.gameName || `Game ${gameId}`;
+                const spectatorRoom = `spectator-${gameId}`;
 
-        // Send the current lobby status (counts) to the new client and everyone else
-        gameManager.broadcastLobbyStatus();
+                spectateTarget = { gameId, gameName };
+                console.log(`[Socket ${socket.id}] Active game found ('${gameName}' - ${gameId}). Routing to spectate.`);
+
+                // 1. Join the specific spectator room for this game
+                socket.join(spectatorRoom);
+                console.log(`[Socket ${socket.id}] Joined spectator room: ${spectatorRoom}`);
+
+                // 2. Emit 'spectateStart' event to the connecting client ONLY
+                socket.emit('spectateStart', { gameId: gameId, gameName: gameName });
+
+                // 3. Notify lobby about spectator joining (optional)
+                io.emit('lobbyEvent', { message: `Player ${socket.id.substring(0, 4)}... started spectating game '${gameName}'.` });
+
+                // 4. DO NOT add to gameManager.pendingPlayers yet.
+                wasSpectator = true; // Mark as routed to spectate
+
+            } catch (error) {
+                 console.error(`[Socket ${socket.id}] Error finding active game to spectate: ${error}. Adding to lobby instead.`);
+                 // Fallback to normal lobby logic
+                 gameManager.addPlayer(socket);
+                 io.emit('lobbyEvent', { message: `Player ${socket.id.substring(0, 4)}... connected.` });
+                 gameManager.broadcastLobbyStatus(); // Broadcast status after adding to lobby
+            }
+
+        } else {
+            // --- NO ACTIVE GAMES - Proceed with Normal Lobby Logic ---
+            console.log(`[Socket ${socket.id}] No active games. Adding to lobby.`);
+            gameManager.addPlayer(socket);
+            io.emit('lobbyEvent', { message: `Player ${socket.id.substring(0, 4)}... connected.` });
+            gameManager.broadcastLobbyStatus(); // Broadcast status after adding to lobby
+        }
+        // --- END SPECTATOR CHECK ---
+
+
+        // --- Send Initial Game History ---
+        // Send *after* potential spectator routing or lobby add
+        // Convert map values to an array, sort by endTime descending (newest first)
+        const currentHistory = Array.from(gameManager.recentlyCompletedGames.values())
+                                  .sort((a, b) => b.endTime - a.endTime);
+        if (currentHistory.length > 0) {
+            console.log(`[Socket ${socket.id}] Sending initial game history (${currentHistory.length} entries).`);
+            socket.emit('gameHistoryUpdate', currentHistory); // Send only to new client
+        }
+        // --- End Initial History Send ---
+
 
         // Handle client disconnections
         socket.on('disconnect', () => {
@@ -3887,7 +4691,7 @@ function initializeSocketHandler(io) {
             const playerName = gameManager.getPlayerName(socket.id) || socket.id.substring(0, 4)+'...';
             console.log(`Client disconnected: ${playerName} (${socket.id})`);
 
-            // Remove the player from GameManager (handles pending list and active games)
+            // Remove the player from GameManager (handles pending, active games, playerGameMap)
             gameManager.removePlayer(socket.id);
 
             // Notify remaining clients about the disconnection using the retrieved name
@@ -3899,31 +4703,46 @@ function initializeSocketHandler(io) {
 
         // Handle player submitting their code, appearance, and name (implicitly marks them as Ready)
         socket.on('submitPlayerData', (data) => {
+            // --- Check if player is allowed to submit (must be in pendingPlayers) ---
+            if (!gameManager.pendingPlayers.has(socket.id)) {
+                const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : 'spectating or unknown';
+                console.warn(`[Socket ${socket.id}] Attempted to submit data while ${state}. Ignoring.`);
+                socket.emit('lobbyEvent', { message: `Cannot submit data while ${state}.`, type: "error" });
+                return;
+            }
+            // --- End check ---
+
             // Validate received data structure
             if (data && typeof data.code === 'string' && typeof data.appearance === 'string' && typeof data.name === 'string') {
 
-                // Sanitize/validate name server-side (trim, length, default, basic HTML prevention)
+                // Sanitize/validate name server-side
                 const name = data.name.trim();
-                const sanitizedName = name.substring(0, 16) || `Anon_${socket.id.substring(0,4)}`;
-                const finalName = sanitizedName.replace(/</g, "<").replace(/>/g, ">");
+                const sanitizedName = name.substring(0, 24) || `Anon_${socket.id.substring(0,4)}`;
+                const finalName = sanitizedName.replace(/<[^>]*>/g, ""); // Strip HTML tags
 
                 console.log(`[Socket ${socket.id}] Received Player Data: Name='${finalName}', Appearance='${data.appearance}'`);
 
                 // Pass validated data to GameManager to update player state and try matchmaking
+                // GameManager will broadcast lobby status after trying to start a match.
                 gameManager.handlePlayerCode(socket.id, data.code, data.appearance, finalName);
-
-                // Broadcast updated lobby status (GameManager emits "Player X is ready!" event)
-                gameManager.broadcastLobbyStatus();
 
             } else {
                 console.warn(`[Socket ${socket.id}] Received invalid playerData format:`, data);
-                // Optionally send an error back to the specific client
                 socket.emit('submissionError', { message: 'Invalid data format received by server.' });
             }
         });
 
         // Handle player explicitly marking themselves as "Not Ready"
         socket.on('playerUnready', () => {
+            // --- Check if player is allowed to unready (must be in pendingPlayers) ---
+             if (!gameManager.pendingPlayers.has(socket.id)) {
+                 const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : 'spectating or unknown';
+                 console.warn(`[Socket ${socket.id}] Attempted to unready while ${state}. Ignoring.`);
+                 socket.emit('lobbyEvent', { message: `Cannot unready while ${state}.`, type: "error" });
+                 return;
+             }
+            // --- End check ---
+
             console.log(`[Socket ${socket.id}] Received 'playerUnready' signal.`);
             // Update player status in GameManager (will also broadcast status update)
             gameManager.setPlayerReadyStatus(socket.id, false);
@@ -3932,21 +4751,37 @@ function initializeSocketHandler(io) {
         // Handle incoming chat messages from a client
         socket.on('chatMessage', (data) => {
             if (data && typeof data.text === 'string') {
-                // Get sender's current name from GameManager
-                const senderName = gameManager.getPlayerName(socket.id) || `Anon_${socket.id.substring(0,4)}`;
+                // Get sender's current name from GameManager OR identify as spectator
+                 let senderName = gameManager.getPlayerName(socket.id);
+                 let isSpectator = false; // Flag to check if sender is likely a spectator
+
+                 if (!senderName) {
+                     // Check if they might be spectating by checking rooms they are in
+                     const rooms = Array.from(socket.rooms);
+                     if (rooms.length > 1) {
+                         const spectatingRoom = rooms.find(room => room.startsWith('spectator-'));
+                         if (spectatingRoom) {
+                            senderName = `Spectator_${socket.id.substring(0,4)}`;
+                            isSpectator = true;
+                         }
+                     }
+                     if (!senderName) { senderName = `Player_${socket.id.substring(0,4)}`; } // Fallback
+                 }
+
                 // Trim and limit message length
                 const messageText = data.text.trim().substring(0, 100);
 
                 if (messageText) { // Ensure message isn't empty after trimming
-                    // Basic sanitization (prevent simple HTML/script injection)
-                    const sanitizedText = messageText.replace(/</g, "<").replace(/>/g, ">");
+                    // Basic sanitization
+                    const sanitizedText = messageText.replace(/</g, "<").replace(/>/g, ">"); // Use HTML entities
 
                     console.log(`[Chat] ${senderName}: ${sanitizedText}`);
 
                     // Broadcast the sanitized chat message to ALL connected clients
                     io.emit('chatUpdate', {
                         sender: senderName,
-                        text: sanitizedText
+                        text: sanitizedText,
+                        isSpectator: isSpectator
                     });
                 }
             } else {
@@ -3954,16 +4789,9 @@ function initializeSocketHandler(io) {
             }
         });
 
-
-        // Listener for player actions during a game (currently unused but kept for potential future)
+        // Listener for player actions during a game (currently unused placeholder)
         // socket.on('robotAction', (action) => {
         //     gameManager.handlePlayerAction(socket.id, action);
-        // });
-
-        // Optional: Listener for explicit reset request (might be used with ready system later)
-        // socket.on('playerResetRequest', () => {
-        //     // Could call setPlayerReadyStatus(socket.id, false) or a dedicated reset method
-        //     gameManager.handlePlayerReset(socket.id);
         // });
 
     }); // End io.on('connection')

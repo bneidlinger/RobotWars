@@ -8,8 +8,10 @@
 class ServerCollisionSystem {
     constructor(gameInstance) {
         this.game = gameInstance; // Reference to the GameInstance
-        this.arenaWidth = 600; // TODO: Get these from GameInstance or config
-        this.arenaHeight = 600;
+        // START CHANGE
+        this.arenaWidth = 900; // TODO: Get these from GameInstance or config
+        this.arenaHeight = 900;
+        // END CHANGE
     }
 
     /**
@@ -61,12 +63,16 @@ class ServerCollisionSystem {
                         const wasDestroyed = targetRobot.takeDamage(damageAmount);
                         console.log(`[Collision] Missile from ${firingRobot.id} hit ${targetRobot.id}. Damage: ${damageAmount}. Destroyed: ${wasDestroyed}`);
 
+                        // Trigger explosion effect on the GameInstance
+                        // It will add this to the list broadcast in the next gameStateUpdate
+                        if (typeof this.game.createExplosion === 'function') {
+                            this.game.createExplosion(missile.x, missile.y, missile.power);
+                        } else {
+                             console.warn(`[Collision] GameInstance missing createExplosion method.`);
+                        }
+
                         // Remove the missile from the firing robot's list
                         firingRobot.missiles.splice(i, 1);
-
-                        // TODO: Trigger explosion effect?
-                        // The GameInstance could have an 'explosions' array or emit an event.
-                        // this.game.createExplosion(missile.x, missile.y, missile.power);
 
                         // If the target was destroyed, maybe credit the firing robot? (Future feature)
                         // if (wasDestroyed) { ... }
@@ -112,7 +118,7 @@ class ServerCollisionSystem {
                     const separationY = dy / distance;
 
                     // --- START COLLISION DEBUG LOGGING ---
-                    console.log(`[DEBUG COLL ${robotA.id}/${robotB.id}] Pre-Push: A=(${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)}), B=(${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
+                    // console.log(`[DEBUG COLL ${robotA.id}/${robotB.id}] Pre-Push: A=(${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)}), B=(${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
                     // --- END COLLISION DEBUG LOGGING ---
 
                     // Move robots apart by half the overlap distance each
@@ -123,7 +129,7 @@ class ServerCollisionSystem {
                     robotB.y += separationY * moveDist;
 
                     // --- START COLLISION DEBUG LOGGING ---
-                    console.log(`[DEBUG COLL ${robotA.id}/${robotB.id}] Post-Push: A=(${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)}), B=(${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
+                    // console.log(`[DEBUG COLL ${robotA.id}/${robotB.id}] Post-Push: A=(${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)}), B=(${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
                     // --- END COLLISION DEBUG LOGGING ---
 
 
@@ -145,12 +151,12 @@ class ServerCollisionSystem {
 
                     // --- START COLLISION DEBUG LOGGING ---
                     // Log ONLY if clamping actually changed the value
-                    if (robotA.x !== preClampAx || robotA.y !== preClampAy) {
-                         console.log(`[DEBUG COLL ${robotA.id}] Clamped A after push from (${preClampAx.toFixed(2)}, ${preClampAy.toFixed(2)}) to (${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)})`);
-                    }
-                    if (robotB.x !== preClampBx || robotB.y !== preClampBy) {
-                         console.log(`[DEBUG COLL ${robotB.id}] Clamped B after push from (${preClampBx.toFixed(2)}, ${preClampBy.toFixed(2)}) to (${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
-                    }
+                    // if (robotA.x !== preClampAx || robotA.y !== preClampAy) {
+                    //      console.log(`[DEBUG COLL ${robotA.id}] Clamped A after push from (${preClampAx.toFixed(2)}, ${preClampAy.toFixed(2)}) to (${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)})`);
+                    // }
+                    // if (robotB.x !== preClampBx || robotB.y !== preClampBy) {
+                    //      console.log(`[DEBUG COLL ${robotB.id}] Clamped B after push from (${preClampBx.toFixed(2)}, ${preClampBy.toFixed(2)}) to (${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
+                    // }
                     // --- END COLLISION DEBUG LOGGING ---
 
                 } // End if (overlap detected)
