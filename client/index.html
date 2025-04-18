@@ -46,18 +46,29 @@
             <div class="game-container">
                 <!-- Canvas with updated dimensions -->
                 <canvas id="arena" width="900" height="900"></canvas>
+
                 <div class="stats-panel">
                     <h3>Robot Stats</h3>
-                    <!-- Dashboard elements (title, list) are created/managed by dashboard.js -->
                     <div id="robot-stats">
-                        <!-- Initial placeholder content might be added by dashboard.js -->
+                        <!-- Dashboard elements created/managed by dashboard.js -->
                     </div>
                 </div>
+
+                <!-- START: Added Robot Console Log -->
+                <div id="robot-console-log" class="console-panel">
+                    <h3>Robot Console Output</h3>
+                    <div id="robot-log-messages" class="log-box">
+                        <!-- Robot console messages will appear here -->
+                        <div>Waiting for robot messages...</div>
+                    </div>
+                </div>
+                <!-- END: Added Robot Console Log -->
+
             </div>
 
             <div class="editor-container">
                 <h3>Robot Code Editor</h3>
-                <!-- START CHANGE: Moved API Help block -->
+                <!-- API Help moved above editor -->
                 <div class="api-help">
                     <h4>API Reference</h4>
                     <ul>
@@ -70,7 +81,6 @@
                         <li><code>getDirection()</code> - Get current direction (degrees)</li>
                     </ul>
                 </div>
-                <!-- END CHANGE: Moved API Help block -->
 
                 <textarea id="code-editor"></textarea>
 
@@ -82,7 +92,7 @@
              <div> <!-- Column 1: Status, Log, Chat -->
                  <h3 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Lobby Status</h3>
                  <div id="lobby-status" style="margin-bottom: 10px;">Connecting...</div>
-                 <div id="event-log" style="height: 150px; overflow-y: scroll; border: 1px solid #555; margin-bottom: 10px; padding: 5px; background: #222; font-size: 14px; font-family: 'VT323', monospace;">Event Log Loading...</div>
+                 <div id="event-log" class="log-box" style="height: 150px; margin-bottom: 10px;">Event Log Loading...</div> <!-- Added log-box class -->
                  <div id="chat-area" style="display: flex; gap: 5px;">
                      <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;" maxlength="100"> <!-- Added maxlength -->
                      <button id="send-chat" style="background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'VT323', monospace; font-size: 15px;">Send</button>
@@ -93,7 +103,7 @@
                  <div id="game-history-log"> <!-- Outer container for styling/header -->
                      <h4 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Recent Game Results</h4>
                      <!-- The actual list element that history.js targets -->
-                     <div id="game-history-list" style="/* Styles are in main.css */">
+                     <div id="game-history-list" class="log-box" style="height: 195px;"> <!-- Added log-box class -->
                          <!-- History will appear here -->
                          <div>No games finished yet.</div>
                      </div>
@@ -109,6 +119,9 @@
     <!-- CodeMirror Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script> <!-- Added for bracket matching -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script> <!-- Added for auto-close brackets -->
+
 
     <!-- Game Engine Scripts -->
     <script src="js/engine/arena.js"></script>
@@ -118,7 +131,7 @@
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
     <script src="js/ui/controls.js"></script>
-    <script src="js/ui/lobby.js"></script>
+    <script src="js/ui/lobby.js"></script> <!-- Handles both Event Log and Robot Log now -->
     <script src="js/ui/history.js"></script> <!-- History script added -->
 
     <!-- Network Handler Script -->

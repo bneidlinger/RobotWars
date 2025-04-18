@@ -1,6 +1,7 @@
 // client/js/ui/lobby.js
 
-const MAX_LOG_MESSAGES = 50; // Keep the log from getting too long
+const MAX_LOG_MESSAGES = 50; // Keep the event log from getting too long
+const MAX_ROBOT_LOG_MESSAGES = 100; // Allow more robot messages
 
 /**
  * Updates the text content of the lobby status display.
@@ -71,55 +72,115 @@ function clearEventLog() {
      const logElement = document.getElementById('event-log');
      if (logElement) {
          logElement.innerHTML = ''; // Clear content
-         addEventLogMessage("Log cleared.", "info");
+         addEventLogMessage("Event Log cleared.", "info");
      }
 }
 
 
-// --- Make functions globally accessible (simple approach) ---
-// This allows network.js to call them easily without complex imports/exports yet
+// --- START: New function for Robot Console Log ---
+/**
+ * Adds a message to the robot's console log display. Handles scrolling.
+ * @param {string} message - The message text from the robot's console.log.
+ */
+function addRobotLogMessage(message) {
+    const logElement = document.getElementById('robot-log-messages'); // Target new element
+    if (!logElement) {
+        console.warn("Robot log messages element '#robot-log-messages' not found.");
+        return;
+    }
+
+    const wasScrolledToBottom = logElement.scrollHeight - logElement.clientHeight <= logElement.scrollTop + 1;
+
+    const messageDiv = document.createElement('div');
+    messageDiv.textContent = message; // Use textContent for security
+    messageDiv.style.marginBottom = '2px'; // Tighter spacing than event log maybe
+    // Style is mostly inherited from .log-box, color set in CSS
+
+    logElement.appendChild(messageDiv);
+
+    // Remove old messages if log is too long
+    while (logElement.childNodes.length > MAX_ROBOT_LOG_MESSAGES) {
+        logElement.removeChild(logElement.firstChild);
+    }
+
+    // Auto-scroll to bottom if already scrolled to bottom
+    if (wasScrolledToBottom) {
+        logElement.scrollTop = logElement.scrollHeight;
+    }
+}
+
+/** Clears the robot console log */
+function clearRobotLog() {
+     const logElement = document.getElementById('robot-log-messages');
+     if (logElement) {
+         logElement.innerHTML = '';
+         // Optionally add a cleared message
+         addRobotLogMessage("-- Robot Log Cleared --");
+     }
+}
+// --- END: New function for Robot Console Log ---
+
+
+// --- Make functions globally accessible ---
 window.updateLobbyStatus = updateLobbyStatus;
 window.addEventLogMessage = addEventLogMessage;
-window.clearEventLog = clearEventLog; // Optional clear function
+window.clearEventLog = clearEventLog;
+window.addRobotLogMessage = addRobotLogMessage; // Add new function to window
+window.clearRobotLog = clearRobotLog; // Optional clear function
 
 
-// --- Initialize Chat Input/Button Listeners ---
-// (We'll put chat logic here too for simplicity)
+// --- Initialize Chat Input/Button Listeners & Clear Placeholders ---
 document.addEventListener('DOMContentLoaded', () => {
     const chatInput = document.getElementById('chat-input');
     const sendButton = document.getElementById('send-chat');
 
-    if (!chatInput || !sendButton) {
+    if (chatInput && sendButton) {
+         sendButton.addEventListener('click', sendChatMessageFromInput);
+         chatInput.addEventListener('keypress', (event) => {
+             if (event.key === 'Enter') {
+                 event.preventDefault(); // Prevent default form submission (if any)
+                 sendChatMessageFromInput();
+             }
+         });
+    } else {
         console.warn("Chat input or send button not found.");
-        return;
     }
-
-    // Send on button click
-    sendButton.addEventListener('click', sendChatMessageFromInput);
-
-    // Send on Enter key press in input field
-    chatInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault(); // Prevent default form submission (if any)
-            sendChatMessageFromInput();
-        }
-    });
 
     function sendChatMessageFromInput() {
         const messageText = chatInput.value;
+        // Ensure network object exists and has the method before calling
         if (messageText.trim() && typeof network !== 'undefined' && network.sendChatMessage) {
             network.sendChatMessage(messageText); // Assumes global 'network' object exists
             chatInput.value = ''; // Clear input field after sending
+        } else if (typeof network === 'undefined' || !network.sendChatMessage) {
+             console.error("Network object or sendChatMessage method not available.");
+             // Optionally inform user via event log
+             // addEventLogMessage("Error: Cannot send chat message.", "error");
         }
          chatInput.focus(); // Keep focus on input
     }
 
-    // Clear placeholder text on initial load
-    const logElement = document.getElementById('event-log');
-    if(logElement && logElement.textContent === 'Event Log Loading...') {
-         logElement.textContent = ''; // Clear loading text
+
+    // --- Clear placeholder text on initial load for BOTH logs ---
+    const eventLogElement = document.getElementById('event-log');
+    // Check for the specific placeholder text before clearing
+    if(eventLogElement && eventLogElement.textContent.trim() === 'Event Log Loading...') {
+         eventLogElement.innerHTML = ''; // Clear content directly
          addEventLogMessage("Welcome! Connect to chat and wait for players...", "info");
     }
+
+    const robotLogElement = document.getElementById('robot-log-messages');
+     // Check for the specific placeholder text before clearing
+    if (robotLogElement && robotLogElement.textContent.trim() === 'Waiting for robot messages...') {
+        robotLogElement.innerHTML = ''; // Clear placeholder
+        // --- START: Add Thematic Message ---
+        addRobotLogMessage("ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL");
+        addRobotLogMessage("ENTER PASSWORD NOW");
+        addRobotLogMessage(" "); // Blank line
+        addRobotLogMessage("> R.O.S. V1.3 INITIALIZING...");
+        // --- END: Add Thematic Message ---
+    }
+    // --- End Placeholder Clearing ---
 });
 
-console.log("Lobby UI functions initialized (lobby.js).");
+console.log("Lobby UI functions initialized (lobby.js). Includes Robot Log handler.");

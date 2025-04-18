@@ -25,13 +25,14 @@ class ServerRobotInterpreter {
      * Initializes the interpreter for a set of robots.
      * Compiles the code for each robot into a function and creates its sandboxed execution context.
      * @param {ServerRobot[]} robots - An array of ServerRobot instances.
-     * @param {Map<string, {socket: Socket, robot: ServerRobot, code: string}>} playersDataMap - Map from robot ID (socket.id) to player data.
+     * @param {Map<string, {socket: SocketIO.Socket, robot: ServerRobot, code: string}>} playersDataMap - Map from robot ID (socket.id) to player data.
      */
     initialize(robots, playersDataMap) {
         console.log("[Interpreter] Initializing robot interpreters (Function Mode)...");
 
         robots.forEach(robot => {
             const playerData = playersDataMap.get(robot.id);
+            const playerSocket = playerData ? playerData.socket : null; // Get socket reference
 
             // Ensure we have player data and valid code for this robot
             if (!playerData || typeof playerData.code !== 'string' || playerData.code.trim() === '') {
@@ -58,12 +59,36 @@ class ServerRobotInterpreter {
                     getDirection: () => this.safeGetDirection(robot.id),
                 },
 
-                // Safe console (accessible as 'console' or 'this.console')
+                // --- START MODIFIED CONSOLE ---
                 console: {
                     log: (...args) => {
+                        // 1. Log server-side as before (optional, but useful for server debug)
                         console.log(`[Robot ${robot.id} Log]`, ...args);
+
+                        // 2. Format message for client
+                        // Simple approach: convert all args to strings and join
+                        const messageString = args.map(arg => {
+                            try {
+                                // Handle different types reasonably
+                                if (typeof arg === 'object' && arg !== null) {
+                                    // Be careful with circular references in complex objects
+                                    // A simple depth limit or specific property selection might be safer
+                                    return JSON.stringify(arg, null, 2); // Pretty print object slightly
+                                }
+                                return String(arg); // Convert others to string
+                            } catch (e) {
+                                return '[Unloggable Value]';
+                            }
+                        }).join(' ');
+
+                        // 3. Emit to the specific client's socket if connected
+                        // Use the playerSocket variable captured in the outer scope
+                        if (playerSocket && playerSocket.connected) {
+                            playerSocket.emit('robotLog', { message: messageString });
+                        }
                     }
                 },
+                // --- END MODIFIED CONSOLE ---
 
                 // Standard Math library (accessible as 'Math' or 'this.Math')
                 Math: Math,
@@ -112,8 +137,9 @@ class ServerRobotInterpreter {
             } catch (error) {
                 // Handle errors during compilation or the initial run
                 console.error(`[Interpreter] Error compiling/initializing function for robot ${robot.id}:`, error.message);
-                if (playerData.socket) {
-                    playerData.socket.emit('codeError', {
+                 // Use the playerSocket variable captured in the outer scope
+                if (playerSocket && playerSocket.connected) {
+                    playerSocket.emit('codeError', {
                         robotId: robot.id,
                         message: `Compilation/Initialization Error: ${error.message}`
                     });
@@ -144,32 +170,20 @@ class ServerRobotInterpreter {
                 this.currentRobotId = robot.id;
                 const tickFunction = this.robotTickFunctions[robot.id];
                 const context = this.robotContexts[robot.id]; // The sandbox object
-
-                // Optional Debug Log (shows context exists, useful for verifying 'state')
-                // console.log(`[Interpreter Debug] Executing function for ${robot.id}. Context keys:`, Object.keys(context));
+                const playerData = gameInstance.players.get(robot.id); // Get player data again for socket access in error handling
+                const playerSocket = playerData ? playerData.socket : null; // Get socket for error handling
 
                 try {
                     // *** Execute the stored function for this tick ***
-                    // We use .call() to explicitly set 'this' inside the function
-                    // to be the sandbox context itself. This ensures that if the user
-                    // writes `this.state.x = 1` it works as expected.
-                    // Direct access `state.x = 1` also works because `state` is a global in the context.
                     tickFunction.call(context /*, arguments if any */);
-
-                    // Note on Timeouts: The 'timeout' option in vm.Script applies to runInContext.
-                    // When calling the function directly (.call), there's no built-in per-call timeout
-                    // enforcement from the VM module itself in this simple setup.
-                    // True per-tick timeout enforcement would require a more complex solution
-                    // (like worker threads or interrupting VMs), which adds significant overhead.
-                    // For now, we rely on the initial compile timeout and assume non-malicious code.
 
                 } catch (error) {
                     // Handle runtime errors *inside* the robot's code during the call
                     console.error(`[Interpreter] Runtime error during function execution for robot ${robot.id}:`, error.message);
                     // Notify the client about the runtime error
-                    const playerData = gameInstance.players.get(robot.id);
-                    if (playerData && playerData.socket) {
-                        playerData.socket.emit('codeError', {
+                     // Use the playerSocket captured just above
+                    if (playerSocket && playerSocket.connected) {
+                        playerSocket.emit('codeError', {
                             robotId: robot.id,
                             message: `Runtime Error: ${error.message}`
                         });
@@ -188,7 +202,6 @@ class ServerRobotInterpreter {
     } // End executeTick()
 
     // --- Safe API Methods ---
-    // These remain unchanged. They bridge the sandbox call to the actual game logic.
 
     /** Safely retrieves the ServerRobot instance for the currently executing robot. @private */
     getCurrentRobot() {
@@ -225,6 +238,7 @@ class ServerRobotInterpreter {
         if (robotId !== this.currentRobotId) return false;
         const robot = this.getCurrentRobot();
         if (robot && typeof direction === 'number') {
+            // Allow power to be optional or undefined, defaulting inside robot.fire
             return robot.fire(direction, power);
         } else if (robot) {
             console.warn(`[Interpreter] Invalid fire(${direction}, ${power}) call for robot ${robotId}`);
@@ -234,7 +248,7 @@ class ServerRobotInterpreter {
 
     /** Safely retrieves robot damage. */
     safeDamage(robotId) {
-        if (robotId !== this.currentRobotId) return 100;
+        if (robotId !== this.currentRobotId) return 100; // Assume max damage if invalid call
         const robot = this.getCurrentRobot();
         return robot ? robot.damage : 100;
     }

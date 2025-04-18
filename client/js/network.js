@@ -4,7 +4,7 @@
  * Handles client-side network communication with the server using Socket.IO.
  * Connects to the server, sends player data (including name), readiness signals,
  * receives game state updates, handles spectating, processes lobby/chat events,
- * and receives game history updates. // <-- Updated description
+ * receives game history updates, and handles robot log messages. // <-- Updated description
  */
 class Network {
     /**
@@ -62,6 +62,10 @@ class Network {
                  if (typeof window.addEventLogMessage === 'function') {
                     window.addEventLogMessage("--> Connected to server.", "event");
                  }
+                 // Clear robot log on new connection
+                 if (typeof window.clearRobotLog === 'function') {
+                     window.clearRobotLog();
+                 }
             });
 
             // On disconnection from the server
@@ -116,6 +120,10 @@ class Network {
                     this.game.handleSpectateStart(data); // Pass game info to game handler
                     if (typeof window.addEventLogMessage === 'function') {
                         window.addEventLogMessage(`Started spectating game: ${this.spectatingGameName}`, 'event');
+                    }
+                    // Clear robot log when starting spectate
+                    if (typeof window.clearRobotLog === 'function') {
+                         window.clearRobotLog();
                     }
                 } else {
                     console.error("Game object or handleSpectateStart method not available!");
@@ -176,6 +184,10 @@ class Network {
                  if (typeof window.addEventLogMessage === 'function') {
                      window.addEventLogMessage(`Your game '${data.gameName || data.gameId}' is starting!`, 'event');
                  }
+                 // Clear robot log at game start
+                 if (typeof window.clearRobotLog === 'function') {
+                      window.clearRobotLog();
+                 }
              });
 
             // Server signals that the game has ended (for players)
@@ -205,11 +217,18 @@ class Network {
             // Server reports an error in the robot's code (compilation or runtime)
             this.socket.on('codeError', (data) => {
                 console.error(`Received Code Error for Robot ${data.robotId}:`, data.message);
+                const robotIdentifier = (data.robotId === this.playerId) ? "Your Robot" : `Robot ${data.robotId.substring(0,4)}...`;
+                // Log to general event log
                 if (typeof window.addEventLogMessage === 'function') {
-                    const robotIdentifier = (data.robotId === this.playerId) ? "Your Robot" : `Robot ${data.robotId.substring(0,4)}...`;
                     window.addEventLogMessage(`Code Error (${robotIdentifier}): ${data.message}`, 'error');
                 }
-                // Display error and reset UI only if it's our robot AND we are not spectating
+                // Also log to the specific robot's log if it's ours
+                if (data.robotId === this.playerId && typeof window.addRobotLogMessage === 'function') {
+                     window.addRobotLogMessage(`--- CODE ERROR ---`);
+                     window.addRobotLogMessage(data.message);
+                     window.addRobotLogMessage(`------------------`);
+                }
+                // Display alert and reset UI only if it's our robot AND we are not spectating
                 if (data.robotId === this.playerId && !this.isSpectating) {
                      alert(`Your Robot Code Error:\n${data.message}\n\nYou might need to reset and fix your code.`);
                      // Reset Controls UI to lobby state
@@ -302,7 +321,19 @@ class Network {
             });
             // --- End Game History Listener ---
 
-            // --- End Lobby/Chat/History Listeners ---
+            // --- Add Robot Log Listener ---
+            this.socket.on('robotLog', (data) => {
+                if (data && typeof data.message === 'string') {
+                    // Call the UI update function (defined in lobby.js)
+                    if (typeof window.addRobotLogMessage === 'function') {
+                        window.addRobotLogMessage(data.message);
+                    } else {
+                        console.warn("addRobotLogMessage function not found!");
+                    }
+                }
+            });
+            // --- End Robot Log Listener ---
+
 
         } catch (error) {
              console.error("Error initializing Socket.IO connection:", error);
@@ -399,3 +430,4 @@ class Network {
     }
 
 } // End Network Class
+

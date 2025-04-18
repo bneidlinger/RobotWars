@@ -137,8 +137,6 @@ main {
     flex-direction: column;
     gap: 20px;
     min-height: 0; /* Prevent flex items from overflowing grid cell */
-    /* Optional: Add border for debugging layout */
-    /* border: 1px solid blue; */
 }
 
 #arena {
@@ -149,26 +147,43 @@ main {
     max-width: 100%; /* Ensure canvas scales down if container is smaller */
     display: block;
     aspect-ratio: 1 / 1; /* Maintain square shape */
-    /* Arena should implicitly grow based on column width, no flex-grow needed here */
-    /* Optional: Add border for debugging layout */
-    /* border: 1px solid red; */
 }
 
-/* Constrain Stats Panel Height MORE */
-.stats-panel {
-    background-color: #333;
-    padding: 15px;
+/* --- START: Shared styles for log panels --- */
+.console-panel {
+    background-color: #333; /* Default background for panels */
+    padding: 10px 15px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     flex-shrink: 0; /* Prevent panel from shrinking */
+}
+
+/* Basic structure for log boxes (overflow, font) */
+.log-box {
+    overflow-y: scroll;
+    font-family: 'VT323', monospace;
+    word-wrap: break-word;
+    /* Specific background/color/border applied per log type */
+}
+/* --- END: Shared styles for log panels --- */
+
+
+/* Constrain Stats Panel Height MORE */
+.stats-panel {
+    /* Apply console-panel base styles */
+    background-color: #333;
+    padding: 15px; /* Keep original padding */
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
     /* REDUCED Max height */
     max-height: 180px; /* ADJUST THIS VALUE */
     overflow-y: auto; /* Add scrollbar if content exceeds max-height */
 }
 
-
 /* Apply retro font to panel/section titles */
-.stats-panel h3, .editor-container h3, .api-help h4, #lobby-area h3, #game-history-log h4 {
+.stats-panel h3, .editor-container h3, .api-help h4, #lobby-area h3, #game-history-log h4,
+.console-panel h3 { /* Added .console-panel h3 */
      /* --- 80s Retro Font --- */
     font-family: 'VT323', monospace;
     font-size: 18px; /* Adjust if needed */
@@ -183,8 +198,6 @@ main {
     flex-direction: column;
     gap: 15px;
     min-height: 0; /* Prevent flex items from overflowing grid cell */
-    /* Optional: Add border for debugging layout */
-    /* border: 1px solid green; */
 }
 
 /* CodeMirror Styling - INCREASED min-height */
@@ -212,11 +225,12 @@ main {
 
 /* Constrain API Help Height MORE */
 .api-help {
+    /* Apply console-panel base styles */
     background-color: #333;
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    flex-shrink: 0; /* Prevent API help from shrinking */
+    flex-shrink: 0;
     /* REDUCED Max height */
     max-height: 150px; /* ADJUST THIS VALUE */
     overflow-y: auto; /* Add scrollbar if content exceeds max-height */
@@ -238,6 +252,74 @@ main {
     border-radius: 3px;
     color: #f0f0f0;
 }
+
+/* --- START: Robot Console Log Specific Styles (FALLOUT TERMINAL) --- */
+#robot-console-log {
+    margin-top: 15px;
+    background-color: #1a1a1a;
+    border: 1px solid #0f290f;
+    padding: 8px;
+    /* Inherits .console-panel shadow, radius */
+}
+
+#robot-console-log h3 {
+    color: #00b300;
+    text-align: center;
+    margin-bottom: 8px;
+    text-shadow: 0 0 3px #00b300;
+}
+
+#robot-log-messages {
+    height: 200px; /* Adjust height as needed */
+    background-color: #000000;
+    color: #00FF41;
+    font-size: 16px;
+    border: 1px inset #004d00;
+    padding: 10px;
+    text-shadow: 0 0 5px #00ff41;
+    word-wrap: break-word;
+    overflow-y: scroll;
+    font-family: 'VT323', monospace; /* Explicitly set font here too */
+
+    /* Scanline preparation: Parent MUST have relative positioning */
+    position: relative;
+    overflow: hidden; /* Crucial: Keep the ::after pseudo-element clipped */
+}
+
+/* Scanline Effect - Adapted from ealertguide.html */
+#robot-log-messages::after {
+    content: '';
+    position: absolute;
+    top: 0; /* Start at the top (animated) */
+    left: 0;
+    right: 0;
+    height: 2px; /* Thickness */
+    /* Simple green background like ealertguide */
+    background: rgba(0, 255, 0, 0.15); /* Slightly more visible green */
+    /* Add a subtle blur */
+    box-shadow: 0 0 4px 1px rgba(0, 255, 0, 0.15);
+    z-index: 1;
+    pointer-events: none;
+    /* Link to the new animation */
+    animation: scanline-log 6s linear infinite; /* Use unique animation name */
+}
+
+/* Scanline Animation Keyframes - Adapted from ealertguide.html */
+/* Use translateY for potentially smoother perf than changing 'top' */
+@keyframes scanline-log {
+    0% {
+        transform: translateY(0%);
+        opacity: 0.1; /* Start slightly faded */
+    }
+    50% {
+        opacity: 0.3; /* Fade in */
+    }
+    100% {
+        transform: translateY(calc(100% - 2px)); /* Move to bottom edge (minus height) */
+        opacity: 0.1; /* Fade out */
+    }
+}
+/* --- END: Robot Console Log Specific Styles --- */
 
 
 /* Lobby Area - Pushed down */
@@ -265,16 +347,21 @@ main {
     color: #e0e0e0;
 }
 
+/* Styles for Event Log */
 #event-log {
-    height: 150px; /* Keep fixed height */
+    /* Apply .log-box base styles */
     overflow-y: scroll;
-    border: 1px solid #555;
+    font-family: 'VT323', monospace;
+    word-wrap: break-word;
+    /* Specifics */
+    height: 150px;
     margin-bottom: 10px;
-    padding: 5px;
+    padding: 5px 8px;
     background: #222;
     font-size: 14px;
-    font-family: 'VT323', monospace;
+    border: 1px solid #555;
 }
+
 
 #chat-area {
     display: flex;
@@ -302,21 +389,26 @@ main {
     font-family: 'VT323', monospace;
 }
 
+/* Styles for Game History List */
 #game-history-list {
-    height: 195px; /* Roughly match event log height */
-    overflow-y: auto;
+    /* Apply .log-box base styles */
+    overflow-y: auto; /* Use auto instead of scroll */
+    font-family: 'VT323', monospace;
+    word-wrap: break-word;
+    /* Specifics */
+    height: 195px;
     background: #222;
     border: 1px solid #555;
     padding: 8px;
     font-size: 14px;
 }
 
+
 #game-history-list > div {
     margin-bottom: 4px;
     padding-bottom: 4px;
     border-bottom: 1px dashed #444;
-    color: #cccccc;
-    word-wrap: break-word;
+    color: #cccccc; /* Inherited from .log-box */
 }
 
 #game-history-list > div:last-child {
@@ -331,7 +423,6 @@ main {
         min-height: 60vh; /* Give main area a min height when stacked */
     }
     .editor-container {
-        /* Let editor take remaining space in stacked view */
         min-height: 400px; /* Still useful */
     }
      #arena {
@@ -343,6 +434,15 @@ main {
      .stats-panel {
          max-height: 150px; /* Further reduce stats height when stacked */
      }
+    #robot-console-log {
+        /* Keep reasonable height when stacked */
+        margin-top: 10px;
+    }
+    #robot-log-messages {
+        height: 150px; /* Adjust stacked height */
+    }
+    /* Optional: Slow down or disable scanline on mobile? */
+    /* #robot-log-messages::after { animation: none; } */
 }
 
 @media (max-width: 768px) {
@@ -355,14 +455,24 @@ main {
         justify-content: center;
         gap: 8px;
     }
-    #lobby-area {
-        grid-template-columns: 1fr; /* Stack lobby columns */
+     #lobby-area {
+        grid-template-columns: 1fr;
     }
     #game-history-log {
-         margin-top: 20px; /* Add space when stacked */
+         margin-top: 20px;
     }
-    /* Adjust CodeMirror min-height for smaller screens if needed */
-    .CodeMirror {
+     .CodeMirror {
         min-height: 350px;
+    }
+    .stats-panel, .api-help {
+        max-height: 130px; /* Even smaller on mobile */
+    }
+     #robot-console-log {
+         /* Use same max-height as stats/api on mobile */
+         max-height: 130px;
+     }
+     #robot-log-messages {
+        height: 100px; /* Further reduce height */
+        font-size: 14px; /* Maybe smaller font too */
     }
 }
