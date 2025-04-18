@@ -21,7 +21,7 @@ class ServerMissile {
      */
     update(deltaTime) {
         // Note: Increased multiplier for more noticeable movement per tick
-        const moveSpeed = this.speed * deltaTime * 40; // Scale speed by time and a factor (adjust 60 base if needed)
+        const moveSpeed = this.speed * deltaTime * 60; // Scale speed by time and a factor (adjust 60 if needed)
         const radians = this.direction * Math.PI / 180;
         this.x += Math.cos(radians) * moveSpeed;
         // Assuming server Y matches canvas (up is negative delta) for consistency:

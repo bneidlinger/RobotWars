@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROBOT WARS - The Battle of Code</title>
+    <style>
+        :root {
+            --dark-metal: #1a1a1a;
+            --gun-metal: #2d3142;
+            --steel-blue: #4f5d75;
+            --battle-red: #b80c09;
+            --american-blue: #0a2463;
+            --industrial-yellow: #f9a03f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background-color: var(--dark-metal);
+            color: #f0f0f0;
+            background-image:
+                linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%),
+                linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%);
+            background-size: 10px 10px;
+            background-position: 0 0, 5px 5px;
+            line-height: 1.6;
+        }
+
+        .retro-terminal {
+            position: relative;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #000;
+            border: 3px solid var(--industrial-yellow);
+            box-shadow: 0 0 15px rgba(249, 160, 63, 0.7),
+                        0 0 30px rgba(249, 160, 63, 0.5),
+                        0 0 45px rgba(249, 160, 63, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .retro-terminal::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(to bottom,
+                        rgba(249, 160, 63, 0.1) 0%,
+                        transparent 100%);
+        }
+
+        .terminal-header {
+            border-bottom: 2px solid var(--industrial-yellow);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .blink {
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        h1 {
+            font-size: 42px;
+            color: var(--industrial-yellow);
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px var(--industrial-yellow);
+        }
+
+        h2 {
+            color: var(--battle-red);
+            margin: 25px 0 10px;
+            text-shadow: 0 0 3px var(--battle-red);
+        }
+
+        .message {
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 3px solid var(--steel-blue);
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .signature {
+            margin-top: 30px;
+            text-align: right;
+            font-style: italic;
+            color: var(--industrial-yellow);
+        }
+
+        .robot-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 30px 0;
+            justify-content: center;
+        }
+
+        .robot-card {
+            width: 200px;
+            padding: 15px;
+            background-color: var(--gun-metal);
+            border: 1px solid var(--steel-blue);
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .robot-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background-color: var(--battle-red);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 25px;
+            font-weight: bold;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            background-color: var(--american-blue);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .action-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        code {
+            display: block;
+            background-color: rgba(0,0,0,0.3);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+            border-left: 3px solid var(--industrial-yellow);
+        }
+
+        .features {
+            margin: 30px 0;
+        }
+
+        .features ul {
+            list-style-type: none;
+        }
+
+        .features li {
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+
+        .features li::before {
+            content: "→ ";
+            color: var(--industrial-yellow);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid var(--gun-metal);
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: rgba(255,255,255,0.1);
+            animation: scan 5s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        @media (max-width: 768px) {
+            .retro-terminal {
+                margin: 20px;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .robot-grid {
+                justify-content: center;
+            }
+
+            .robot-card {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="retro-terminal">
+        <div class="scan-line"></div>
+        <div class="terminal-header">
+            <h1>ROBOT WARS <span class="blink">_</span></h1>
+            <p>TACTICAL COMBAT CODE SYSTEM v2.5</p>
+        </div>
+
+        <div class="message">
+            <h2>[ ENCRYPTED TRANSMISSION ]</h2>
+            <p>Lakeman,</p>
+            <p>I won't be around Milwaukee next week. Had to head east on urgent business.</p>
+            <p>I'm leaving this system in your hands. The bots are programmed and ready for the next phase. All you need to do is deploy your code warriors and let them battle in the arena.</p>
+            <p>Remember what I taught you: In the world of Robot Wars, victory belongs to those who write the smartest code, not the fastest trigger finger.</p>
+            <p>The source is on GitHub: https://github.com/bneidlinger/RobotWars. Latest deployed version on Render: https://robotwars-c198.onrender.com. Network credentials are in the usual place.</p>
+        </div>
+
+        <h2>BOT DEPLOYMENT SYSTEM</h2>
+        <p>The arena awaits your command, programmer. Write your AI, choose your robot's appearance, and watch the battle unfold in real-time against opponents across the network.</p>
+
+        <div class="robot-grid">
+            <div class="robot-card">
+                <div class="robot-icon">🤖</div>
+                <h3>Default Bot</h3>
+                <p>Balanced speed and armor</p>
+            </div>
+            <div class="robot-card">
+                <div class="robot-icon">⚙️</div>
+                <h3>Tank Bot</h3>
+                <p>Heavy armor, slow but powerful</p>
+            </div>
+            <div class="robot-card">
+                <div class="robot-icon">⚡</div>
+                <h3>Spike Bot</h3>
+                <p>Fast and aggressive</p>
+            </div>
+            <div class="robot-card">
+                <div class="robot-icon">🔺</div>
+                <h3>Tri Bot</h3>
+                <p>Nimble with precision tracking</p>
+            </div>
+        </div>
+
+        <h2>ROBOT API SYSTEM</h2>
+        <p>Your battle code runs in a secure sandbox with access to these commands:</p>
+        <code>// Initialize your robot's state
+if (typeof state.direction === 'undefined') {
+    state.direction = 0;
+    state.lastDamage = 0;
+}
+
+// Drive in the current direction
+robot.drive(state.direction, 3);
+
+// Scan for enemies
+let scanResult = robot.scan(state.direction, 30);
+
+// If enemy detected, fire!
+if (scanResult) {
+    robot.fire(scanResult.direction, 2);
+}
+
+// Evade when damaged
+if (robot.damage() > state.lastDamage) {
+    state.direction = (state.direction + 90) % 360;
+}
+state.lastDamage = robot.damage();</code>
+
+        <div class="features">
+            <h2>SYSTEM CAPABILITIES</h2>
+            <ul>
+                <li>Real-time multiplayer battles</li>
+                <li>In-browser JavaScript coding environment</li>
+                <li>Multiple robot appearance options</li>
+                <li>Live battle statistics</li>
+                <li>WebSocket-based communication</li>
+                <li>Secure sandboxed code execution</li>
+            </ul>
+        </div>
+
+        <div class="action-container">
+            <a href="https://github.com/bneidlinger/RobotWars" class="btn">ACCESS REPOSITORY</a>
+            <a href="https://robotwars-c198.onrender.com" class="btn" style="background-color: var(--american-blue); margin-left: 15px;">PLAY ON RENDER</a>
+        </div>
+
+        <div class="signature">
+            <p>- Cool Rick</p>
+            <p>"In the arena of code, only the clever survive."</p>
+        </div>
+    </div>
+
+    <footer>
+        Project based on the original CROBOTS game | All rights reserved &copy; 2025
+    </footer>
+</body>
+</html>
