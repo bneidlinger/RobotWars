@@ -20,7 +20,8 @@ class ServerMissile {
      * @param {number} deltaTime - Time elapsed since the last tick in seconds.
      */
     update(deltaTime) {
-        const moveSpeed = this.speed * deltaTime * 50; // Scale speed by time and a factor
+        // Note: Increased multiplier for more noticeable movement per tick
+        const moveSpeed = this.speed * deltaTime * 40; // Scale speed by time and a factor (adjust 60 base if needed)
         const radians = this.direction * Math.PI / 180;
         this.x += Math.cos(radians) * moveSpeed;
         // Assuming server Y matches canvas (up is negative delta) for consistency:
@@ -107,7 +108,8 @@ class ServerRobot {
 
         // Update position if the robot is moving
         if (this.speed !== 0) {
-            const moveSpeed = this.speed * deltaTime * 50; // Scale speed by time and factor
+            // Note: Increased multiplier for more noticeable movement per tick
+            const moveSpeed = this.speed * deltaTime * 60; // Scale speed by time and factor (adjust 60 if needed)
             const radians = this.direction * Math.PI / 180;
             const dx = Math.cos(radians) * moveSpeed;
             const dy = Math.sin(radians) * moveSpeed; // Y direction depends on coordinate system
@@ -116,25 +118,36 @@ class ServerRobot {
             // Assuming server Y matches canvas (up is negative delta):
             let newY = this.y - dy;
 
+            // --- START DEBUG LOGGING ---
+            console.log(`[DEBUG ${this.id}] Pre-clamp: newX=${newX.toFixed(2)}, newY=${newY.toFixed(2)}, arenaW=${arenaWidth}, arenaH=${arenaHeight}, radius=${this.radius}`);
+            // --- END DEBUG LOGGING ---
+
             // Clamp position to stay within arena boundaries, considering radius
             newX = Math.max(this.radius, Math.min(arenaWidth - this.radius, newX));
             newY = Math.max(this.radius, Math.min(arenaHeight - this.radius, newY));
 
+            // Assign the clamped values
             this.x = newX;
             this.y = newY;
-        }
+
+            // --- START DEBUG LOGGING ---
+            console.log(`[DEBUG ${this.id}] Post-clamp: this.x=${this.x.toFixed(2)}, this.y=${this.y.toFixed(2)}`);
+            // --- END DEBUG LOGGING ---
+
+        } // End of if (this.speed !== 0)
 
         // Update all missiles fired by this robot
         for (let i = this.missiles.length - 1; i >= 0; i--) {
             const missile = this.missiles[i];
             missile.update(deltaTime);
             // Remove missile if it goes out of the arena boundaries
+            // Check against 0 and arena dimensions for missile center
             if (missile.x < 0 || missile.x > arenaWidth || missile.y < 0 || missile.y > arenaHeight) {
-                // console.log(`[${this.id}] Missile ${missile.id} went out of bounds.`); // Debug log
+                // console.log(`[${this.id}] Missile ${missile.id} went out of bounds.`); // Optional: Keep this log if needed
                 this.missiles.splice(i, 1);
             }
         }
-    }
+    } // End of update method
 
     // --- API Methods (Called via ServerRobotInterpreter's safe methods) ---
 
