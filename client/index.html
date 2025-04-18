@@ -22,7 +22,7 @@
             <h1>Robot Wars</h1>
             <nav>
                 <!-- Player Name Input Field -->
-                <input type="text" id="playerName" placeholder="Enter Name" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: #e0e0e0; margin-right: 5px;">
+                <input type="text" id="playerName" placeholder="Enter Name" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: #e0e0e0; margin-right: 5px;" maxlength="24"> <!-- Added maxlength -->
                 <!-- End Player Name Input -->
 
                 <select id="robot-appearance-select" title="Choose Robot Appearance">
@@ -30,9 +30,8 @@
                     <option value="tank">Tank Bot</option>
                     <option value="spike">Spike Bot</option>
                     <option value="tri">Tri Bot</option>
-                    <!-- Add more options later -->
                 </select>
-                <button id="btn-ready">Ready Up</button>
+                <button id="btn-ready">Ready Up</button> <!-- State managed by controls.js -->
                 <button id="btn-reset">Reset</button>
                 <select id="sample-code">
                     <option value="">Load Sample Code...</option>
@@ -49,8 +48,9 @@
                 <canvas id="arena" width="600" height="600"></canvas>
                 <div class="stats-panel">
                     <h3>Robot Stats</h3>
+                    <!-- Dashboard elements (title, list) are created/managed by dashboard.js -->
                     <div id="robot-stats">
-                        <!-- Stats will be populated by dashboard.js -->
+                        <!-- Initial placeholder content might be added by dashboard.js -->
                     </div>
                 </div>
             </div>
@@ -64,54 +64,63 @@
                         <li><code>drive(direction, speed)</code> - Move your robot</li>
                         <li><code>scan(angle, resolution)</code> - Scan for enemies</li>
                         <li><code>fire(direction, power)</code> - Fire a missile</li>
-                        <li><code>damage()</code> - Get current damage level</li>
-                        <!-- Add new API methods if any -->
+                        <li><code>damage()</code> - Get current damage level (0-100)</li>
                         <li><code>getX()</code> - Get current X coordinate</li>
                         <li><code>getY()</code> - Get current Y coordinate</li>
-                        <li><code>getDirection()</code> - Get current direction</li>
+                        <li><code>getDirection()</code> - Get current direction (degrees)</li>
                     </ul>
                 </div>
             </div>
         </main>
 
-        <!-- Placeholder for Lobby/Chat elements - Add these next -->
-        <div id="lobby-area" style="margin-top: 20px; background: #333; padding: 15px; border-radius: 8px;">
-             <h3 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Lobby Status</h3>
-             <div id="lobby-status" style="margin-bottom: 10px;">Connecting...</div>
-             <div id="event-log" style="height: 150px; overflow-y: scroll; border: 1px solid #555; margin-bottom: 10px; padding: 5px; background: #222; font-size: 14px; font-family: 'VT323', monospace;">Event Log Loading...</div>
-             <div id="chat-area" style="display: flex; gap: 5px;">
-                 <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;">
-                 <button id="send-chat" style="background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'VT323', monospace; font-size: 15px;">Send</button>
+        <!-- Lobby Area - Using CSS Grid -->
+        <div id="lobby-area"> <!-- style is now in main.css -->
+             <div> <!-- Column 1: Status, Log, Chat -->
+                 <h3 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Lobby Status</h3>
+                 <div id="lobby-status" style="margin-bottom: 10px;">Connecting...</div>
+                 <div id="event-log" style="height: 150px; overflow-y: scroll; border: 1px solid #555; margin-bottom: 10px; padding: 5px; background: #222; font-size: 14px; font-family: 'VT323', monospace;">Event Log Loading...</div>
+                 <div id="chat-area" style="display: flex; gap: 5px;">
+                     <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;" maxlength="100"> <!-- Added maxlength -->
+                     <button id="send-chat" style="background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'VT323', monospace; font-size: 15px;">Send</button>
+                 </div>
+             </div>
+
+             <div> <!-- Column 2: Game History -->
+                 <div id="game-history-log"> <!-- Outer container for styling/header -->
+                     <h4 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Recent Game Results</h4>
+                     <!-- The actual list element that history.js targets -->
+                     <div id="game-history-list" style="/* Styles are in main.css */">
+                         <!-- History will appear here -->
+                         <div>No games finished yet.</div>
+                     </div>
+                 </div>
              </div>
         </div>
-        <!-- End Lobby/Chat elements -->
+        <!-- End Lobby Area -->
 
     </div> <!-- End .container -->
 
-    <!-- Socket.IO -->
+    <!-- Socket.IO Client Library -->
     <script src="/socket.io/socket.io.js"></script>
-    <!-- Other Libraries -->
+    <!-- CodeMirror Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
 
-    <!-- Game Engine -->
+    <!-- Game Engine Scripts -->
     <script src="js/engine/arena.js"></script>
-    <!-- Note: engine/robot.js, interpreter.js, collision.js are likely unused on client now -->
-    <!-- <script src="js/engine/robot.js"></script> -->
-    <!-- <script src="js/engine/interpreter.js"></script> -->
-    <!-- <script src="js/engine/collision.js"></script> -->
     <script src="js/engine/game.js"></script>
 
-    <!-- UI Components -->
+    <!-- UI Component Scripts -->
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
     <script src="js/ui/controls.js"></script>
     <script src="js/ui/lobby.js"></script>
+    <script src="js/ui/history.js"></script> <!-- History script added -->
 
-    <!-- Network Handler -->
+    <!-- Network Handler Script -->
     <script src="js/network.js"></script>
 
-    <!-- Main Application -->
-    <script src="js/main.js"></script> <!-- This should be last -->
+    <!-- Main Application Entry Point -->
+    <script src="js/main.js"></script> <!-- This should always be the last script -->
 </body>
 </html>

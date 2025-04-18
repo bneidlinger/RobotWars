@@ -6,6 +6,7 @@ const GameInstance = require('./game-instance'); // Manages a single game match
  * Handles storing player data (including names, readiness), matchmaking,
  * game naming, tracking active/finished games, cleaning up old instances,
  * transitioning lobby players to spectators, moving participants back to lobby, // <-- Added participant move
+ * broadcasting game history, // <-- Added history broadcast
  * and broadcasting lobby events and status updates.
  */
 class GameManager {
@@ -53,11 +54,10 @@ class GameManager {
     addPlayer(socket) {
         // Avoid adding if already pending (e.g., multiple moves during cleanup)
         if (this.pendingPlayers.has(socket.id)) {
-            console.log(`[GameManager] Player ${socket.id} is already pending. Skipping add.`);
+            // console.log(`[GameManager] Player ${socket.id} is already pending. Skipping add.`); // Optional Log
             return;
         }
         // Try to retain existing name if available (e.g. from Controls state or previous game)
-        // This part is tricky server-side without client sending name again.
         // Keep simple for now: assign default or last known name if easy.
         const initialName = `Player_${socket.id.substring(0, 4)}`; // Default for now
         console.log(`[GameManager] Adding player ${socket.id} (${initialName}) back to pending list.`);
@@ -149,6 +149,7 @@ class GameManager {
         this._tryStartMatch();
 
         // Broadcast lobby status after attempting match start
+        // (Moved from socket-handler to ensure it happens after _tryStartMatch completes)
         this.broadcastLobbyStatus();
     }
 
@@ -206,7 +207,7 @@ class GameManager {
             this.createGame(playersForGame);
 
             // Broadcast the new lobby status (pending list should now be smaller or empty)
-            this.broadcastLobbyStatus(); // Moved here from inside createGame to ensure it runs after spectate move
+            // (Moved broadcast call to end of createGame and handlePlayerCode to ensure it runs after state changes)
         } else {
             // Not enough players ready, just log status
             // console.log(`[GameManager] Waiting for more players. ${readyPlayers.length}/${requiredPlayers} ready.`); // Optional log
@@ -216,7 +217,7 @@ class GameManager {
     /**
      * Creates a new GameInstance, adds it to the active games list,
      * maps players to the game, starts the game loop, transitions remaining lobby players
-     * to spectators, and emits lobby events.
+     * to spectators, emits lobby events, and broadcasts lobby status.
      * @param {Array<{socket: SocketIO.Socket, code: string, appearance: string, name: string, isReady: boolean}>} playersData - Array of player data objects for the new game.
      */
     createGame(playersData) {
@@ -257,6 +258,7 @@ class GameManager {
 
             // --- START: Transition remaining lobby players to spectators ---
             const spectatorRoom = `spectator-${gameId}`;
+            // IMPORTANT: Create a *copy* of the values before iterating and modifying the map
             const remainingPendingPlayers = Array.from(this.pendingPlayers.values());
 
             if (remainingPendingPlayers.length > 0) {
@@ -266,7 +268,8 @@ class GameManager {
                     const spectatorId = spectatorSocket.id;
                     const spectatorName = pendingPlayer.name;
 
-                    if (this.pendingPlayers.has(spectatorId)) { // Check if still pending
+                    // Double-check if the player still exists in pendingPlayers before modifying
+                    if (this.pendingPlayers.has(spectatorId)) {
                         if (spectatorSocket.connected) {
                              spectatorSocket.join(spectatorRoom);
                              spectatorSocket.emit('spectateStart', { gameId: gameId, gameName: gameName });
@@ -285,6 +288,9 @@ class GameManager {
 
             // Start the simulation loop for the new game instance
             gameInstance.startGameLoop();
+
+            // Broadcast lobby status AFTER game is created and players/spectators moved
+            this.broadcastLobbyStatus();
 
         } catch (error) {
             console.error(`[GameManager] Error creating game ${gameId} ('${gameName}'):`, error);
@@ -308,7 +314,8 @@ class GameManager {
     /**
      * Handles the game over event triggered by a GameInstance callback.
      * Emits lobby events, moves spectators AND participants back to the lobby,
-     * cleans up player mapping, removes the game instance, and logs the result.
+     * cleans up player mapping, removes the game instance, logs the result,
+     * and broadcasts the updated game history. // <-- Added history broadcast
      * @param {string} gameId - The ID of the game that just ended.
      * @param {object} winnerData - Object containing winner details { winnerId, winnerName, reason }.
      */
@@ -337,7 +344,7 @@ class GameManager {
                 if (spectatorSocket.connected) {
                     console.log(`[GameManager] Moving spectator ${spectatorSocket.id} from room ${spectatorRoom} back to lobby.`);
                     spectatorSocket.leave(spectatorRoom); // Leave room first
-                    this.addPlayer(spectatorSocket);    // Then add to pending
+                    this.addPlayer(spectatorSocket);    // Then add to pending safely
                 } else {
                     console.log(`[GameManager] Spectator ${spectatorSocket.id} disconnected before move.`);
                 }
@@ -347,7 +354,7 @@ class GameManager {
         }
         // --- End Spectator Move ---
 
-        // --- Clean up Player Mappings AND Move Participants to Lobby --- // <--- KEY CHANGE HERE
+        // --- Clean up Player Mappings AND Move Participants to Lobby ---
         const playerIds = Array.from(gameInstance.players.keys());
         console.log(`[GameManager] Cleaning up mappings and moving participants to lobby for game ${gameId}:`, playerIds);
         playerIds.forEach(playerId => {
@@ -361,24 +368,37 @@ class GameManager {
             // Add participant back to the pending list if still connected
             if (playerSocket && playerSocket.connected) {
                  console.log(`[GameManager] Adding participant ${playerId} back to pendingPlayers.`);
-                 this.addPlayer(playerSocket); // Add them back to the lobby list
+                 this.addPlayer(playerSocket); // Add them back to the lobby list safely
             } else {
                  console.log(`[GameManager] Participant ${playerId} not found or disconnected. Cannot add back to lobby.`);
-                 // If they disconnected, removePlayer handler should have/will clean them up fully.
             }
         });
         // --- End Participant Cleanup/Move ---
 
         // --- Optional: Log completed game ---
-        const completedGameData = { /* ... */ }; // (Logging logic unchanged)
-        this.recentlyCompletedGames.set(gameId, completedGameData);
-        // ... (Pruning logic unchanged) ...
-        console.log(`[GameManager] Logged completed game: ${gameId} ('${gameName}')`);
+        // Ensure gameInstance and playerNames exist before trying to access them
+        if (gameInstance && gameInstance.playerNames) {
+            const completedGameData = {
+                name: gameName,
+                winnerName: winnerName,
+                players: Array.from(gameInstance.playerNames.entries()).map(([id, name]) => ({ id, name })),
+                endTime: Date.now()
+            };
+            this.recentlyCompletedGames.set(gameId, completedGameData);
+            while (this.recentlyCompletedGames.size > this.maxCompletedGames) {
+                const oldestGameId = this.recentlyCompletedGames.keys().next().value;
+                this.recentlyCompletedGames.delete(oldestGameId);
+                console.log(`[GameManager] Pruned oldest completed game log: ${oldestGameId}`);
+            }
+            console.log(`[GameManager] Logged completed game: ${gameId} ('${gameName}')`);
+        } else {
+            console.warn(`[GameManager] Could not log completed game ${gameId}, instance or playerNames missing.`);
+        }
         // --- End Game Logging ---
 
         // --- Clean up Game Instance Resources & Remove ---
         try {
-            gameInstance.cleanup();
+            if (gameInstance) gameInstance.cleanup(); // Check if instance exists before cleanup
         } catch(err) {
             console.error(`[GameManager] Error during gameInstance.cleanup() for ${gameId}:`, err);
         }
@@ -388,7 +408,20 @@ class GameManager {
 
         // Broadcast status now that spectators AND participants are back in pending
         this.broadcastLobbyStatus();
+
+        // --- Broadcast Updated Game History ---
+        this.broadcastGameHistory(); // Call helper function
+        // --- End History Broadcast ---
     }
+
+     /** Helper function to broadcast the current game history */
+     broadcastGameHistory() {
+         // Convert map values to an array, sort by endTime descending (newest first)
+         const historyArray = Array.from(this.recentlyCompletedGames.values())
+                                 .sort((a, b) => b.endTime - a.endTime); // Sort newest first
+         // console.log(`[GameManager] Broadcasting game history (${historyArray.length} entries).`); // Optional Log
+         this.io.emit('gameHistoryUpdate', historyArray);
+     }
 
     /**
      * Removes a disconnected or leaving player from the system.
@@ -415,8 +448,7 @@ class GameManager {
                 // If the game becomes empty *DURING PLAY* after removal, clean up the game instance itself.
                 if (game.isEmpty()) {
                     console.log(`[GameManager] Active game ${gameId} ('${game.gameName}') has no players left after disconnect. Triggering cleanup.`);
-                    // We don't need a full gameOver event, just cleanup
-                    try { game.cleanup(); } catch(e){ console.error("Error cleaning up empty game", e); }
+                    try { if (game.cleanup) game.cleanup(); } catch(e){ console.error("Error cleaning up empty game", e); }
                     this.activeGames.delete(gameId);
                     console.log(`[GameManager] Game instance ${gameId} removed from active games.`);
                 }

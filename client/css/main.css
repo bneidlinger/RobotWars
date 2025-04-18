@@ -8,15 +8,14 @@
 
 body {
     /* --- 80s Retro Font --- */
-    /* Use VT323 for the primary body text, adjust size carefully */
     font-family: 'VT323', monospace;
-    font-size: 20px; /* STARTING POINT for VT323 - Tweak this! */
+    font-size: 20px; /* Base size for VT323 */
     /* --- End Retro Font --- */
 
     /* Keep modern dark theme */
     background-color: #1e1e1e;
     color: #e0e0e0;
-    line-height: 1.6; /* Keep line-height for readability */
+    line-height: 1.6;
 }
 
 .container {
@@ -36,21 +35,18 @@ header {
 
 header h1 {
     /* --- 80s Retro Font --- */
-    /* Use Press Start 2P for the main title, significantly smaller size needed */
     font-family: 'Press Start 2P', cursive;
-    font-size: 1.8rem; /* STARTING POINT for Press Start 2P - Tweak this! (Maybe 28px-32px?) */
+    font-size: 1.8rem; /* Adjust if needed */
     /* --- End Retro Font --- */
 
-    /* Keep modern color */
     color: #4CAF50;
-    /* Remove default H1 margin if the font adds too much space */
     margin: 0;
 }
 
 nav {
     display: flex;
     gap: 10px;
-    align-items: center; /* Align items vertically */
+    align-items: center;
 }
 
 /* Keep modern button and select styling */
@@ -58,15 +54,14 @@ button, select {
     background-color: #4CAF50;
     color: white;
     border: none;
-    padding: 8px 16px; /* Keep original padding */
-    border-radius: 4px; /* Keep rounded corners */
+    padding: 8px 16px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.2s; /* Keep transition */
+    transition: background-color 0.2s;
 
     /* --- 80s Retro Font --- */
-    /* Apply VT323 font to buttons/selects */
     font-family: 'VT323', monospace;
-    font-size: 15px; /* STARTING POINT - Slightly smaller than body maybe? Tweak this! */
+    font-size: 15px; /* Adjust if needed */
     /* --- End Retro Font --- */
 }
 
@@ -74,25 +69,47 @@ button:hover, select:hover {
     background-color: #45a049;
 }
 
+/* Style disabled buttons */
+button:disabled {
+    background-color: #555; /* Darker grey when disabled */
+    color: #aaa;
+    cursor: not-allowed;
+}
+button:disabled:hover {
+    background-color: #555; /* Prevent hover effect when disabled */
+}
+
+
 /* Keep modern select specific styling */
 select {
     background-color: #333;
 }
+select:disabled {
+    background-color: #555;
+    color: #aaa;
+    cursor: not-allowed;
+}
 
-/* Style the new player name input similarly to the select */
+/* Style the player name input */
 input#playerName {
      /* --- 80s Retro Font --- */
     font-family: 'VT323', monospace;
-    font-size: 15px; /* Match button/select size - Tweak this! */
+    font-size: 15px; /* Match button/select size */
      /* --- End Retro Font --- */
 
     background-color: #333;
     color: #e0e0e0;
-    border: 1px solid #555; /* Subtle border */
-    padding: 8px; /* Match button vertical padding */
+    border: 1px solid #555;
+    padding: 8px;
     border-radius: 4px;
-    margin-right: 5px; /* Keep spacing */
+    margin-right: 5px;
 }
+input#playerName:disabled {
+    background-color: #555;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
 
 /* Keep modern grid layout */
 main {
@@ -105,18 +122,16 @@ main {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    /* align-items: center; */ /* Removed centering for now unless needed */
 }
 
 #arena {
     /* Keep modern arena styling */
     background-color: #2c2c2c;
     border: 2px solid #444;
-    border-radius: 8px; /* Keep rounded corners */
-    /* width: 100%; */ /* REMOVED - Let HTML attributes define the size (FIXED EARLIER) */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Keep subtle shadow */
-    max-width: 100%; /* Keep responsiveness */
-    /* Ensure canvas aligns well if container has padding/alignment */
+    border-radius: 8px;
+    /* width/height set by HTML attributes */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 100%;
     display: block; /* Helps prevent extra space below */
 }
 
@@ -124,19 +139,20 @@ main {
 .stats-panel {
     background-color: #333;
     padding: 15px;
-    border-radius: 8px; /* Keep rounded corners */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Keep subtle shadow */
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Apply retro font to panel titles */
-.stats-panel h3, .editor-container h3, .api-help h4 {
+.stats-panel h3, .editor-container h3, .api-help h4, #lobby-area h3, #game-history-log h4 {
      /* --- 80s Retro Font --- */
-    font-family: 'VT323', monospace; /* Use VT323 */
-    font-size: 18px; /* Slightly larger than body - Tweak this! */
+    font-family: 'VT323', monospace;
+    font-size: 18px; /* Adjust if needed */
      /* --- End Retro Font --- */
-     margin-bottom: 10px; /* Add some space below titles */
+     margin-bottom: 10px;
      color: #4CAF50; /* Match header color accent */
 }
+
 
 .editor-container {
     display: flex;
@@ -144,53 +160,163 @@ main {
     gap: 15px;
 }
 
+/* CodeMirror Styling */
 .CodeMirror {
-    height: 400px;
-    border-radius: 8px; /* Keep rounded corners */
+    height: 400px; /* Adjust height as needed */
+    border-radius: 8px;
+    border: 1px solid #444; /* Subtle border */
 
     /* --- 80s Retro Font --- */
-    font-family: 'VT323', monospace; /* Use VT323 for code */
-    font-size: 16px; /* STARTING POINT for code - Readability is key, tweak this! */
+    font-family: 'VT323', monospace;
+    font-size: 16px; /* Adjust for readability */
     /* --- End Retro Font --- */
-
-    /* Ensure the theme provides background/text color */
-    /* Assuming theme: 'monokai' handles the rest */
 }
+/* Style CodeMirror when read-only */
+.CodeMirror-readonly .CodeMirror-cursor {
+    display: none !important; /* Hide cursor when read-only */
+}
+.CodeMirror-readonly {
+    background-color: #2a2a2a !important; /* Slightly different background when read-only */
+}
+
 
 /* Keep modern API help styling */
 .api-help {
     background-color: #333;
     padding: 15px;
-    border-radius: 8px; /* Keep rounded corners */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Keep subtle shadow */
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .api-help ul {
-    list-style-position: inside; /* Keep bullets neat */
+    list-style-position: inside;
     padding-left: 5px;
 }
 
 .api-help li {
-    margin-bottom: 5px; /* Space out API items */
+    margin-bottom: 5px;
 }
 
 /* Style code snippets within API help */
 .api-help code {
     /* --- 80s Retro Font --- */
-    /* Use VT323 here too for consistency */
     font-family: 'VT323', monospace;
-    /* font-size: 15px; */ /* Inherit size or slightly smaller */
+    /* Inherit size or slightly smaller */
     /* --- End Retro Font --- */
 
     background-color: #444; /* Keep modern snippet style */
     padding: 2px 4px;
-    border-radius: 3px; /* Keep subtle rounding */
+    border-radius: 3px;
     color: #f0f0f0; /* Lighter color for code */
 }
 
-/* Keep modern responsive design */
+
+/* --- Lobby Area Grid Layout --- */
+#lobby-area {
+    margin-top: 20px;
+    background: #333;
+    padding: 15px;
+    border-radius: 8px;
+    display: grid; /* Use grid */
+    grid-template-columns: 1fr 1fr; /* Two equal columns */
+    gap: 20px; /* Space between columns */
+    border-top: 2px solid #444; /* Add a separator from main content */
+}
+
+/* Styles for elements within the first column of the lobby area */
+#lobby-area > div:first-child {
+    /* Styles specific to the first column if needed */
+}
+
+/* Styles for elements within the second column (Game History) */
+#lobby-area > div:last-child {
+    /* Styles specific to the second column if needed */
+}
+
+#lobby-status {
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #e0e0e0;
+}
+
+#event-log {
+    height: 150px; /* Adjust height as needed */
+    overflow-y: scroll;
+    border: 1px solid #555;
+    margin-bottom: 10px;
+    padding: 5px;
+    background: #222;
+    font-size: 14px;
+    font-family: 'VT323', monospace;
+}
+
+#chat-area {
+    display: flex;
+    gap: 5px;
+}
+
+#chat-input {
+    flex-grow: 1;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background: #2a2a2a;
+    color: #e0e0e0;
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+}
+
+#send-chat {
+    /* Inherits general button styles */
+    /* Add specific overrides if needed */
+    padding: 8px 16px; /* Match other buttons */
+    font-size: 15px;
+}
+
+
+/* --- Game History Log Styling --- */
+#game-history-log {
+    /* Container takes up the second grid column */
+    font-family: 'VT323', monospace; /* Use retro font */
+}
+
+/* #game-history-log h4 already styled by shared header styles */
+
+#game-history-list {
+    /* Style the list area */
+    height: 195px; /* Roughly match event log height, adjusted for less padding */
+    overflow-y: auto; /* Scroll if content exceeds height */
+    background: #222; /* Match event log background */
+    border: 1px solid #555; /* Match event log border */
+    padding: 8px;
+    font-size: 14px; /* Match event log font size */
+}
+
+#game-history-list > div { /* Style individual history entries */
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed #444; /* Separator line */
+    color: #cccccc; /* Slightly dimmer than chat */
+    word-wrap: break-word; /* Prevent long names from breaking layout */
+}
+
+#game-history-list > div:last-child { /* Remove border from last item */
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+/* --- Responsive Adjustments --- */
 @media (max-width: 900px) {
     main {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Stack game and editor */
+    }
+}
+
+@media (max-width: 768px) { /* Adjust breakpoint if needed */
+    #lobby-area {
+        grid-template-columns: 1fr; /* Stack lobby columns */
+    }
+    #game-history-log {
+         margin-top: 20px; /* Add space when stacked */
     }
 }
