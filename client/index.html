@@ -4,19 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robot Wars</title>
+
+    <!-- Google Fonts Link (Press Start 2P & VT323) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <!-- End Google Fonts -->
+
     <link rel="stylesheet" href="css/main.css">
     <!-- Code Mirror for the editor -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/monokai.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Robot Wars</h1>
             <nav>
+                <!-- Player Name Input Field -->
+                <input type="text" id="playerName" placeholder="Enter Name" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: #e0e0e0; margin-right: 5px;">
+                <!-- End Player Name Input -->
+
                 <select id="robot-appearance-select" title="Choose Robot Appearance">
                     <option value="default">Default Bot</option>
                     <option value="tank">Tank Bot</option>
@@ -37,11 +45,13 @@
 
         <main>
             <div class="game-container">
-                <!-- Verify this line carefully -->
+                <!-- Canvas with fixed dimensions -->
                 <canvas id="arena" width="600" height="600"></canvas>
                 <div class="stats-panel">
                     <h3>Robot Stats</h3>
-                    <div id="robot-stats"></div>
+                    <div id="robot-stats">
+                        <!-- Stats will be populated by dashboard.js -->
+                    </div>
                 </div>
             </div>
 
@@ -55,11 +65,28 @@
                         <li><code>scan(angle, resolution)</code> - Scan for enemies</li>
                         <li><code>fire(direction, power)</code> - Fire a missile</li>
                         <li><code>damage()</code> - Get current damage level</li>
+                        <!-- Add new API methods if any -->
+                        <li><code>getX()</code> - Get current X coordinate</li>
+                        <li><code>getY()</code> - Get current Y coordinate</li>
+                        <li><code>getDirection()</code> - Get current direction</li>
                     </ul>
                 </div>
             </div>
         </main>
-    </div>
+
+        <!-- Placeholder for Lobby/Chat elements - Add these next -->
+        <div id="lobby-area" style="margin-top: 20px; background: #333; padding: 15px; border-radius: 8px;">
+             <h3 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Lobby Status</h3>
+             <div id="lobby-status" style="margin-bottom: 10px;">Connecting...</div>
+             <div id="event-log" style="height: 150px; overflow-y: scroll; border: 1px solid #555; margin-bottom: 10px; padding: 5px; background: #222; font-size: 14px; font-family: 'VT323', monospace;">Event Log Loading...</div>
+             <div id="chat-area" style="display: flex; gap: 5px;">
+                 <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;">
+                 <button id="send-chat" style="background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'VT323', monospace; font-size: 15px;">Send</button>
+             </div>
+        </div>
+        <!-- End Lobby/Chat elements -->
+
+    </div> <!-- End .container -->
 
     <!-- Socket.IO -->
     <script src="/socket.io/socket.io.js"></script>
@@ -69,15 +96,19 @@
 
     <!-- Game Engine -->
     <script src="js/engine/arena.js"></script>
-    <script src="js/engine/robot.js"></script>
-    <script src="js/engine/interpreter.js"></script> <!-- Note: This is client-side, likely unused now -->
-    <script src="js/engine/collision.js"></script>   <!-- Note: This is client-side, likely unused now -->
+    <!-- Note: engine/robot.js, interpreter.js, collision.js are likely unused on client now -->
+    <!-- <script src="js/engine/robot.js"></script> -->
+    <!-- <script src="js/engine/interpreter.js"></script> -->
+    <!-- <script src="js/engine/collision.js"></script> -->
     <script src="js/engine/game.js"></script>
 
     <!-- UI Components -->
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
     <script src="js/ui/controls.js"></script>
+    <!-- Add Lobby/Chat UI script later -->
+    <!-- <script src="js/ui/lobby.js"></script> -->
+
 
     <!-- Network Handler -->
     <script src="js/network.js"></script>

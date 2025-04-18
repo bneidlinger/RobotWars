@@ -10,7 +10,7 @@ body {
     /* --- 80s Retro Font --- */
     /* Use VT323 for the primary body text, adjust size carefully */
     font-family: 'VT323', monospace;
-    font-size: 16px; /* STARTING POINT for VT323 - Tweak this! */
+    font-size: 20px; /* STARTING POINT for VT323 - Tweak this! */
     /* --- End Retro Font --- */
 
     /* Keep modern dark theme */

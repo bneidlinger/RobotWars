@@ -13,10 +13,18 @@ class Game {
      */
     constructor(arenaId) {
         // Arena handles drawing the canvas, grid, robots, and visual effects (explosions)
-        this.arena = new Arena(arenaId);
+        try {
+            this.arena = new Arena(arenaId); // Arena constructor might throw if canvas/context fails
+        } catch (error) {
+            console.error("Failed to initialize Arena:", error);
+            alert(`Critical Error: Could not initialize game graphics.\n${error.message}`);
+            // Attempt to prevent further errors if arena failed
+            this.arena = null; // Mark arena as unusable
+        }
+
 
         // Store local representations of game state received from the server
-        this.robots = []; // Data objects for robots, including appearance
+        this.robots = []; // Data objects for robots, including appearance and name
         this.missiles = []; // Data objects for missiles (Arena will access this to draw)
 
         // State variables for the client game flow
@@ -40,7 +48,7 @@ class Game {
     /**
      * Updates the local game representation based on state received from the server.
      * Called by network.js upon receiving the 'gameStateUpdate' event.
-     * This includes updating robot positions, damage, appearance, missiles, and triggering explosions.
+     * This includes updating robot positions, damage, appearance, name, missiles, and triggering explosions.
      * @param {object} gameState - The game state object sent by the server.
      */
     updateFromServer(gameState) {
@@ -51,7 +59,7 @@ class Game {
 
         // --- Update Robots ---
         if (gameState.robots) {
-            // Map server robot data to simple objects for rendering, including appearance
+            // Map server robot data to simple objects for rendering, including appearance and name
             this.robots = gameState.robots.map(serverRobotData => ({
                 id: serverRobotData.id,
                 x: serverRobotData.x,
@@ -61,14 +69,22 @@ class Game {
                 color: serverRobotData.color,
                 isAlive: serverRobotData.isAlive,
                 radius: 15, // Assuming fixed radius for client rendering logic
-                appearance: serverRobotData.appearance || 'default' // Store appearance
+                appearance: serverRobotData.appearance || 'default', // Store appearance
+                // --- FIX: Copy the name property from server data ---
+                name: serverRobotData.name || 'Unknown' // Copy name, fallback if missing
+                // --- End FIX ---
             }));
-            // Update the Arena's list so it can draw them using the correct appearance
-            this.arena.robots = this.robots;
+            // Update the Arena's list so it can draw them using the correct appearance and name
+            // Check if arena exists before trying to update it
+            if (this.arena) {
+                this.arena.robots = this.robots;
+            }
         } else {
             // If no robot data, clear local list and arena's list
             this.robots = [];
-            this.arena.robots = [];
+            if (this.arena) {
+                 this.arena.robots = [];
+            }
         }
 
         // --- Update Missiles ---
@@ -88,10 +104,10 @@ class Game {
 
         // --- Trigger Client-Side Explosions ---
         // Check if the server sent any explosion events this tick
-        if (gameState.explosions && gameState.explosions.length > 0) {
+        if (this.arena && gameState.explosions && gameState.explosions.length > 0) {
             gameState.explosions.forEach(expData => {
                 // Tell the Arena instance to create the visual effect
-                if (this.arena && typeof this.arena.createExplosion === 'function') {
+                if (typeof this.arena.createExplosion === 'function') {
                     // console.log(`Client creating visual explosion for event ${expData.id}`); // Debug log
                     this.arena.createExplosion(expData.x, expData.y, expData.size);
                 }
@@ -100,7 +116,7 @@ class Game {
 
         // --- Update UI Elements (Dashboard) ---
         if (window.dashboard && typeof window.dashboard.updateStats === 'function') {
-            // Pass the current robot data (which includes damage, status) to the dashboard
+            // Pass the current robot data (which includes name, damage, status) to the dashboard
             window.dashboard.updateStats(this.robots);
         }
     }
@@ -113,9 +129,17 @@ class Game {
         // Stop the loop if the game is no longer marked as running
         if (!this.running) return;
 
-        // 1. Ask the Arena to draw everything based on the current state
-        //    (Arena accesses game.robots and game.missiles internally if needed by its draw method)
-        this.arena.draw();
+        // Ensure arena exists before attempting to draw
+        if (this.arena) {
+            // 1. Ask the Arena to draw everything based on the current state
+            //    (Arena accesses game.robots and game.missiles internally if needed by its draw method)
+            this.arena.draw();
+        } else {
+             // If arena doesn't exist, stop the loop to prevent errors
+             console.error("Render loop cannot run because Arena object is missing.");
+             this.stop();
+             return;
+        }
 
         // 2. Request the next frame to continue the animation loop
         this.animationFrame = requestAnimationFrame(this.clientRenderLoop.bind(this));
@@ -127,6 +151,11 @@ class Game {
      */
     startRenderLoop() {
         if (this.running) return; // Prevent starting multiple loops
+        // Prevent starting if arena failed to initialize
+        if (!this.arena) {
+             console.error("Cannot start render loop because Arena is not initialized.");
+             return;
+        }
         console.log("Starting client render loop...");
         this.running = true;
         this.clientRenderLoop(); // Initiate the animation loop
@@ -150,19 +179,27 @@ class Game {
 
     /**
      * Handles the 'gameStart' event from the server. Prepares the client for the match.
-     * @param {object} data - Data associated with the game start (e.g., game ID, player list with appearances).
+     * @param {object} data - Data associated with the game start (e.g., game ID, player list with names/appearances).
      */
     handleGameStart(data) {
         console.log("Game Start signal received:", data);
         this.gameId = data.gameId;
-        // Reset local state from any previous game
+
+        // Reset local state from any previous game only if arena exists
         if (this.arena) {
             this.arena.explosions = []; // Clear visual effects in arena
         }
         this.missiles = []; // Clear missile list in game state
         this.robots = []; // Clear robot list
-        this.arena.robots = []; // Clear arena's robot list
+        if (this.arena) {
+            this.arena.robots = []; // Clear arena's robot list
+        }
         this.lastServerState = null; // Clear last known state
+
+        // Log players in the game
+        if (data.players) {
+            console.log("Players in this game:", data.players.map(p => `${p.name} (${p.appearance})`).join(', '));
+        }
 
         // Start rendering the game now that it's begun
         this.startRenderLoop();
@@ -170,6 +207,7 @@ class Game {
         // Update UI elements to reflect the "in-game" state
         const runButton = document.getElementById('btn-run');
         const appearanceSelect = document.getElementById('robot-appearance-select');
+        const playerNameInput = document.getElementById('playerName');
         if (runButton) {
             runButton.textContent = "Game in Progress...";
             runButton.disabled = true;
@@ -177,36 +215,64 @@ class Game {
         if (appearanceSelect) {
             appearanceSelect.disabled = true; // Disable changing appearance during game
         }
+         if (playerNameInput) {
+             playerNameInput.disabled = true; // Disable changing name during game
+         }
         // Consider making editor read-only during game
         // if (typeof editor !== 'undefined') editor.setOption("readOnly", true);
     }
 
     /**
      * Handles the 'gameOver' event from the server. Cleans up the client state and UI.
-     * @param {object} data - Data associated with the game end (e.g., reason, winner ID).
+     * @param {object} data - Data associated with the game end (e.g., reason, winnerId, winnerName).
      */
     handleGameOver(data) {
         console.log("Game Over signal received:", data);
         this.stop(); // Stop the rendering loop
 
-        // Display game over message to the user
-        const winnerName = data.winner ? data.winner.substring(0, 6) + '...' : 'None'; // Show partial ID or None
-        const message = `Game Over! ${data.reason || 'Match ended.'} Winner: ${winnerName}`;
-        alert(message);
+        // --- Updated Winner Display ---
+        // Use winnerName if provided by the server, otherwise fallback to ID or 'None'.
+        let winnerDisplayName = 'None'; // Default
+        if (data.winnerName) {
+            winnerDisplayName = data.winnerName; // Use the name if available
+        } else if (data.winnerId) {
+            // Fallback to partial ID if name is missing but ID is present
+            winnerDisplayName = `ID: ${data.winnerId.substring(0, 6)}...`;
+        }
+        const message = `Game Over! ${data.reason || 'Match ended.'} Winner: ${winnerDisplayName}`;
+        alert(message); // Display name (or fallback) in alert
+        // --- End Updated Winner Display ---
 
-        // Reset UI elements to allow starting a new game
+        // --- Reset UI Elements ---
         const runButton = document.getElementById('btn-run');
         const appearanceSelect = document.getElementById('robot-appearance-select');
+        const playerNameInput = document.getElementById('playerName'); // Get player name input
+
         if (runButton) {
+            // TODO: Change text to "Ready Up" when explicit ready is implemented
             runButton.textContent = "Run Simulation";
             runButton.disabled = false;
         }
          if (appearanceSelect) {
             appearanceSelect.disabled = false; // Re-enable appearance selection
         }
+         // Re-enable the player name input field
+         if (playerNameInput) {
+             playerNameInput.disabled = false;
+         }
         // if (typeof editor !== 'undefined') editor.setOption("readOnly", false); // Allow editing again
+        // --- End Reset UI Elements ---
+
+        // Update lobby status (example)
+        if (typeof updateLobbyStatus === 'function') {
+             updateLobbyStatus('Game Over. Ready Up for another match!');
+        }
 
         // Optional: Clear the display after a short delay if desired
-        // setTimeout(() => { ... }, 2000);
+        // setTimeout(() => {
+        //      if(this.arena) this.arena.clear(); // Clear canvas if arena exists
+        //      if(window.dashboard) window.dashboard.updateStats([]); // Clear dashboard
+        // }, 2000);
     }
+
 } // End Game Class
