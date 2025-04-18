@@ -71,8 +71,12 @@ main {
     background-color: #2c2c2c;
     border: 2px solid #444;
     border-radius: 8px;
-    width: 100%;
+    /* width: 100%; */ /* REMOVED - Let HTML attributes define the size */
+    /* display: block; */ /* Often helpful for canvas elements */
+    /* margin: 0 auto; */ /* Center the canvas if the container is wider */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* Ensure the canvas doesn't break layout if container is too small */
+    max-width: 100%; /* Optional: Allow shrinking if needed, but drawing area is still 600x600 */
 }
 
 .stats-panel {

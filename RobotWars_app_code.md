@@ -1737,6 +1737,7 @@ class Network {
 
         <main>
             <div class="game-container">
+                <!-- Verify this line carefully -->
                 <canvas id="arena" width="600" height="600"></canvas>
                 <div class="stats-panel">
                     <h3>Robot Stats</h3>
@@ -1760,7 +1761,7 @@ class Network {
         </main>
     </div>
 
- <!-- Socket.IO -->
+    <!-- Socket.IO -->
     <script src="/socket.io/socket.io.js"></script>
     <!-- Other Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
@@ -1769,8 +1770,8 @@ class Network {
     <!-- Game Engine -->
     <script src="js/engine/arena.js"></script>
     <script src="js/engine/robot.js"></script>
-    <script src="js/engine/interpreter.js"></script>
-    <script src="js/engine/collision.js"></script>
+    <script src="js/engine/interpreter.js"></script> <!-- Note: This is client-side, likely unused now -->
+    <script src="js/engine/collision.js"></script>   <!-- Note: This is client-side, likely unused now -->
     <script src="js/engine/game.js"></script>
 
     <!-- UI Components -->
@@ -1779,7 +1780,7 @@ class Network {
     <script src="js/ui/controls.js"></script>
 
     <!-- Network Handler -->
-    <script src="js/network.js"></script>  <!-- ADD THIS LINE -->
+    <script src="js/network.js"></script>
 
     <!-- Main Application -->
     <script src="js/main.js"></script> <!-- This should be last -->
@@ -2488,7 +2489,7 @@ class ServerCollisionSystem {
      * Checks for collisions between robots to prevent overlap.
      * Applies minor damage and pushes robots apart.
      */
-    checkRobotRobotCollisions() {
+     checkRobotRobotCollisions() {
         const robots = this.game.robots;
         const numRobots = robots.length;
 
@@ -2508,7 +2509,7 @@ class ServerCollisionSystem {
 
                 if (distanceSquared < minDistanceSquared && distanceSquared > 0.001) { // Avoid division by zero if perfectly overlapped
                     // --- OVERLAP DETECTED ---
-                     console.log(`[Collision] Robot ${robotA.id} and ${robotB.id} collided.`);
+                     // console.log(`[Collision] Robot ${robotA.id} and ${robotB.id} collided.`); // Original log (optional)
 
                     const distance = Math.sqrt(distanceSquared);
                     const overlap = minDistance - distance;
@@ -2517,12 +2518,21 @@ class ServerCollisionSystem {
                     const separationX = dx / distance;
                     const separationY = dy / distance;
 
+                    // --- START COLLISION DEBUG LOGGING ---
+                    console.log(`[DEBUG COLL ${robotA.id}/${robotB.id}] Pre-Push: A=(${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)}), B=(${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
+                    // --- END COLLISION DEBUG LOGGING ---
+
                     // Move robots apart by half the overlap distance each
                     const moveDist = overlap / 2;
                     robotA.x -= separationX * moveDist;
                     robotA.y -= separationY * moveDist;
                     robotB.x += separationX * moveDist;
                     robotB.y += separationY * moveDist;
+
+                    // --- START COLLISION DEBUG LOGGING ---
+                    console.log(`[DEBUG COLL ${robotA.id}/${robotB.id}] Post-Push: A=(${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)}), B=(${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
+                    // --- END COLLISION DEBUG LOGGING ---
+
 
                     // Apply small collision damage
                     robotA.takeDamage(0.5); // Very minor damage for bumps
@@ -2531,15 +2541,29 @@ class ServerCollisionSystem {
                     // Optional: Apply a small impulse/change in velocity if physics are more complex later
 
                     // Re-check boundaries after push-apart (simple clamp)
+                    // Store pre-clamp values for comparison logging
+                    const preClampAx = robotA.x; const preClampAy = robotA.y;
+                    const preClampBx = robotB.x; const preClampBy = robotB.y;
+
                     robotA.x = Math.max(robotA.radius, Math.min(this.arenaWidth - robotA.radius, robotA.x));
                     robotA.y = Math.max(robotA.radius, Math.min(this.arenaHeight - robotA.radius, robotA.y));
                     robotB.x = Math.max(robotB.radius, Math.min(this.arenaWidth - robotB.radius, robotB.x));
                     robotB.y = Math.max(robotB.radius, Math.min(this.arenaHeight - robotB.radius, robotB.y));
 
-                }
-            }
-        }
-    }
+                    // --- START COLLISION DEBUG LOGGING ---
+                    // Log ONLY if clamping actually changed the value
+                    if (robotA.x !== preClampAx || robotA.y !== preClampAy) {
+                         console.log(`[DEBUG COLL ${robotA.id}] Clamped A after push from (${preClampAx.toFixed(2)}, ${preClampAy.toFixed(2)}) to (${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)})`);
+                    }
+                    if (robotB.x !== preClampBx || robotB.y !== preClampBy) {
+                         console.log(`[DEBUG COLL ${robotB.id}] Clamped B after push from (${preClampBx.toFixed(2)}, ${preClampBy.toFixed(2)}) to (${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
+                    }
+                    // --- END COLLISION DEBUG LOGGING ---
+
+                } // End if (overlap detected)
+            } // End inner loop (robotB)
+        } // End outer loop (robotA)
+    } // End checkRobotRobotCollisions method
 
     // Optional: Move missile boundary check here if not handled in robot.update
     // checkMissileBoundaryCollisions() { ... }
@@ -2855,7 +2879,7 @@ class ServerMissile {
      */
     update(deltaTime) {
         // Note: Increased multiplier for more noticeable movement per tick
-        const moveSpeed = this.speed * deltaTime * 40; // Scale speed by time and a factor (adjust 60 base if needed)
+        const moveSpeed = this.speed * deltaTime * 60; // Scale speed by time and a factor (adjust 60 if needed)
         const radians = this.direction * Math.PI / 180;
         this.x += Math.cos(radians) * moveSpeed;
         // Assuming server Y matches canvas (up is negative delta) for consistency:
