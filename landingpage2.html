@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROBOT WARS - The Battle of Code</title>
+    <style>
+        :root {
+            --dark-metal: #1a1a1a;
+            --gun-metal: #2d3142;
+            --steel-blue: #4f5d75;
+            --battle-red: #b80c09;
+            --american-blue: #0a2463;
+            --industrial-yellow: #f9a03f;
+            --neon-green: #39ff14;
+            --warning-orange: #FF5722;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background-color: var(--dark-metal);
+            color: #f0f0f0;
+            background-image:
+                linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%),
+                linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%);
+            background-size: 10px 10px;
+            background-position: 0 0, 5px 5px;
+            line-height: 1.6;
+        }
+
+        .retro-terminal {
+            position: relative;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #000;
+            border: 3px solid var(--industrial-yellow);
+            box-shadow: 0 0 15px rgba(249, 160, 63, 0.7),
+                        0 0 30px rgba(249, 160, 63, 0.5),
+                        0 0 45px rgba(249, 160, 63, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .retro-terminal::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(to bottom,
+                        rgba(249, 160, 63, 0.1) 0%,
+                        transparent 100%);
+        }
+
+        .terminal-header {
+            border-bottom: 2px solid var(--industrial-yellow);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .blink {
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        h1 {
+            font-size: 42px;
+            color: var(--industrial-yellow);
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px var(--industrial-yellow);
+        }
+
+        h2 {
+            color: var(--battle-red);
+            margin: 25px 0 10px;
+            text-shadow: 0 0 3px var(--battle-red);
+        }
+
+        .message {
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 3px solid var(--steel-blue);
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .urgent {
+            border-left: 3px solid var(--battle-red);
+            background-color: rgba(184, 12, 9, 0.1);
+        }
+
+        .signature {
+            margin-top: 30px;
+            text-align: right;
+            font-style: italic;
+            color: var(--industrial-yellow);
+        }
+
+        .robot-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 30px 0;
+            justify-content: center;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 30px 0;
+        }
+
+        @media (max-width: 700px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-card {
+            background-color: var(--gun-metal);
+            border: 1px solid var(--steel-blue);
+            border-radius: 5px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card.highlight {
+            border: 1px solid var(--neon-green);
+            box-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+        }
+
+        .warning-card {
+            border: 1px solid var(--warning-orange);
+            box-shadow: 0 0 10px rgba(255, 87, 34, 0.3);
+        }
+
+        .feature-card h3 {
+            color: var(--industrial-yellow);
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .feature-card p {
+            position: relative;
+            z-index: 1;
+        }
+
+        .robot-card {
+            width: 200px;
+            padding: 15px;
+            background-color: var(--gun-metal);
+            border: 1px solid var(--steel-blue);
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .robot-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background-color: var(--battle-red);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 25px;
+            font-weight: bold;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            background-color: var(--american-blue);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn-warning {
+            background-color: var(--warning-orange);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 87, 34, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 87, 34, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 87, 34, 0); }
+        }
+
+        .btn-warning:hover {
+            background-color: #d84315;
+        }
+
+        .btn-test {
+            background-color: var(--american-blue);
+        }
+
+        .btn-test:hover {
+            background-color: #083580;
+        }
+
+        .action-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        code {
+            display: block;
+            background-color: rgba(0,0,0,0.3);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+            border-left: 3px solid var(--industrial-yellow);
+        }
+
+        .features {
+            margin: 30px 0;
+        }
+
+        .features ul {
+            list-style-type: none;
+        }
+
+        .features li {
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+
+        .features li::before {
+            content: "→ ";
+            color: var(--industrial-yellow);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid var(--gun-metal);
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: rgba(255,255,255,0.1);
+            animation: scan 5s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        .new-feature {
+            color: var(--industrial-yellow);
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            margin-left: 10px;
+            padding: 2px 8px;
+            background-color: rgba(249, 160, 63, 0.2);
+            border-radius: 10px;
+        }
+
+        .critical-feature {
+            color: #fff;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            margin-left: 10px;
+            padding: 2px 8px;
+            background-color: rgba(255, 87, 34, 0.6);
+            border-radius: 10px;
+            animation: blink 2s step-start infinite;
+        }
+
+        .console-example {
+            background-color: #000;
+            color: #00FF41;
+            border: 1px solid #004d00;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 5px;
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+            font-family: 'Courier New', monospace;
+        }
+
+        .terminal-animation {
+            position: relative;
+            overflow: hidden;
+            background-color: #000;
+            color: #00FF41;
+            border: 1px solid #004d00;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+            font-family: 'Courier New', monospace;
+        }
+
+        .terminal-animation::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(0, 255, 65, 0.2);
+            animation: scan 3s linear infinite;
+        }
+
+        .self-destruct-demo {
+            margin: 20px 0;
+            position: relative;
+            padding: 30px;
+            overflow: hidden;
+            border-radius: 5px;
+            background-color: rgba(184, 12, 9, 0.1);
+            border: 1px solid var(--battle-red);
+        }
+
+        .self-destruct-steps {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .step {
+            flex: 1;
+            min-width: 150px;
+            background-color: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 5px;
+            position: relative;
+        }
+
+        .step-number {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--battle-red);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .screenshots {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 25px 0;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+
+        .screenshot {
+            border: 2px solid var(--steel-blue);
+            border-radius: 5px;
+            overflow: hidden;
+            flex-shrink: 0;
+            width: 250px;
+            height: 150px;
+            background-color: var(--gun-metal);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: rgba(255,255,255,0.7);
+            position: relative;
+        }
+
+        .screenshot::before {
+            content: "SCREENSHOT";
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 10px;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .retro-terminal {
+                margin: 20px;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .robot-grid {
+                justify-content: center;
+            }
+
+            .robot-card {
+                width: 100%;
+                max-width: 200px;
+            }
+            
+            .self-destruct-steps {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="retro-terminal">
+        <div class="scan-line"></div>
+        <div class="terminal-header">
+            <h1>ROBOT WARS <span class="blink">_</span></h1>
+            <p>TACTICAL COMBAT CODE SYSTEM v3.5</p>
+        </div>
+
+        <div class="message urgent">
+            <h2>[ PRIORITY ENCRYPTED TRANSMISSION ]</h2>
+            <p>Lakeman,</p>
+            <p>The situation has escalated. Our operation in Milwaukee attracted unwanted attention. Several units have gone dark. I'm activating counter-measures across the network.</p>
+            <p>I've pushed two major updates to the system you need to deploy <b>immediately</b>:</p>
+            <p>1. Test Mode - This allows single-operator combat simulations against an AI-controlled bot. It's critical that our operatives can practice deployment techniques without revealing their strategies in live combat.</p>
+            <p>2. Self-Destruct Protocol - In case of compromise during active engagement, I've implemented an emergency termination sequence. This allows our units to neutralize themselves rather than risk capture and analysis.</p>
+            <p>These aren't just features, Lakeman. They're survival mechanisms. The organization that's been tracking us has advanced pattern recognition capabilities. We need to stay unpredictable.</p>
+            <p>Deploy both updates immediately. Standard repository location: <a href="https://github.com/bneidlinger/RobotWars" style="color: var(--industrial-yellow);">https://github.com/bneidlinger/RobotWars</a>. Production environment: <a href="https://robotwars-c198.onrender.com" style="color: var(--industrial-yellow);">https://robotwars-c198.onrender.com</a>.</p>
+            <p>Don't contact me again through standard channels. I'll reach out when it's safe.</p>
+        </div>
+
+        <h2>VERSION 3.5 TACTICAL ENHANCEMENTS</h2>
+        <p>Critical updates have been integrated into the combat simulation platform. These provide essential operational capabilities for both testing and emergency protocols.</p>
+
+        <div class="feature-grid">
+            <div class="feature-card highlight">
+                <h3>TEST MODE <span class="new-feature">New</span></h3>
+                <p>Practice combat strategies against an AI opponent before entering live multiplayer battles:</p>
+                <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ Single-player testing environment</li>
+                    <li>→ Advanced AI opponent with predictive behaviors</li>
+                    <li>→ Same physics and combat rules as multiplayer</li>
+                    <li>→ Isolated testing with no impact on player statistics</li>
+                    <li>→ Perfect for developing and refining combat strategies</li>
+                </ul>
+                <div class="terminal-animation">
+                    <div>> Requesting Test Game...</div>
+                    <div>> Test game 'Test Arena 7' starting for OperatorX!</div>
+                    <div>> Opponent: Test Bot Alpha</div>
+                    <div>> Environment: Standard Combat Arena</div>
+                    <div>> Combat Simulation Initiated</div>
+                </div>
+            </div>
+
+            <div class="feature-card warning-card">
+                <h3>SELF-DESTRUCT PROTOCOL <span class="critical-feature">Critical</span></h3>
+                <p>Emergency termination sequence for compromised units:</p>
+                <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ Instant neutralization of your robot during combat</li>
+                    <li>→ Triggers massive explosion animation in arena</li>
+                    <li>→ Prevents opponent analysis of your combat patterns</li>
+                    <li>→ Available only during active combat sessions</li>
+                    <li>→ Requires confirmation to prevent accidental activation</li>
+                </ul>
+                <div class="console-example">
+                    <div>> WARNING: SELF-DESTRUCT SEQUENCE INITIATED</div>
+                    <div>> CONFIRM? [Y/N]: Y</div>
+                    <div>> COUNTDOWN INITIATED</div>
+                    <div>> 3...</div>
+                    <div>> 2...</div>
+                    <div>> 1...</div>
+                    <div>> ROBOT TERMINATED</div>
+                </div>
+            </div>
+        </div>
+
+        <h2>TEST MODE IMPLEMENTATION</h2>
+        <p>The test mode provides a secure environment to refine combat algorithms without revealing strategies to human opponents:</p>
+        
+        <div class="self-destruct-demo">
+            <h3 style="color: var(--industrial-yellow); margin-bottom: 20px;">Test Mode Execution Sequence</h3>
+            <div class="self-destruct-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <p>Enter robot name and appearance in the combat interface</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <p>Write or load your combat code in the editor</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <p>Click "Test Code" instead of "Ready Up"</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <p>Engage in combat with the AI opponent</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="screenshots">
+            <div class="screenshot" style="background-image: url('#'); background-size: cover;">CODE EDITOR</div>
+            <div class="screenshot" style="background-image: url('#'); background-size: cover;">TEST BATTLE</div>
+            <div class="screenshot" style="background-image: url('#'); background-size: cover;">CONSOLE OUTPUT</div>
+        </div>
+
+        <h2>SELF-DESTRUCT PROTOCOL</h2>
+        <p>The emergency termination system provides a critical failsafe during active combat operations:</p>
+
+        <div class="self-destruct-demo">
+            <h3 style="color: var(--battle-red); margin-bottom: 20px;">Self-Destruct Sequence</h3>
+            <div class="self-destruct-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <p>Enter active combat with another player or AI</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <p>Locate the Self-Destruct button in the interface</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <p>Confirm termination when prompted</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <p>Robot will immediately neutralize with visual explosion</p>
+                </div>
+            </div>
+        </div>
+
+        <h2>CODE EXAMPLE FOR TEST OPTIMIZATION</h2>
+        <p>Utilize the test mode to refine your combat algorithms before live deployment:</p>
+        <code>// Test-optimized robot AI with debugging
+if (typeof state.mode === 'undefined') {
+    state.mode = 'patrol';
+    state.patrolPoints = [
+        {x: 150, y: 150},
+        {x: 750, y: 150},
+        {x: 750, y: 750},
+        {x: 150, y: 750}
+    ];
+    state.currentPoint = 0;
+    state.lastDamage = 0;
+    state.hits = 0;
+    state.misses = 0;
+    
+    console.log('Combat system initialized in test mode');
+    console.log(`Current position: (${robot.getX()}, ${robot.getY()})`);
+}
+
+// Calculate position relative to patrol point
+const targetPoint = state.patrolPoints[state.currentPoint];
+const dx = targetPoint.x - robot.getX();
+const dy = targetPoint.y - robot.getY();
+const distToPoint = Math.sqrt(dx * dx + dy * dy);
+const angleToPoint = Math.atan2(-dy, dx) * 180 / Math.PI;
+
+// Handle patrol movement
+if (distToPoint > 20) {
+    robot.drive(angleToPoint, 3);
+    if (state.mode === 'patrol') {
+        // Scan while moving
+        for (let angle = 0; angle < 360; angle += 45) {
+            const scanResult = robot.scan((angleToPoint + angle) % 360, 15);
+            if (scanResult) {
+                state.mode = 'engage';
+                state.targetDir = scanResult.direction;
+                state.targetDist = scanResult.distance;
+                console.log(`Target acquired! Distance: ${scanResult.distance.toFixed(1)}`);
+                break;
+            }
+        }
+    }
+} else {
+    // Point reached, move to next patrol point
+    state.currentPoint = (state.currentPoint + 1) % state.patrolPoints.length;
+    console.log(`Reached patrol point ${state.currentPoint}. Moving to next.`);
+}
+
+// Combat mode when target detected
+if (state.mode === 'engage') {
+    // Scan for target
+    const scanResult = robot.scan(state.targetDir, 20);
+    
+    if (scanResult) {
+        // Target still in sight, update tracking
+        state.targetDir = scanResult.direction;
+        state.targetDist = scanResult.distance;
+        
+        // Move toward target
+        robot.drive(state.targetDir, 4);
+        
+        // Fire at target with power based on distance
+        const power = Math.min(3, Math.max(1, Math.ceil(3 * (1 - scanResult.distance / 800))));
+        const success = robot.fire(state.targetDir, power);
+        
+        if (success) {
+            console.log(`Firing at target. Power: ${power}, Direction: ${state.targetDir.toFixed(1)}°`);
+        }
+    } else {
+        // Lost target, return to patrol
+        state.mode = 'patrol';
+        console.log('Target lost. Returning to patrol pattern.');
+    }
+}
+
+// Damage response system
+if (robot.damage() > state.lastDamage) {
+    console.log(`Damage sustained! Current: ${robot.damage().toFixed(1)}%`);
+    
+    // Evasive maneuvers
+    const evasionAngle = (robot.getDirection() + 120 + Math.random() * 120) % 360;
+    robot.drive(evasionAngle, 5);
+    
+    // Log position for test analysis
+    console.log(`Evasive action! Position: (${robot.getX().toFixed(0)}, ${robot.getY().toFixed(0)})`);
+}
+state.lastDamage = robot.damage();</code>
+
+        <div class="features">
+            <h2>UPDATED SYSTEM CAPABILITIES</h2>
+            <ul>
+                <li>Single-player test mode with AI opponent</li>
+                <li>Emergency self-destruct protocol during active combat</li>
+                <li>Enhanced sandbox security for code execution</li>
+                <li>Improved visual feedback for robot damage and status</li>
+                <li>Advanced console output with contextual debugging</li>
+                <li>Optimized collision detection and physics</li>
+                <li>Expanded robot API documentation</li>
+                <li>Streamlined user interface for critical actions</li>
+            </ul>
+        </div>
+
+        <div class="action-container">
+            <a href="https://robotwars-c198.onrender.com" class="btn">ACCESS COMBAT SYSTEM</a>
+            <a href="https://robotwars-c198.onrender.com" class="btn btn-test" style="margin-left: 15px;">ENTER TEST MODE</a>
+            <a href="https://github.com/bneidlinger/RobotWars" class="btn btn-warning" style="margin-left: 15px;">DEPLOYMENT GUIDE</a>
+        </div>
+
+        <div class="signature">
+            <p>- Cool Rick</p>
+            <p>"When compromise is inevitable, destruction becomes strategy."</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>ROBOT WARS Combat System | <a href="https://github.com/bneidlinger/RobotWars" style="color: #888;">GitHub Repository</a> | &copy; 2025</p>
+    </footer>
+</body>
+</html>

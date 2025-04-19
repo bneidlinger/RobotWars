@@ -4,7 +4,8 @@ const GameManager = require('./game-manager');
 /**
  * Initializes Socket.IO event handlers for the application.
  * Manages player connections, disconnections, data submission, readiness signals, chat,
- * routes players to spectate if games are in progress, and sends initial game history. // <-- Added history mention
+ * test game requests, self-destruct requests, routes players to spectate if games are in progress, // <-- Added self-destruct
+ * and sends initial game history.
  * Delegates game logic to the GameManager.
  * @param {SocketIO.Server} io - The Socket.IO server instance.
  */
@@ -21,14 +22,20 @@ function initializeSocketHandler(io) {
 
         // --- SPECTATOR CHECK ---
         let wasSpectator = false; // Flag if routed to spectate initially
+        let spectateTarget = null; // Store target game if spectating
         if (gameManager.activeGames.size > 0) {
             // Simple logic: pick the first active game found
             try {
-                const [gameId, gameInstance] = gameManager.activeGames.entries().next().value;
+                // Use Array.from to safely get an iterator and take the first entry
+                const firstGameEntry = Array.from(gameManager.activeGames.entries())[0];
+                if (!firstGameEntry) {
+                     throw new Error("Active games map was not empty but couldn't get first entry.");
+                }
+                const [gameId, gameInstance] = firstGameEntry;
                 const gameName = gameInstance.gameName || `Game ${gameId}`;
                 const spectatorRoom = `spectator-${gameId}`;
 
-                spectateTarget = { gameId, gameName };
+                spectateTarget = { gameId, gameName }; // Store the game being spectated
                 console.log(`[Socket ${socket.id}] Active game found ('${gameName}' - ${gameId}). Routing to spectate.`);
 
                 // 1. Join the specific spectator room for this game
@@ -45,7 +52,7 @@ function initializeSocketHandler(io) {
                 wasSpectator = true; // Mark as routed to spectate
 
             } catch (error) {
-                 console.error(`[Socket ${socket.id}] Error finding active game to spectate: ${error}. Adding to lobby instead.`);
+                 console.error(`[Socket ${socket.id}] Error finding/processing active game to spectate: ${error}. Adding to lobby instead.`);
                  // Fallback to normal lobby logic
                  gameManager.addPlayer(socket);
                  io.emit('lobbyEvent', { message: `Player ${socket.id.substring(0, 4)}... connected.` });
@@ -94,7 +101,7 @@ function initializeSocketHandler(io) {
         socket.on('submitPlayerData', (data) => {
             // --- Check if player is allowed to submit (must be in pendingPlayers) ---
             if (!gameManager.pendingPlayers.has(socket.id)) {
-                const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : 'spectating or unknown';
+                const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : (spectateTarget ? `spectating ${spectateTarget.gameName}` : 'unknown state');
                 console.warn(`[Socket ${socket.id}] Attempted to submit data while ${state}. Ignoring.`);
                 socket.emit('lobbyEvent', { message: `Cannot submit data while ${state}.`, type: "error" });
                 return;
@@ -125,7 +132,7 @@ function initializeSocketHandler(io) {
         socket.on('playerUnready', () => {
             // --- Check if player is allowed to unready (must be in pendingPlayers) ---
              if (!gameManager.pendingPlayers.has(socket.id)) {
-                 const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : 'spectating or unknown';
+                 const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : (spectateTarget ? `spectating ${spectateTarget.gameName}` : 'unknown state');
                  console.warn(`[Socket ${socket.id}] Attempted to unready while ${state}. Ignoring.`);
                  socket.emit('lobbyEvent', { message: `Cannot unready while ${state}.`, type: "error" });
                  return;
@@ -137,6 +144,34 @@ function initializeSocketHandler(io) {
             gameManager.setPlayerReadyStatus(socket.id, false);
         });
 
+        // --- Handle Request for Single-Player Test Game ---
+        socket.on('requestTestGame', (data) => {
+            // Check if player is allowed to start a test (must be in pendingPlayers)
+            if (!gameManager.pendingPlayers.has(socket.id)) {
+                const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : (spectateTarget ? `spectating ${spectateTarget.gameName}` : 'unknown state');
+                console.warn(`[Socket ${socket.id}] Attempted to start test game while ${state}. Ignoring.`);
+                socket.emit('lobbyEvent', { message: `Cannot start test while ${state}.`, type: "error" });
+                return;
+            }
+
+            // Validate received data structure
+            if (data && typeof data.code === 'string' && typeof data.appearance === 'string' && typeof data.name === 'string') {
+                // Sanitize/validate name server-side
+                const name = data.name.trim();
+                const sanitizedName = name.substring(0, 24) || `Anon_${socket.id.substring(0,4)}`;
+                const finalName = sanitizedName.replace(/<[^>]*>/g, ""); // Strip HTML tags
+
+                console.log(`[Socket ${socket.id}] Received Test Game Request: Name='${finalName}', Appearance='${data.appearance}'`);
+
+                // Call the new GameManager method
+                gameManager.startTestGameForPlayer(socket, data.code, data.appearance, finalName);
+            } else {
+                console.warn(`[Socket ${socket.id}] Received invalid test game request data:`, data);
+                socket.emit('submissionError', { message: 'Invalid data format received by server for test game.' });
+            }
+        });
+        // --- END: Test Game Request Handler ---
+
         // Handle incoming chat messages from a client
         socket.on('chatMessage', (data) => {
             if (data && typeof data.text === 'string') {
@@ -147,7 +182,7 @@ function initializeSocketHandler(io) {
                  if (!senderName) {
                      // Check if they might be spectating by checking rooms they are in
                      const rooms = Array.from(socket.rooms);
-                     if (rooms.length > 1) {
+                     if (rooms.length > 1) { // Usually [socket.id, spectateRoom]
                          const spectatingRoom = rooms.find(room => room.startsWith('spectator-'));
                          if (spectatingRoom) {
                             senderName = `Spectator_${socket.id.substring(0,4)}`;
@@ -161,8 +196,8 @@ function initializeSocketHandler(io) {
                 const messageText = data.text.trim().substring(0, 100);
 
                 if (messageText) { // Ensure message isn't empty after trimming
-                    // Basic sanitization
-                    const sanitizedText = messageText.replace(/</g, "<").replace(/>/g, ">"); // Use HTML entities
+                    // Basic sanitization (encode basic HTML chars)
+                    const sanitizedText = messageText.replace(/</g, "<").replace(/>/g, ">");
 
                     console.log(`[Chat] ${senderName}: ${sanitizedText}`);
 
@@ -177,6 +212,21 @@ function initializeSocketHandler(io) {
                  console.warn(`[Socket ${socket.id}] Received invalid chat message format:`, data);
             }
         });
+
+        // --- Handle Self Destruct Request ---
+        socket.on('selfDestruct', () => {
+             console.log(`[Socket ${socket.id}] Received selfDestruct signal.`);
+             // Validate: Player must be in an active game map
+             const gameId = gameManager.playerGameMap.get(socket.id);
+             if (!gameId) {
+                 console.warn(`[Socket ${socket.id}] Sent selfDestruct but is not in playerGameMap. Ignoring.`);
+                 // Optionally send feedback? socket.emit('lobbyEvent', { message: "Cannot self-destruct: Not in game.", type: "error" });
+                 return;
+             }
+             // Delegate to game manager
+             gameManager.handleSelfDestruct(socket.id);
+        });
+        // --- END: Self Destruct Handler ---
 
         // Listener for player actions during a game (currently unused placeholder)
         // socket.on('robotAction', (action) => {

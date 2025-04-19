@@ -90,6 +90,23 @@ button:disabled:hover {
     background-color: #555; /* Prevent hover effect when disabled */
 }
 
+/* Specific style for Test Code button */
+#btn-test-code {
+    background-color: #2196F3; /* Blue color for testing */
+}
+#btn-test-code:hover {
+    background-color: #1e88e5; /* Darker blue on hover */
+}
+
+/* Specific style for Self Destruct button */
+#btn-self-destruct {
+    background-color: #e74c3c; /* Red */
+    padding: 6px 12px; /* Slightly smaller padding */
+}
+#btn-self-destruct:hover {
+    background-color: #c0392b; /* Darker Red */
+}
+
 
 /* Keep modern select specific styling */
 select {
@@ -287,16 +304,16 @@ main {
 #robot-console-log {
     margin-top: 15px;
     background-color: #1a1a1a; /* Darker bg for the whole panel */
-    border: 1px solid #0f290f; /* Dark green border */
+    border: 2px solid #0f400f; /* Slightly thicker/darker green border for panel */
     padding: 8px;
     /* Inherits .console-panel shadow, radius */
 }
 
 #robot-console-log h3 {
-    color: #00b300; /* Bright green title */
+    color: #00dd00; /* Bright green title */
     text-align: center;
     margin-bottom: 8px;
-    text-shadow: 0 0 3px #00b300; /* Subtle glow */
+    text-shadow: 0 0 4px #00dd00; /* Slightly stronger glow */
 }
 
 #robot-log-messages {
@@ -304,17 +321,41 @@ main {
     background-color: #000000; /* True black background */
     color: #00FF41; /* Classic terminal green text */
     font-size: 16px;
-    border: 1px inset #004d00; /* Inset border for depth */
+    /* border: 1px inset #004d00; /* Old inset border */
+    border: 2px solid #004d00; /* New: Solid, slightly thicker border */
     padding: 10px;
     text-shadow: 0 0 5px rgba(0, 255, 65, 0.5); /* Text glow */
     word-wrap: break-word;
     overflow-y: scroll; /* Keep scroll */
     font-family: 'VT323', monospace; /* Explicitly set font here too */
 
-    /* Scanline preparation: Parent MUST have relative positioning */
-    position: relative; /* Already added previously */
+    /* Scanline/Vignette/Noise preparation: Parent MUST have relative positioning */
+    position: relative;
     overflow: hidden; /* Crucial: Keep the ::after pseudo-element clipped */
+
+    /* Optional: Vignette effect */
+    /* box-shadow: inset 0 0 40px 10px rgba(0,0,0,0.6); */
 }
+
+/* Optional: Static/Noise Effect (Commented Out By Default) */
+/* #robot-log-messages::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0.05) 1px, rgba(0,0,0,0) 2px);
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 2;
+    animation: flicker 0.15s infinite;
+} */
+
+/* Optional: Flicker Animation */
+/* @keyframes flicker {
+    0% { opacity: 0.25; }
+    50% { opacity: 0.35; }
+    100% { opacity: 0.25; }
+} */
+
 
 /* --- START: Scanline Effect (Adapted from ealertguide.html) --- */
 #robot-log-messages::after {
@@ -328,7 +369,7 @@ main {
     background: rgba(0, 255, 0, 0.15); /* Adjust alpha for visibility */
     /* Optional subtle blur/glow effect */
     box-shadow: 0 0 4px 1px rgba(0, 255, 0, 0.15);
-    z-index: 1; /* Place above text content if needed (usually fine) */
+    z-index: 3; /* Ensure it's above noise if enabled */
     pointer-events: none; /* Ensure it doesn't interfere with interaction */
     /* Link to the animation */
     animation: scanline-log 6s linear infinite; /* Use unique animation name */
@@ -472,8 +513,9 @@ main {
     #robot-log-messages {
         height: 150px; /* Adjust stacked height */
     }
-    /* Optional: Slow down or disable scanline on mobile? */
+    /* Optional: Slow down or disable scanline/flicker on mobile? */
     /* #robot-log-messages::after { animation: none; } */
+    /* #robot-log-messages::before { animation: none; display: none; } */
 }
 
 @media (max-width: 768px) {

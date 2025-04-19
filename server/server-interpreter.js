@@ -25,14 +25,14 @@ class ServerRobotInterpreter {
      * Initializes the interpreter for a set of robots.
      * Compiles the code for each robot into a function and creates its sandboxed execution context.
      * @param {ServerRobot[]} robots - An array of ServerRobot instances.
-     * @param {Map<string, {socket: SocketIO.Socket, robot: ServerRobot, code: string}>} playersDataMap - Map from robot ID (socket.id) to player data.
+     * @param {Map<string, {socket: SocketIO.Socket | null, robot: ServerRobot, code: string}>} playersDataMap - Map from robot ID to player data (socket can be null).
      */
     initialize(robots, playersDataMap) {
         console.log("[Interpreter] Initializing robot interpreters (Function Mode)...");
 
         robots.forEach(robot => {
             const playerData = playersDataMap.get(robot.id);
-            const playerSocket = playerData ? playerData.socket : null; // Get socket reference
+            const playerSocket = playerData ? playerData.socket : null; // Get socket ref (could be null for dummy)
 
             // Ensure we have player data and valid code for this robot
             if (!playerData || typeof playerData.code !== 'string' || playerData.code.trim() === '') {
@@ -47,7 +47,7 @@ class ServerRobotInterpreter {
             const sandbox = {
                 // Persistent state object (accessible as 'state' or 'this.state' inside function)
                 state: {},
-
+                // NOTE: Dummy bot uses the same API, just no corresponding socket
                 // Safe API object (accessible as 'robot' or 'this.robot')
                 robot: {
                     drive: (direction, speed) => this.safeDrive(robot.id, direction, speed),
@@ -59,10 +59,11 @@ class ServerRobotInterpreter {
                     getDirection: () => this.safeGetDirection(robot.id),
                 },
 
-                // --- START MODIFIED CONSOLE ---
+                // --- Console for Robot (Handles Dummy Bot) ---
                 console: {
                     log: (...args) => {
                         // 1. Log server-side as before (optional, but useful for server debug)
+                        // Use robot.id from outer scope which is reliable
                         console.log(`[Robot ${robot.id} Log]`, ...args);
 
                         // 2. Format message for client
@@ -82,7 +83,8 @@ class ServerRobotInterpreter {
                         }).join(' ');
 
                         // 3. Emit to the specific client's socket if connected
-                        // Use the playerSocket variable captured in the outer scope
+                        // CRUCIAL: Only emit if playerSocket exists (i.e., not the dummy bot)
+                        // Use the playerSocket variable captured in the outer scope for THIS robot
                         if (playerSocket && playerSocket.connected) {
                             playerSocket.emit('robotLog', { message: messageString });
                         }
@@ -137,6 +139,7 @@ class ServerRobotInterpreter {
             } catch (error) {
                 // Handle errors during compilation or the initial run
                 console.error(`[Interpreter] Error compiling/initializing function for robot ${robot.id}:`, error.message);
+                 // CRUCIAL: Only emit if playerSocket exists
                  // Use the playerSocket variable captured in the outer scope
                 if (playerSocket && playerSocket.connected) {
                     playerSocket.emit('codeError', {
@@ -169,7 +172,8 @@ class ServerRobotInterpreter {
                 // Set the ID of the currently executing robot for validation in safe methods
                 this.currentRobotId = robot.id;
                 const tickFunction = this.robotTickFunctions[robot.id];
-                const context = this.robotContexts[robot.id]; // The sandbox object
+                const context = this.robotContexts[robot.id]; // The sandbox object for THIS robot
+                // Need player data to check for socket when handling errors
                 const playerData = gameInstance.players.get(robot.id); // Get player data again for socket access in error handling
                 const playerSocket = playerData ? playerData.socket : null; // Get socket for error handling
 
@@ -181,6 +185,7 @@ class ServerRobotInterpreter {
                     // Handle runtime errors *inside* the robot's code during the call
                     console.error(`[Interpreter] Runtime error during function execution for robot ${robot.id}:`, error.message);
                     // Notify the client about the runtime error
+                     // CRUCIAL: Only emit if playerSocket exists
                      // Use the playerSocket captured just above
                     if (playerSocket && playerSocket.connected) {
                         playerSocket.emit('codeError', {
@@ -206,9 +211,11 @@ class ServerRobotInterpreter {
     /** Safely retrieves the ServerRobot instance for the currently executing robot. @private */
     getCurrentRobot() {
         if (!this.currentRobotId || !this.currentGameInstance) return null;
-        const data = this.currentGameInstance.players.get(this.currentRobotId);
-        return data ? data.robot : null;
+        // Find the robot directly in the gameInstance's robots array
+        // This avoids relying on the players map which might change structure
+        return this.currentGameInstance.robots.find(r => r.id === this.currentRobotId);
     }
+
 
     /** Safely delegates drive command. */
     safeDrive(robotId, direction, speed) {
@@ -225,13 +232,16 @@ class ServerRobotInterpreter {
     safeScan(robotId, direction, resolution) {
         if (robotId !== this.currentRobotId || !this.currentGameInstance) return null;
         const robot = this.getCurrentRobot();
-        if (robot && typeof direction === 'number' && typeof resolution === 'number') {
-            return this.currentGameInstance.performScan(robot, direction, resolution);
+        if (robot && typeof direction === 'number') {
+            // Use default resolution if not provided or invalid
+            const res = (typeof resolution === 'number' && resolution > 0) ? resolution : 10;
+            return this.currentGameInstance.performScan(robot, direction, res);
         } else if (robot) {
             console.warn(`[Interpreter] Invalid scan(${direction}, ${resolution}) call for robot ${robotId}`);
         }
         return null;
     }
+
 
     /** Safely delegates fire command and returns success/failure. */
     safeFire(robotId, direction, power) {

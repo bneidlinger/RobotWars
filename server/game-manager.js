@@ -1,12 +1,15 @@
 // server/game-manager.js
 const GameInstance = require('./game-instance'); // Manages a single game match
+const fs = require('fs'); // Needed to read the dummy bot AI file
+const path = require('path'); // Needed to construct the path to the dummy bot AI file
 
 /**
  * Manages the overall flow of players joining, waiting, and starting games.
  * Handles storing player data (including names, readiness), matchmaking,
  * game naming, tracking active/finished games, cleaning up old instances,
- * transitioning lobby players to spectators, moving participants back to lobby, // <-- Added participant move
- * broadcasting game history, // <-- Added history broadcast
+ * starting single-player test games, handling self-destruct requests, // <-- Added Self-Destruct
+ * transitioning lobby players to spectators, moving participants back to lobby,
+ * broadcasting game history,
  * and broadcasting lobby events and status updates.
  */
 class GameManager {
@@ -42,13 +45,24 @@ class GameManager {
         this.maxCompletedGames = 10; // Limit history size
         // --- End Game Tracking ---
 
+        // --- Added for Test Mode ---
+        // Simple hardcoded AI for the dummy bot
+        try {
+             this.dummyBotCode = fs.readFileSync(path.join(__dirname, 'dummy-bot-ai.js'), 'utf8');
+             console.log("[GameManager] Dummy bot AI loaded successfully.");
+        } catch (err) {
+             console.error("[GameManager] FAILED TO LOAD dummy-bot-ai.js:", err);
+             this.dummyBotCode = "// Dummy Bot AI Load Failed\nconsole.log('AI Load Error!'); robot.drive(0,0);"; // Fallback AI
+        }
+        // --- End Test Mode ---
+
         console.log("[GameManager] Initialized.");
     }
 
     /**
      * Adds a newly connected player to the waiting list with default values.
      * Called by socket-handler upon connection *if no games are active*,
-     * OR when moving spectators/participants back to lobby state. // <-- Added context
+     * OR when moving spectators/participants back to lobby state.
      * @param {SocketIO.Socket} socket - The socket object for the connected player.
      */
     addPlayer(socket) {
@@ -297,37 +311,137 @@ class GameManager {
             this.io.emit('lobbyEvent', { message: `Failed to start game '${gameName}' for ${playerInfo}. Please try again.`, type: 'error' });
             // Put original players back in pending if game creation failed
             playersData.forEach(player => {
-                 player.isReady = false; // Mark as not ready
-                 this.addPlayer(player.socket); // Add back to pending list safely
-                 if(player.socket.connected) {
-                    player.socket.emit('gameError', { message: `Failed to create game instance '${gameName}'. Please Ready Up again.` });
+                 if (player.socket) { // Only add back real players
+                     player.isReady = false; // Mark as not ready
+                     this.addPlayer(player.socket); // Add back to pending list safely
+                     if(player.socket.connected) {
+                        player.socket.emit('gameError', { message: `Failed to create game instance '${gameName}'. Please Ready Up again.` });
+                     }
                  }
             });
             // Clean up partially created game if needed
             if (this.activeGames.has(gameId)) { this.activeGames.delete(gameId); }
-            playersData.forEach(player => { this.playerGameMap.delete(player.socket.id); });
+            playersData.forEach(player => {
+                 if (player.socket) this.playerGameMap.delete(player.socket.id);
+            });
             // Broadcast lobby status after failure handling
             this.broadcastLobbyStatus();
         }
     } // End createGame
 
     /**
+     * Starts a single-player test game against a simple AI bot.
+     * Called by socket-handler when 'requestTestGame' is received.
+     * @param {SocketIO.Socket} playerSocket - The socket of the player requesting the test.
+     * @param {string} playerCode - The AI code submitted by the player.
+     * @param {string} playerAppearance - The appearance identifier chosen by the player.
+     * @param {string} playerName - The sanitized name provided by the player.
+     */
+    startTestGameForPlayer(playerSocket, playerCode, playerAppearance, playerName) {
+        const playerId = playerSocket.id;
+        console.log(`[GameManager] Starting test game for player ${playerName} (${playerId})`);
+
+        // 1. Remove player from the pending list
+        if (!this.pendingPlayers.delete(playerId)) {
+             console.warn(`[GameManager] Player ${playerName} (${playerId}) requested test game but wasn't pending. Aborting.`);
+             playerSocket.emit('lobbyEvent', { message: "Cannot start test game - state conflict.", type: "error" });
+             return;
+        }
+
+        // 2. Generate Game ID and Name
+        const gameId = `test-${this.gameIdCounter++}`;
+        // Make the name distinct
+        const gameName = `Test Arena ${gameId.split('-')[1]}`; // e.g., Test Arena 0
+
+        // 3. Prepare Player Data for GameInstance
+        const playerGameData = {
+            socket: playerSocket, // The real player's socket
+            code: playerCode,
+            appearance: playerAppearance,
+            name: playerName,
+            isReady: true // Mark as ready for instance logic
+        };
+
+        // 4. Prepare Dummy Bot Data
+        const dummyBotId = `dummy-bot-${gameId}`;
+        const dummyBotGameData = {
+            socket: null, // CRUCIAL: Dummy bot has no socket
+            code: this.dummyBotCode, // Hardcoded AI script from file
+            appearance: 'default', // Or choose a specific one
+            name: "Test Bot Alpha", // Fixed name
+            isReady: true // Mark as ready
+        };
+
+        // 5. Create the GameInstance with BOTH player and dummy bot
+        console.log(`[GameManager] Creating test game ${gameId} ('${gameName}')`);
+        this.io.emit('lobbyEvent', { message: `Test game '${gameName}' starting for ${playerName}!` });
+
+        try {
+             const gameInstance = new GameInstance(
+                 gameId,
+                 this.io,
+                 [playerGameData, dummyBotGameData], // Pass both to the instance
+                 (endedGameId, winnerData) => {
+                      // Add a flag to the winner data for client-side distinction
+                      winnerData.wasTestGame = true;
+                      this.handleGameOverEvent(endedGameId, winnerData);
+                 },
+                 gameName
+             );
+
+            this.activeGames.set(gameId, gameInstance);
+            // IMPORTANT: Only map the REAL player to the game
+            this.playerGameMap.set(playerId, gameId);
+
+            // Send 'gameStart' ONLY to the requesting player's socket
+            playerSocket.emit('gameStart', {
+                gameId: gameId, gameName: gameName, isTestGame: true, // Add flag
+                players: [ // Send info for both player and dummy
+                     { id: playerId, name: playerName, appearance: playerAppearance },
+                     { id: dummyBotId, name: dummyBotGameData.name, appearance: dummyBotGameData.appearance }
+                ]
+            });
+
+            gameInstance.startGameLoop();
+            this.broadcastLobbyStatus(); // Update lobby counts
+
+        } catch (error) {
+             console.error(`[GameManager] Error creating test game ${gameId} ('${gameName}'):`, error);
+             this.io.emit('lobbyEvent', { message: `Failed to start test game '${gameName}' for ${playerName}. Please try again.`, type: 'error' });
+             // Put the player back into pending if creation failed
+             playerGameData.isReady = false; // Mark as not ready
+             this.addPlayer(playerSocket); // Add back safely
+             if(playerSocket.connected) {
+                playerSocket.emit('gameError', { message: `Failed to create test game instance '${gameName}'. Please Ready Up or Test again.` });
+             }
+             // Clean up maps if needed
+             if (this.activeGames.has(gameId)) { this.activeGames.delete(gameId); }
+             this.playerGameMap.delete(playerId);
+             this.broadcastLobbyStatus(); // Broadcast status after failure
+        }
+    }
+
+
+    /**
      * Handles the game over event triggered by a GameInstance callback.
      * Emits lobby events, moves spectators AND participants back to the lobby,
      * cleans up player mapping, removes the game instance, logs the result,
-     * and broadcasts the updated game history. // <-- Added history broadcast
+     * and broadcasts the updated game history.
      * @param {string} gameId - The ID of the game that just ended.
-     * @param {object} winnerData - Object containing winner details { winnerId, winnerName, reason }.
+     * @param {object} winnerData - Object containing winner details { winnerId, winnerName, reason, wasTestGame? }.
      */
     async handleGameOverEvent(gameId, winnerData) {
         const gameInstance = this.activeGames.get(gameId);
         const gameName = gameInstance ? gameInstance.gameName : `Game ${gameId}`;
+        const isTestGame = winnerData.wasTestGame || false; // Check for the test game flag
 
         const winnerName = winnerData.winnerName || 'No one';
         const reason = winnerData.reason || 'Match ended.';
-        console.log(`[GameManager] Received game over event for ${gameId} ('${gameName}'). Winner: ${winnerName}`);
+        console.log(`[GameManager] Received game over event for ${gameId} ('${gameName}'). Winner: ${winnerName}. TestGame: ${isTestGame}`);
 
-        this.io.emit('lobbyEvent', { message: `Game '${gameName}' over! Winner: ${winnerName}. (${reason})` });
+        // Adjust lobby message based on game type
+        const lobbyMsg = isTestGame ? `Test game '${gameName}' over! Winner: ${winnerName}. (${reason})` : `Game '${gameName}' over! Winner: ${winnerName}. (${reason})`;
+        this.io.emit('lobbyEvent', { message: lobbyMsg });
 
         if (!gameInstance) {
             console.warn(`[GameManager] handleGameOverEvent called for ${gameId}, but instance not found. Skipping cleanup.`);
@@ -336,6 +450,7 @@ class GameManager {
         }
 
         // --- Move Spectators Back to Lobby ---
+        // Test games don't have spectators, but this code handles both cases safely.
         const spectatorRoom = `spectator-${gameId}`;
         try {
             const spectatorSockets = await this.io.in(spectatorRoom).fetchSockets();
@@ -354,7 +469,7 @@ class GameManager {
         }
         // --- End Spectator Move ---
 
-        // --- Clean up Player Mappings AND Move Participants to Lobby ---
+        // --- Clean up Player Mappings AND Move REAL Participants to Lobby ---
         const playerIds = Array.from(gameInstance.players.keys());
         console.log(`[GameManager] Cleaning up mappings and moving participants to lobby for game ${gameId}:`, playerIds);
         playerIds.forEach(playerId => {
@@ -365,12 +480,16 @@ class GameManager {
             const playerData = gameInstance.players.get(playerId);
             const playerSocket = playerData ? playerData.socket : null;
 
-            // Add participant back to the pending list if still connected
+            // Add participant back to the pending list ONLY IF they have a socket AND are connected
+            // This prevents trying to add the dummy bot back to the lobby.
             if (playerSocket && playerSocket.connected) {
                  console.log(`[GameManager] Adding participant ${playerId} back to pendingPlayers.`);
                  this.addPlayer(playerSocket); // Add them back to the lobby list safely
-            } else {
+            } else if (playerSocket) { // Had a socket but disconnected
                  console.log(`[GameManager] Participant ${playerId} not found or disconnected. Cannot add back to lobby.`);
+            } else {
+                // This is likely the dummy bot, no socket to add back.
+                console.log(`[GameManager] Participant ${playerId} (likely dummy bot) has no socket. Not adding to lobby.`);
             }
         });
         // --- End Participant Cleanup/Move ---
@@ -384,13 +503,20 @@ class GameManager {
                 players: Array.from(gameInstance.playerNames.entries()).map(([id, name]) => ({ id, name })),
                 endTime: Date.now()
             };
-            this.recentlyCompletedGames.set(gameId, completedGameData);
-            while (this.recentlyCompletedGames.size > this.maxCompletedGames) {
-                const oldestGameId = this.recentlyCompletedGames.keys().next().value;
-                this.recentlyCompletedGames.delete(oldestGameId);
-                console.log(`[GameManager] Pruned oldest completed game log: ${oldestGameId}`);
+            // Only log non-test games to history (or add a flag to filter client-side)
+            if (!isTestGame) {
+                this.recentlyCompletedGames.set(gameId, completedGameData);
+                while (this.recentlyCompletedGames.size > this.maxCompletedGames) {
+                    const oldestGameId = this.recentlyCompletedGames.keys().next().value;
+                    this.recentlyCompletedGames.delete(oldestGameId);
+                    console.log(`[GameManager] Pruned oldest completed game log: ${oldestGameId}`);
+                }
+                console.log(`[GameManager] Logged completed game: ${gameId} ('${gameName}')`);
+                 // Broadcast Updated Game History ONLY if a non-test game ended
+                this.broadcastGameHistory();
+            } else {
+                console.log(`[GameManager] Test game ${gameId} ('${gameName}') ended. Not adding to public history.`);
             }
-            console.log(`[GameManager] Logged completed game: ${gameId} ('${gameName}')`);
         } else {
             console.warn(`[GameManager] Could not log completed game ${gameId}, instance or playerNames missing.`);
         }
@@ -408,17 +534,16 @@ class GameManager {
 
         // Broadcast status now that spectators AND participants are back in pending
         this.broadcastLobbyStatus();
-
-        // --- Broadcast Updated Game History ---
-        this.broadcastGameHistory(); // Call helper function
-        // --- End History Broadcast ---
     }
 
      /** Helper function to broadcast the current game history */
      broadcastGameHistory() {
          // Convert map values to an array, sort by endTime descending (newest first)
          const historyArray = Array.from(this.recentlyCompletedGames.values())
-                                 .sort((a, b) => b.endTime - a.endTime); // Sort newest first
+                                 // Optional: Filter out test games from history?
+                                 // .filter(game => !game.name.startsWith("Test Arena")) // Already filtered during logging
+
+                                  .sort((a, b) => b.endTime - a.endTime); // Sort newest first
          // console.log(`[GameManager] Broadcasting game history (${historyArray.length} entries).`); // Optional Log
          this.io.emit('gameHistoryUpdate', historyArray);
      }
@@ -446,11 +571,12 @@ class GameManager {
                 game.removePlayer(socketId); // Tell the GameInstance to handle internal cleanup
 
                 // If the game becomes empty *DURING PLAY* after removal, clean up the game instance itself.
+                // The GameInstance.isEmpty() method now correctly handles dummy bots.
                 if (game.isEmpty()) {
                     console.log(`[GameManager] Active game ${gameId} ('${game.gameName}') has no players left after disconnect. Triggering cleanup.`);
-                    try { if (game.cleanup) game.cleanup(); } catch(e){ console.error("Error cleaning up empty game", e); }
-                    this.activeGames.delete(gameId);
-                    console.log(`[GameManager] Game instance ${gameId} removed from active games.`);
+                    // Use the existing gameOver handling which now manages dummy bots correctly
+                    this.handleGameOverEvent(gameId, { winnerId: null, winnerName: 'None', reason: 'Player Disconnected', wasTestGame: game.gameName.startsWith("Test Arena") });
+                    // Note: handleGameOverEvent deletes the game from activeGames
                 }
             } else {
                  console.warn(`[GameManager] Player ${playerName || socketId} mapped to non-existent game ${gameId}. Cleaning up map.`);
@@ -464,7 +590,7 @@ class GameManager {
             console.log(`[GameManager] Player ${playerName || socketId} removed from pending list.`);
              this._tryStartMatch();
         } else if (gameId) {
-             // Logged above
+             // Logged above when calling game.removePlayer()
         } else {
              // Player was neither pending nor in the active game map (e.g., spectator disconnect)
              console.log(`[GameManager] Removed player ${playerName || socketId} (was not pending or in active game map).`);
@@ -510,6 +636,25 @@ class GameManager {
         }
     }
 
+    /**
+     * Handles a self-destruct request from a player.
+     * Finds the game instance and tells it to trigger the destruction.
+     * @param {string} socketId - The ID of the player requesting self-destruction.
+     */
+    handleSelfDestruct(socketId) {
+        const gameId = this.playerGameMap.get(socketId);
+        if (gameId) {
+            const game = this.activeGames.get(gameId);
+            if (game && typeof game.triggerSelfDestruct === 'function') {
+                console.log(`[GameManager] Relaying self-destruct for ${socketId} to game ${gameId}`);
+                game.triggerSelfDestruct(socketId); // Delegate to GameInstance
+            } else {
+                 console.warn(`[GameManager] Game instance ${gameId} not found or missing triggerSelfDestruct for player ${socketId}.`);
+            }
+        } // No need for else, socket-handler already warned if not in map
+    }
+
 } // End GameManager Class
+
 
 module.exports = GameManager;

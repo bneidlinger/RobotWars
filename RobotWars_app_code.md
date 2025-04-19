@@ -116,6 +116,23 @@ button:disabled:hover {
     background-color: #555; /* Prevent hover effect when disabled */
 }
 
+/* Specific style for Test Code button */
+#btn-test-code {
+    background-color: #2196F3; /* Blue color for testing */
+}
+#btn-test-code:hover {
+    background-color: #1e88e5; /* Darker blue on hover */
+}
+
+/* Specific style for Self Destruct button */
+#btn-self-destruct {
+    background-color: #e74c3c; /* Red */
+    padding: 6px 12px; /* Slightly smaller padding */
+}
+#btn-self-destruct:hover {
+    background-color: #c0392b; /* Darker Red */
+}
+
 
 /* Keep modern select specific styling */
 select {
@@ -313,16 +330,16 @@ main {
 #robot-console-log {
     margin-top: 15px;
     background-color: #1a1a1a; /* Darker bg for the whole panel */
-    border: 1px solid #0f290f; /* Dark green border */
+    border: 2px solid #0f400f; /* Slightly thicker/darker green border for panel */
     padding: 8px;
     /* Inherits .console-panel shadow, radius */
 }
 
 #robot-console-log h3 {
-    color: #00b300; /* Bright green title */
+    color: #00dd00; /* Bright green title */
     text-align: center;
     margin-bottom: 8px;
-    text-shadow: 0 0 3px #00b300; /* Subtle glow */
+    text-shadow: 0 0 4px #00dd00; /* Slightly stronger glow */
 }
 
 #robot-log-messages {
@@ -330,17 +347,41 @@ main {
     background-color: #000000; /* True black background */
     color: #00FF41; /* Classic terminal green text */
     font-size: 16px;
-    border: 1px inset #004d00; /* Inset border for depth */
+    /* border: 1px inset #004d00; /* Old inset border */
+    border: 2px solid #004d00; /* New: Solid, slightly thicker border */
     padding: 10px;
     text-shadow: 0 0 5px rgba(0, 255, 65, 0.5); /* Text glow */
     word-wrap: break-word;
     overflow-y: scroll; /* Keep scroll */
     font-family: 'VT323', monospace; /* Explicitly set font here too */
 
-    /* Scanline preparation: Parent MUST have relative positioning */
-    position: relative; /* Already added previously */
+    /* Scanline/Vignette/Noise preparation: Parent MUST have relative positioning */
+    position: relative;
     overflow: hidden; /* Crucial: Keep the ::after pseudo-element clipped */
+
+    /* Optional: Vignette effect */
+    /* box-shadow: inset 0 0 40px 10px rgba(0,0,0,0.6); */
 }
+
+/* Optional: Static/Noise Effect (Commented Out By Default) */
+/* #robot-log-messages::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0.05) 1px, rgba(0,0,0,0) 2px);
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 2;
+    animation: flicker 0.15s infinite;
+} */
+
+/* Optional: Flicker Animation */
+/* @keyframes flicker {
+    0% { opacity: 0.25; }
+    50% { opacity: 0.35; }
+    100% { opacity: 0.25; }
+} */
+
 
 /* --- START: Scanline Effect (Adapted from ealertguide.html) --- */
 #robot-log-messages::after {
@@ -354,7 +395,7 @@ main {
     background: rgba(0, 255, 0, 0.15); /* Adjust alpha for visibility */
     /* Optional subtle blur/glow effect */
     box-shadow: 0 0 4px 1px rgba(0, 255, 0, 0.15);
-    z-index: 1; /* Place above text content if needed (usually fine) */
+    z-index: 3; /* Ensure it's above noise if enabled */
     pointer-events: none; /* Ensure it doesn't interfere with interaction */
     /* Link to the animation */
     animation: scanline-log 6s linear infinite; /* Use unique animation name */
@@ -498,8 +539,9 @@ main {
     #robot-log-messages {
         height: 150px; /* Adjust stacked height */
     }
-    /* Optional: Slow down or disable scanline on mobile? */
+    /* Optional: Slow down or disable scanline/flicker on mobile? */
     /* #robot-log-messages::after { animation: none; } */
+    /* #robot-log-messages::before { animation: none; display: none; } */
 }
 
 @media (max-width: 768px) {
@@ -1654,7 +1696,8 @@ class Missile {
  * Controls handler for Robot Wars.
  * Manages UI state ('lobby', 'waiting', 'playing', 'spectating'), button interactions,
  * code loading, appearance selection, player name input, code loadout saving/loading,
- * and sends relevant data/signals to the server via the network handler.
+ * test game requests, self-destruct requests, and sends relevant data/signals
+ * to the server via the network handler. // Updated description
  */
 class Controls {
     /**
@@ -1672,6 +1715,7 @@ class Controls {
         // --- START: Loadout Properties ---
         this.localStorageKey = 'robotWarsLoadouts';
         // --- END: Loadout Properties ---
+        this.testGameActive = false; // Track if a test game is running client-side (Might be useful later)
 
         if (!this.game || !this.network) {
              console.error("Controls initialized without valid game or network reference!");
@@ -1719,6 +1763,8 @@ class Controls {
         const playerNameInput = document.getElementById('playerName');
         const sampleCodeSelect = document.getElementById('sample-code');
         const resetButton = document.getElementById('btn-reset');
+        const selfDestructButton = document.getElementById('btn-self-destruct'); // Get self-destruct
+        const testButton = document.getElementById('btn-test-code'); // Get test button
         // --- START: Get Loadout Elements ---
         const saveButton = document.getElementById('btn-save-code');
         const loadSelect = document.getElementById('loadout-select');
@@ -1732,6 +1778,8 @@ class Controls {
         let readyButtonDisabled = true;
         let inputsDisabled = true;
         let editorReadOnly = true;
+        let selfDestructVisible = false; // Hide self-destruct by default
+        let testButtonDisabled = true; // Disable test button by default
         let loadoutControlsDisabled = true; // Disable save/load/delete by default
 
         switch (this.uiState) {
@@ -1741,6 +1789,8 @@ class Controls {
                 readyButtonDisabled = false;
                 inputsDisabled = false;
                 editorReadOnly = false;
+                selfDestructVisible = false; // Hide self-destruct
+                testButtonDisabled = false; // Enable test button
                 loadoutControlsDisabled = false; // Enable loadout controls
                 break;
 
@@ -1750,15 +1800,19 @@ class Controls {
                 readyButtonDisabled = false; // Must be enabled to unready
                 inputsDisabled = true; // Other inputs locked
                 editorReadOnly = true;
+                selfDestructVisible = false; // Hide self-destruct
+                testButtonDisabled = true;
                 loadoutControlsDisabled = true;
                 break;
 
-            case 'playing': // All interaction disabled
+            case 'playing': // All interaction disabled (includes test games)
                 readyButtonText = "Game in Progress...";
                 readyButtonColor = '#777'; // Grey
                 readyButtonDisabled = true;
                 inputsDisabled = true;
                 editorReadOnly = true;
+                selfDestructVisible = true; // SHOW self-destruct during play
+                testButtonDisabled = true;
                 loadoutControlsDisabled = true;
                 break;
 
@@ -1768,6 +1822,8 @@ class Controls {
                 readyButtonDisabled = true;
                 inputsDisabled = true;
                 editorReadOnly = true;
+                selfDestructVisible = false; // Hide self-destruct
+                testButtonDisabled = true;
                 loadoutControlsDisabled = true;
                 break;
 
@@ -1796,6 +1852,15 @@ class Controls {
 
         if (resetButton) { resetButton.disabled = inputsDisabled; } // Reset follows other inputs now
          else { console.warn("Reset button not found during UI update."); }
+
+        if (selfDestructButton) { // Show/hide and enable/disable self-destruct
+             selfDestructButton.style.display = selfDestructVisible ? 'inline-block' : 'none';
+             selfDestructButton.disabled = !selfDestructVisible; // Disable if not visible (i.e., not playing)
+        } else { console.warn("Self Destruct button not found during UI update."); }
+
+        if (testButton) { testButton.disabled = testButtonDisabled; } // Update test button state
+         else { console.warn("Test Code button not found during UI update."); }
+
 
         // --- START: Update Loadout Control State ---
         if (saveButton) { saveButton.disabled = loadoutControlsDisabled; }
@@ -1832,17 +1897,22 @@ class Controls {
         const sampleCodeSelect = document.getElementById('sample-code');
         const appearanceSelect = document.getElementById('robot-appearance-select');
         const playerNameInput = document.getElementById('playerName');
+        const selfDestructButton = document.getElementById('btn-self-destruct'); // Get self-destruct
+        const testButton = document.getElementById('btn-test-code'); // Get test button
         // --- START: Get Loadout Elements ---
         const saveButton = document.getElementById('btn-save-code');
         const loadSelect = document.getElementById('loadout-select');
         const deleteButton = document.getElementById('btn-delete-loadout');
         // --- END: Get Loadout Elements ---
 
+
         // Check if elements exist to prevent errors
         if (!readyButton || !resetButton || !sampleCodeSelect || !appearanceSelect || !playerNameInput ||
             // --- START: Check Loadout Elements ---
-            !saveButton || !loadSelect || !deleteButton) {
-            console.error("One or more control elements (button#btn-ready, select, player name input, save/load/delete) not found in the DOM!");
+            !saveButton || !loadSelect || !deleteButton ||
+            // --- END: Check Loadout Elements ---
+            !testButton || !selfDestructButton) { // Check test and self-destruct buttons
+            console.error("One or more control elements (button#btn-ready, test, self-destruct, reset, select, player name input, save/load/delete) not found in the DOM!");
             return; // Stop setup if elements are missing
         }
 
@@ -2019,6 +2089,61 @@ class Controls {
         });
 
         // --- END: Loadout Event Listeners ---
+
+        // --- START: Test Code Button Listener ---
+        testButton.addEventListener('click', () => {
+            if (this.uiState !== 'lobby') {
+                console.warn(`Test Code button clicked in non-lobby state: ${this.uiState}. Ignoring.`);
+                return;
+            }
+            if (!this.network || !this.network.socket || !this.network.socket.connected) {
+                 console.error("Network handler not available or not connected in Controls for Test Code.");
+                 alert("Not connected to server. Please check connection and refresh.");
+                 return;
+            }
+
+            console.log('Test Code button clicked (State: lobby)');
+            const playerCode = (typeof editor !== 'undefined') ? editor.getValue() : '';
+            const nameValue = playerNameInput.value.trim();
+            const chosenAppearance = appearanceSelect.value || 'default';
+
+            // Validate inputs before sending
+            if (!playerCode) { alert("Code editor is empty!"); return; }
+            if (!nameValue) { alert("Please enter a player name."); return; }
+
+            // Sanitize name
+            const finalPlayerName = nameValue.substring(0, 24).replace(/<[^>]*>/g, "");
+            if (!finalPlayerName) { alert("Invalid player name."); return; }
+            playerNameInput.value = finalPlayerName; // Update input field with sanitized name
+
+            this.savePlayerName(finalPlayerName); // Save name locally too
+
+            // Emit the request to the server via network handler
+            this.network.requestTestGame(playerCode, chosenAppearance, finalPlayerName);
+            // Server response ('gameStart') will trigger state change
+        });
+        // --- END: Test Code Button Listener ---
+
+        // --- START: Self Destruct Button Listener ---
+        selfDestructButton.addEventListener('click', () => {
+            // Should only be clickable when uiState is 'playing' due to updateUIForState logic,
+            // but double-check state and network connection
+            if (this.uiState !== 'playing') {
+                 console.warn("Self Destruct button clicked when not playing. Ignoring.");
+                 return; // Ignore click if not playing
+            }
+            if (!this.network || !this.network.socket || !this.network.socket.connected) {
+                console.error("Network not available for Self Destruct.");
+                alert("Not connected to server.");
+                return;
+            }
+            if (confirm("Are you sure you want to self-destruct your robot?")) {
+                console.log("Sending self-destruct signal...");
+                this.network.sendSelfDestructSignal();
+            }
+        });
+        // --- END: Self Destruct Button Listener ---
+
 
     } // End setupEventListeners
 
@@ -2889,8 +3014,9 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Handles client-side network communication with the server using Socket.IO.
  * Connects to the server, sends player data (including name), readiness signals,
- * receives game state updates, handles spectating, processes lobby/chat events,
- * receives game history updates, and handles robot log messages. // <-- Updated description
+ * requests test games, sends self-destruct signals, receives game state updates, // <-- Updated description
+ * handles spectating, processes lobby/chat events,
+ * receives game history updates, and handles robot log messages.
  */
 class Network {
     /**
@@ -2991,7 +3117,7 @@ class Network {
                  if (!this.isSpectating && typeof window.updateLobbyStatus === 'function') {
                       // Check if UI is currently in the lobby state
                       if (typeof controls !== 'undefined' && controls.uiState === 'lobby') {
-                         window.updateLobbyStatus('Enter name & code, then Ready Up!');
+                         window.updateLobbyStatus('Enter name & code, then Ready Up or Test Code!'); // Updated prompt
                       }
                  }
             });
@@ -3054,7 +3180,7 @@ class Network {
                 }
             });
 
-            // Server signals that the game is starting (for players)
+            // Server signals that the game is starting (for players - includes test games)
             this.socket.on('gameStart', (data) => {
                  // Ignore if spectating
                  if (this.isSpectating) {
@@ -3066,7 +3192,9 @@ class Network {
                      this.game.handleGameStart(data); // This will update gameId and gameName
                  }
                  // Update lobby status - Game class handleGameStart should update button text now
-                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus(`Playing Game: ${data.gameName || data.gameId}`);
+                 // Add a check for the test game flag
+                 const statusPrefix = data.isTestGame ? 'Testing Code vs AI:' : 'Playing Game:';
+                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus(`${statusPrefix} ${data.gameName || data.gameId}`);
                  if (typeof window.addEventLogMessage === 'function') {
                      window.addEventLogMessage(`Your game '${data.gameName || data.gameId}' is starting!`, 'event');
                  }
@@ -3076,7 +3204,7 @@ class Network {
                  }
              });
 
-            // Server signals that the game has ended (for players)
+            // Server signals that the game has ended (for players - includes test games)
              this.socket.on('gameOver', (data) => {
                  // Ignore if spectating
                  if (this.isSpectating) {
@@ -3090,7 +3218,8 @@ class Network {
                          this.game.handleGameOver(data); // This should reset controls UI state
                      }
                      // Update lobby status after game over
-                     if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Game Over. Ready Up for another match!');
+                     const prompt = data.wasTestGame ? 'Test Complete. Ready Up or Test Again!' : 'Game Over. Ready Up for another match!';
+                     if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus(prompt);
                       if (typeof window.addEventLogMessage === 'function') {
                          const endedGameName = this.game.gameName || data.gameId;
                          window.addEventLogMessage(`Your game '${endedGameName}' finished! Winner: ${data.winnerName || 'None'}`, 'event');
@@ -3121,7 +3250,7 @@ class Network {
                      if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
                          controls.setState('lobby');
                      }
-                     if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Code error detected. Please fix and Ready Up again.');
+                     if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Code error detected. Please fix and Ready Up or Test again.');
                  }
             });
 
@@ -3136,7 +3265,7 @@ class Network {
                  if (!this.isSpectating && typeof controls !== 'undefined' && typeof controls.setState === 'function') {
                      controls.setState('lobby'); // Reset to lobby state
                  }
-                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Game Error Occurred. Ready Up again.');
+                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Game Error Occurred. Ready Up or Test again.');
                   if (this.game) this.game.stop(); // Stop rendering
              });
 
@@ -3315,8 +3444,52 @@ class Network {
         }
     }
 
-} // End Network Class
+    /**
+     * Sends a request to the server to start a single-player test game.
+     * Called by the Controls class when the 'Test Code' button is clicked.
+     * @param {string} code - The robot AI code written by the player.
+     * @param {string} appearance - The identifier for the chosen robot appearance.
+     * @param {string} name - The player's chosen name.
+     */
+    requestTestGame(code, appearance, name) {
+        // Basic check: ensure socket is connected
+        if (!this.socket || !this.socket.connected) {
+             console.error("Socket not available or not connected. Cannot request test game.");
+             alert("Not connected to server. Please check connection and try again.");
+             return;
+        }
+         // Basic check: ensure player is in lobby state (client-side check)
+         if (typeof controls === 'undefined' || controls.uiState !== 'lobby') {
+             console.warn("Attempted to request test game while not in lobby state. Ignored.");
+             return;
+         }
 
+        console.log(`Sending test game request to server: { name: '${name}', appearance: '${appearance}', code: ... }`);
+        this.socket.emit('requestTestGame', {
+             code: code,
+             appearance: appearance,
+             name: name
+        });
+        // The server will respond with 'gameStart' if successful, which will transition the client state.
+        // Optionally, update lobby status immediately:
+        if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Requesting Test Game...');
+    }
+
+    /**
+     * Sends a signal to the server for the player's robot to self-destruct.
+     * Called by the Controls class.
+     */
+    sendSelfDestructSignal() {
+        if (!this.socket || !this.socket.connected) {
+             console.error("Socket not available or not connected. Cannot send self-destruct signal.");
+             alert("Not connected to server.");
+             return;
+        }
+        console.log("Client sending selfDestruct event."); // Added log
+        this.socket.emit('selfDestruct');
+    }
+
+} // End Network Class
 ```
 
 ## client/index.html
@@ -3356,6 +3529,8 @@ class Network {
                     <option value="tri">Tri Bot</option>
                 </select>
                 <button id="btn-ready">Ready Up</button> <!-- State managed by controls.js -->
+                <button id="btn-test-code">Test Code</button> <!-- Test Code Button -->
+                <button id="btn-self-destruct" style="display: none;">Self-Destruct</button> <!-- Self Destruct Button (Initially hidden) -->
                 <button id="btn-reset">Reset</button>
                 <select id="sample-code">
                     <option value="">Load Sample Code...</option>
@@ -3488,7 +3663,7 @@ class Network {
 ```code
 // server/game-instance.js
 const ServerRobot = require('./server-robot');
-const ServerRobotInterpreter = require('./server-interpreter');
+const ServerRobotInterpreter = require('./server-interpreter'); // Corrected require name
 const ServerCollisionSystem = require('./server-collision'); // Handles collisions
 
 // --- Game Simulation Constants ---
@@ -3498,8 +3673,9 @@ const ARENA_HEIGHT = 900; // Match canvas size
 
 /**
  * Represents a single active game match on the server.
- * Manages the game state, robots, interpreter, collisions, game loop,
- * broadcasts state to players and spectators, // <-- Added spectator mention
+ * Manages the game state, robots (including potential AI dummies),
+ * interpreter, collisions, game loop,
+ * broadcasts state to players and spectators, handles self-destruct requests, // <-- Added self-destruct
  * and notifies the GameManager upon game completion via a callback.
  */
 class GameInstance {
@@ -3507,16 +3683,17 @@ class GameInstance {
      * Creates a new game instance.
      * @param {string} gameId - A unique identifier for this game.
      * @param {SocketIO.Server} io - The main Socket.IO server instance.
-     * @param {Array<{socket: SocketIO.Socket, code: string, appearance: string, name: string, isReady: boolean}>} playersData - Array of player data.
+     * @param {Array<{socket: SocketIO.Socket | null, code: string, appearance: string, name: string, isReady: boolean}>} playersData - Array of player data (socket can be null for AI).
      * @param {Function} gameOverCallback - Function provided by GameManager to call when the game ends. Expects (gameId, winnerData) object.
-     * @param {string} gameName - Thematic name for the game (Added for Phase 3)
+     * @param {string} gameName - Thematic name for the game
      */
-    constructor(gameId, io, playersData, gameOverCallback, gameName = '') { // Added gameName
+    constructor(gameId, io, playersData, gameOverCallback, gameName = '') {
         this.gameId = gameId;
         this.io = io; // Socket.IO server instance for broadcasting
-        this.players = new Map(); // Map: socket.id -> { socket, robot, code, appearance, name }
+        // Map: socket.id (for real players) or dummy ID -> { socket, robot, code, appearance, name }
+        this.players = new Map();
         this.robots = []; // Array of ServerRobot instances in this game
-        this.playerNames = new Map(); // Map: socket.id -> name (for easier lookup during logs/events)
+        this.playerNames = new Map(); // Map: robot.id -> name (for easier lookup during logs/events)
         this.interpreter = new ServerRobotInterpreter(); // Handles robot code execution
         this.collisionSystem = new ServerCollisionSystem(this); // Handles collisions
         this.gameLoopInterval = null; // Stores the setInterval ID for the game loop
@@ -3525,24 +3702,28 @@ class GameInstance {
         this.explosionsToBroadcast = [];
         // Store the callback function provided by GameManager
         this.gameOverCallback = gameOverCallback;
-        // Store game name (added for Phase 3)
+        // Store game name
         this.gameName = gameName || `Game ${gameId}`; // Use provided name or generate default
         // Define the spectator room name for this instance
         this.spectatorRoom = `spectator-${this.gameId}`;
 
 
-        console.log(`[${this.gameId} - '${this.gameName}'] Initializing Game Instance...`); // Added name to log
+        console.log(`[${this.gameId} - '${this.gameName}'] Initializing Game Instance...`);
 
         // Initialize players and their robots based on received data
         playersData.forEach((playerData, index) => {
             // Assign starting positions (simple alternating sides)
-            const startX = index % 2 === 0 ? 100 : ARENA_WIDTH - 100;
+            const startX = index % 2 === 0 ? 150 : ARENA_WIDTH - 150; // Spread out a bit more
             const startY = 100 + Math.floor(index / 2) * (ARENA_HEIGHT - 200);
             const startDir = index % 2 === 0 ? 0 : 180;
 
+            // Determine the ID: socket ID for real players, dummy ID for AI
+            // Use gameId in dummy ID to ensure uniqueness across multiple test games
+            const robotId = playerData.socket ? playerData.socket.id : `dummy-bot-${this.gameId}`;
+
             // Create the ServerRobot instance, passing appearance
             const robot = new ServerRobot(
-                playerData.socket.id,
+                robotId, // Use determined ID
                 startX, startY, startDir,
                 playerData.appearance // Pass the appearance identifier
             );
@@ -3550,27 +3731,30 @@ class GameInstance {
             robot.name = playerData.name;
             this.robots.push(robot);
 
-            // Store player data associated with the robot
-            this.players.set(playerData.socket.id, {
-                socket: playerData.socket,
+            // Store player data associated with the robot, using the robot's ID as the key
+            this.players.set(robotId, {
+                socket: playerData.socket, // Can be null
                 robot: robot,
                 code: playerData.code,
                 appearance: playerData.appearance,
                 name: playerData.name // Store name here as well
             });
-            // Store name in the separate map for quick lookups
-            this.playerNames.set(playerData.socket.id, playerData.name);
+            // Store name in the separate map for quick lookups using robot ID
+            this.playerNames.set(robot.id, playerData.name);
 
-            console.log(`[${this.gameId} - '${this.gameName}'] Added player ${playerData.name} (${playerData.socket.id}) (Appearance: ${playerData.appearance}) with Robot ${robot.id}`);
+            console.log(`[${this.gameId} - '${this.gameName}'] Added participant ${playerData.name} (${robot.id}) (Appearance: ${playerData.appearance}) with Robot ${robot.id}. Socket: ${playerData.socket ? 'Yes' : 'No'}`);
 
             // Add the player's socket to the dedicated Socket.IO room for this game
-            playerData.socket.join(this.gameId);
-            console.log(`[${this.gameId} - '${this.gameName}'] Player ${playerData.name} joined Socket.IO room.`);
+            // Only join room if it's a real player with a socket
+            if (playerData.socket) {
+                playerData.socket.join(this.gameId);
+                console.log(`[${this.gameId} - '${this.gameName}'] Player ${playerData.name} joined Socket.IO room.`);
+            }
         });
 
         // Initialize the interpreter AFTER all robots and player data are set up
-        // Pass the players map which now includes the name for potential use in error messages etc.
-        this.interpreter.initialize(this.robots, this.players);
+        // Pass the list of robots and the full players map (which includes null sockets for dummies)
+        this.interpreter.initialize(this.robots, this.players); // Pass the map containing potentially null sockets
 
         console.log(`[${this.gameId} - '${this.gameName}'] Game Instance Initialization complete.`);
     }
@@ -3616,7 +3800,7 @@ class GameInstance {
             // --- Start of Tick ---
             this.explosionsToBroadcast = []; // Clear transient data from the previous tick
 
-            // 1. Execute Robot AI Code
+            // 1. Execute Robot AI Code (Interpreter handles both real and dummy AI)
             this.interpreter.executeTick(this.robots, this);
 
             // 2. Update Robot and Missile Physics/Movement
@@ -3639,6 +3823,7 @@ class GameInstance {
             const gameState = this.getGameState();
 
             // 6. Broadcast the state to ALL clients in this game's room AND the spectator room.
+            // For test games, gameId room only contains the one real player.
             this.io.to(this.gameId).to(this.spectatorRoom).emit('gameStateUpdate', gameState);
 
         } catch (error) {
@@ -3649,7 +3834,9 @@ class GameInstance {
              this.io.to(this.gameId).to(this.spectatorRoom).emit('gameError', { message: `Critical server error during game tick for '${this.gameName}'. Game aborted.` });
              // Manually trigger game over callback with no winner due to error
              if (typeof this.gameOverCallback === 'function') {
-                 this.gameOverCallback(this.gameId, { winnerId: null, winnerName: 'None', reason: 'Server Error' });
+                  // Determine if it was a test game to pass flag back
+                  const wasTest = this.gameName.startsWith("Test Arena");
+                 this.gameOverCallback(this.gameId, { winnerId: null, winnerName: 'None', reason: 'Server Error', wasTestGame: wasTest });
              }
         }
     }
@@ -3661,6 +3848,12 @@ class GameInstance {
      * @returns {boolean} True if the game is over, false otherwise.
      */
     checkGameOver() {
+        // Only proceed if the game loop is actually running
+        // This prevents multiple gameOver events if checkGameOver is called after stopGameLoop
+        if (!this.gameLoopInterval) {
+            return true; // Consider game over if loop isn't running
+        }
+
         // Count how many robots are still marked as alive
         const aliveRobots = this.robots.filter(r => r.isAlive);
 
@@ -3669,7 +3862,7 @@ class GameInstance {
             const winnerRobot = aliveRobots[0]; // Could be undefined if 0 left (draw/mutual destruction)
 
             // Prepare winner data object
-            const winnerData = {
+            let winnerData = { // Use let so we can add wasTestGame later if needed
                 gameId: this.gameId, // Add gameId for context on client/server
                 winnerId: winnerRobot ? winnerRobot.id : null,
                 winnerName: winnerRobot ? winnerRobot.name : 'None', // Get name from robot instance
@@ -3678,18 +3871,30 @@ class GameInstance {
 
             console.log(`[${this.gameId} - '${this.gameName}'] Game Over detected. Reason: ${winnerData.reason}. Winner: ${winnerData.winnerName} (${winnerData.winnerId || 'N/A'})`);
 
-            // Notify players *in the game room* about the game end
-            this.io.to(this.gameId).emit('gameOver', winnerData);
+            // --- STOP GAME LOOP FIRST ---
+            // Stop the simulation loop for this game instance BEFORE sending events.
+            this.stopGameLoop();
+            // --- END STOP GAME LOOP ---
 
-            // Notify spectators *in the spectator room* about the game end
+
+            // Identify the real player socket ID in this game (the one that's not null)
+            const realPlayerEntry = Array.from(this.players.entries()).find(([id, data]) => data.socket !== null);
+            const realPlayerSocketId = realPlayerEntry ? realPlayerEntry[0] : null;
+
+            // Notify players *in the game room* about the game end
+            // If it's a test game, target the specific real player socket ID, otherwise broadcast to room
+            const target = realPlayerSocketId || this.gameId;
+            console.log(`[${this.gameId} - '${this.gameName}'] Emitting gameOver to target: ${target}`);
+            this.io.to(target).emit('gameOver', winnerData); // GameManager callback adds wasTestGame flag before passing to client
+
+            // Notify spectators *in the spectator room* about the game end (if any exist)
             this.io.to(this.spectatorRoom).emit('spectateGameOver', winnerData);
             console.log(`[${this.gameId} - '${this.gameName}'] Notified spectator room ${this.spectatorRoom} of game over.`);
 
-            // Stop the simulation loop for this game instance.
-            this.stopGameLoop();
 
             // Call the GameManager callback to handle lobby events etc.
             // Pass gameId along with winnerData for context in GameManager
+            // The callback *must* add the wasTestGame flag if appropriate
             if (typeof this.gameOverCallback === 'function') {
                 this.gameOverCallback(this.gameId, winnerData); // Pass gameId now
             } else {
@@ -3716,14 +3921,12 @@ class GameInstance {
             size: size,
         };
         this.explosionsToBroadcast.push(explosionData);
-        // Send explosion data immediately? Or bundle with gameStateUpdate?
-        // Bundling is generally more efficient. Already handled in getGameState.
     }
 
     /**
      * Gathers the current state of the game (robots, missiles, effects)
      * into a serializable object suitable for broadcasting to clients via Socket.IO.
-     * Includes the gameName. // <-- Added gameName
+     * Includes the gameName.
      * @returns {object} The current game state snapshot.
      */
     getGameState() {
@@ -3762,8 +3965,6 @@ class GameInstance {
             explosions: this.explosionsToBroadcast,
             timestamp: Date.now() // Include a server timestamp
         };
-
-        // Clearing explosionsToBroadcast moved to start of tick()
 
         return state;
     }
@@ -3833,50 +4034,75 @@ class GameInstance {
     }
 
     /**
-     * Removes a player and marks their robot as inactive upon disconnection.
-     * Called by the GameManager.
-     * @param {string} socketId - The ID of the disconnecting player's socket.
+     * Triggers the self-destruction sequence for a specific robot.
+     * Marks the robot as dead, applies max damage, creates an explosion,
+     * and checks for game over.
+     * @param {string} robotId - The ID of the robot to self-destruct (should be a real player's socket ID).
      */
-    removePlayer(socketId) {
-        // Use the playerNames map for logging
-        const playerName = this.playerNames.get(socketId) || socketId.substring(0,4)+'...';
-        console.log(`[${this.gameId} - '${this.gameName}'] Handling removal of player ${playerName} (${socketId}).`);
+    triggerSelfDestruct(robotId) {
+         const playerData = this.players.get(robotId);
 
-        const playerData = this.players.get(socketId);
+         if (playerData && playerData.robot && playerData.robot.isAlive) {
+             const robot = playerData.robot;
+             console.log(`[${this.gameId} - '${this.gameName}'] Triggering self-destruct for robot ${robot.name} (${robot.id}).`);
+
+             // Force death
+             robot.takeDamage(100); // This sets isAlive = false and damage = 100
+
+             // Create a big explosion
+             this.createExplosion(robot.x, robot.y, 5); // Size 5 explosion
+
+             // Check game over condition immediately after destruction
+             // This will stop the loop and trigger the callback if necessary
+             this.checkGameOver();
+         } else {
+             console.warn(`[${this.gameId} - '${this.gameName}'] Could not trigger self-destruct for ${robotId}. Robot not found, already dead, or invalid ID.`);
+         }
+    }
+
+    /**
+     * Removes a player (real or dummy) and marks their robot as inactive upon disconnection or game end.
+     * Called by the GameManager.
+     * @param {string} robotId - The ID of the robot whose participant is being removed.
+     */
+    removePlayer(robotId) {
+        // Use the playerNames map for logging
+        const playerName = this.playerNames.get(robotId) || robotId.substring(0,8)+'...';
+        console.log(`[${this.gameId} - '${this.gameName}'] Handling removal of participant ${playerName} (${robotId}).`);
+
+        const playerData = this.players.get(robotId);
         if (playerData) {
             // Mark the robot as inactive
             if (playerData.robot) {
                  playerData.robot.isAlive = false;
+                 playerData.robot.damage = 100; // Ensure damage reflects death state
                  playerData.robot.speed = 0; // Stop movement
                  playerData.robot.targetSpeed = 0;
                  console.log(`[${this.gameId} - '${this.gameName}'] Marked robot for ${playerName} as inactive.`);
             }
 
-            // Have the socket leave the Socket.IO room for this game
-            // This happens automatically on disconnect, but leave() is useful if removing manually
-            // if (playerData.socket) {
-            //      playerData.socket.leave(this.gameId);
-            // }
+            // Socket leaving room happens automatically on disconnect for real players
             // Remove player data from the active players map for this game
-            this.players.delete(socketId);
+            this.players.delete(robotId);
             // Remove from name map
-            this.playerNames.delete(socketId);
+            this.playerNames.delete(robotId);
 
-            // Check if removing this player triggers the game over condition
-            // (e.g., if only one player remains)
-            this.checkGameOver();
         } else {
-             console.warn(`[${this.gameId} - '${this.gameName}'] Tried to remove player ${socketId}, but they were not found in the player map.`);
+             console.warn(`[${this.gameId} - '${this.gameName}'] Tried to remove participant ${robotId}, but they were not found in the player map.`);
         }
     }
 
     /**
-     * Checks if the game instance has no active players left in its map.
+     * Checks if the game instance has no *real* players left in its map.
+     * A game with only a dummy bot (null socket) is considered empty for cleanup.
      * Used by GameManager to determine if the instance can be cleaned up.
-     * @returns {boolean} True if the player map is empty, false otherwise.
+     * @returns {boolean} True if no real players remain, false otherwise.
      */
     isEmpty() {
-        return this.players.size === 0;
+        // A test game is considered "empty" for cleanup purposes
+        // if the *only* entry left has a null socket (the dummy bot),
+        // or if the map is completely empty.
+        return this.players.size === 0 || Array.from(this.players.values()).every(p => p.socket === null);
     }
 
     // Placeholder for queueAction - remains unchanged
@@ -3895,9 +4121,11 @@ class GameInstance {
         // Force any remaining sockets out of the spectator room
         // This helps ensure spectators disconnected uncleanly are removed from the room state
         this.io.socketsLeave(this.spectatorRoom);
+        // Also force any remaining real players out of the game room (should be redundant)
+        this.io.socketsLeave(this.gameId);
     }
 
-}
+} // End of GameInstance class definition
 
 module.exports = GameInstance;
 ```
@@ -3907,13 +4135,16 @@ module.exports = GameInstance;
 ```code
 // server/game-manager.js
 const GameInstance = require('./game-instance'); // Manages a single game match
+const fs = require('fs'); // Needed to read the dummy bot AI file
+const path = require('path'); // Needed to construct the path to the dummy bot AI file
 
 /**
  * Manages the overall flow of players joining, waiting, and starting games.
  * Handles storing player data (including names, readiness), matchmaking,
  * game naming, tracking active/finished games, cleaning up old instances,
- * transitioning lobby players to spectators, moving participants back to lobby, // <-- Added participant move
- * broadcasting game history, // <-- Added history broadcast
+ * starting single-player test games, handling self-destruct requests, // <-- Added Self-Destruct
+ * transitioning lobby players to spectators, moving participants back to lobby,
+ * broadcasting game history,
  * and broadcasting lobby events and status updates.
  */
 class GameManager {
@@ -3949,13 +4180,24 @@ class GameManager {
         this.maxCompletedGames = 10; // Limit history size
         // --- End Game Tracking ---
 
+        // --- Added for Test Mode ---
+        // Simple hardcoded AI for the dummy bot
+        try {
+             this.dummyBotCode = fs.readFileSync(path.join(__dirname, 'dummy-bot-ai.js'), 'utf8');
+             console.log("[GameManager] Dummy bot AI loaded successfully.");
+        } catch (err) {
+             console.error("[GameManager] FAILED TO LOAD dummy-bot-ai.js:", err);
+             this.dummyBotCode = "// Dummy Bot AI Load Failed\nconsole.log('AI Load Error!'); robot.drive(0,0);"; // Fallback AI
+        }
+        // --- End Test Mode ---
+
         console.log("[GameManager] Initialized.");
     }
 
     /**
      * Adds a newly connected player to the waiting list with default values.
      * Called by socket-handler upon connection *if no games are active*,
-     * OR when moving spectators/participants back to lobby state. // <-- Added context
+     * OR when moving spectators/participants back to lobby state.
      * @param {SocketIO.Socket} socket - The socket object for the connected player.
      */
     addPlayer(socket) {
@@ -4204,37 +4446,137 @@ class GameManager {
             this.io.emit('lobbyEvent', { message: `Failed to start game '${gameName}' for ${playerInfo}. Please try again.`, type: 'error' });
             // Put original players back in pending if game creation failed
             playersData.forEach(player => {
-                 player.isReady = false; // Mark as not ready
-                 this.addPlayer(player.socket); // Add back to pending list safely
-                 if(player.socket.connected) {
-                    player.socket.emit('gameError', { message: `Failed to create game instance '${gameName}'. Please Ready Up again.` });
+                 if (player.socket) { // Only add back real players
+                     player.isReady = false; // Mark as not ready
+                     this.addPlayer(player.socket); // Add back to pending list safely
+                     if(player.socket.connected) {
+                        player.socket.emit('gameError', { message: `Failed to create game instance '${gameName}'. Please Ready Up again.` });
+                     }
                  }
             });
             // Clean up partially created game if needed
             if (this.activeGames.has(gameId)) { this.activeGames.delete(gameId); }
-            playersData.forEach(player => { this.playerGameMap.delete(player.socket.id); });
+            playersData.forEach(player => {
+                 if (player.socket) this.playerGameMap.delete(player.socket.id);
+            });
             // Broadcast lobby status after failure handling
             this.broadcastLobbyStatus();
         }
     } // End createGame
 
     /**
+     * Starts a single-player test game against a simple AI bot.
+     * Called by socket-handler when 'requestTestGame' is received.
+     * @param {SocketIO.Socket} playerSocket - The socket of the player requesting the test.
+     * @param {string} playerCode - The AI code submitted by the player.
+     * @param {string} playerAppearance - The appearance identifier chosen by the player.
+     * @param {string} playerName - The sanitized name provided by the player.
+     */
+    startTestGameForPlayer(playerSocket, playerCode, playerAppearance, playerName) {
+        const playerId = playerSocket.id;
+        console.log(`[GameManager] Starting test game for player ${playerName} (${playerId})`);
+
+        // 1. Remove player from the pending list
+        if (!this.pendingPlayers.delete(playerId)) {
+             console.warn(`[GameManager] Player ${playerName} (${playerId}) requested test game but wasn't pending. Aborting.`);
+             playerSocket.emit('lobbyEvent', { message: "Cannot start test game - state conflict.", type: "error" });
+             return;
+        }
+
+        // 2. Generate Game ID and Name
+        const gameId = `test-${this.gameIdCounter++}`;
+        // Make the name distinct
+        const gameName = `Test Arena ${gameId.split('-')[1]}`; // e.g., Test Arena 0
+
+        // 3. Prepare Player Data for GameInstance
+        const playerGameData = {
+            socket: playerSocket, // The real player's socket
+            code: playerCode,
+            appearance: playerAppearance,
+            name: playerName,
+            isReady: true // Mark as ready for instance logic
+        };
+
+        // 4. Prepare Dummy Bot Data
+        const dummyBotId = `dummy-bot-${gameId}`;
+        const dummyBotGameData = {
+            socket: null, // CRUCIAL: Dummy bot has no socket
+            code: this.dummyBotCode, // Hardcoded AI script from file
+            appearance: 'default', // Or choose a specific one
+            name: "Test Bot Alpha", // Fixed name
+            isReady: true // Mark as ready
+        };
+
+        // 5. Create the GameInstance with BOTH player and dummy bot
+        console.log(`[GameManager] Creating test game ${gameId} ('${gameName}')`);
+        this.io.emit('lobbyEvent', { message: `Test game '${gameName}' starting for ${playerName}!` });
+
+        try {
+             const gameInstance = new GameInstance(
+                 gameId,
+                 this.io,
+                 [playerGameData, dummyBotGameData], // Pass both to the instance
+                 (endedGameId, winnerData) => {
+                      // Add a flag to the winner data for client-side distinction
+                      winnerData.wasTestGame = true;
+                      this.handleGameOverEvent(endedGameId, winnerData);
+                 },
+                 gameName
+             );
+
+            this.activeGames.set(gameId, gameInstance);
+            // IMPORTANT: Only map the REAL player to the game
+            this.playerGameMap.set(playerId, gameId);
+
+            // Send 'gameStart' ONLY to the requesting player's socket
+            playerSocket.emit('gameStart', {
+                gameId: gameId, gameName: gameName, isTestGame: true, // Add flag
+                players: [ // Send info for both player and dummy
+                     { id: playerId, name: playerName, appearance: playerAppearance },
+                     { id: dummyBotId, name: dummyBotGameData.name, appearance: dummyBotGameData.appearance }
+                ]
+            });
+
+            gameInstance.startGameLoop();
+            this.broadcastLobbyStatus(); // Update lobby counts
+
+        } catch (error) {
+             console.error(`[GameManager] Error creating test game ${gameId} ('${gameName}'):`, error);
+             this.io.emit('lobbyEvent', { message: `Failed to start test game '${gameName}' for ${playerName}. Please try again.`, type: 'error' });
+             // Put the player back into pending if creation failed
+             playerGameData.isReady = false; // Mark as not ready
+             this.addPlayer(playerSocket); // Add back safely
+             if(playerSocket.connected) {
+                playerSocket.emit('gameError', { message: `Failed to create test game instance '${gameName}'. Please Ready Up or Test again.` });
+             }
+             // Clean up maps if needed
+             if (this.activeGames.has(gameId)) { this.activeGames.delete(gameId); }
+             this.playerGameMap.delete(playerId);
+             this.broadcastLobbyStatus(); // Broadcast status after failure
+        }
+    }
+
+
+    /**
      * Handles the game over event triggered by a GameInstance callback.
      * Emits lobby events, moves spectators AND participants back to the lobby,
      * cleans up player mapping, removes the game instance, logs the result,
-     * and broadcasts the updated game history. // <-- Added history broadcast
+     * and broadcasts the updated game history.
      * @param {string} gameId - The ID of the game that just ended.
-     * @param {object} winnerData - Object containing winner details { winnerId, winnerName, reason }.
+     * @param {object} winnerData - Object containing winner details { winnerId, winnerName, reason, wasTestGame? }.
      */
     async handleGameOverEvent(gameId, winnerData) {
         const gameInstance = this.activeGames.get(gameId);
         const gameName = gameInstance ? gameInstance.gameName : `Game ${gameId}`;
+        const isTestGame = winnerData.wasTestGame || false; // Check for the test game flag
 
         const winnerName = winnerData.winnerName || 'No one';
         const reason = winnerData.reason || 'Match ended.';
-        console.log(`[GameManager] Received game over event for ${gameId} ('${gameName}'). Winner: ${winnerName}`);
+        console.log(`[GameManager] Received game over event for ${gameId} ('${gameName}'). Winner: ${winnerName}. TestGame: ${isTestGame}`);
 
-        this.io.emit('lobbyEvent', { message: `Game '${gameName}' over! Winner: ${winnerName}. (${reason})` });
+        // Adjust lobby message based on game type
+        const lobbyMsg = isTestGame ? `Test game '${gameName}' over! Winner: ${winnerName}. (${reason})` : `Game '${gameName}' over! Winner: ${winnerName}. (${reason})`;
+        this.io.emit('lobbyEvent', { message: lobbyMsg });
 
         if (!gameInstance) {
             console.warn(`[GameManager] handleGameOverEvent called for ${gameId}, but instance not found. Skipping cleanup.`);
@@ -4243,6 +4585,7 @@ class GameManager {
         }
 
         // --- Move Spectators Back to Lobby ---
+        // Test games don't have spectators, but this code handles both cases safely.
         const spectatorRoom = `spectator-${gameId}`;
         try {
             const spectatorSockets = await this.io.in(spectatorRoom).fetchSockets();
@@ -4261,7 +4604,7 @@ class GameManager {
         }
         // --- End Spectator Move ---
 
-        // --- Clean up Player Mappings AND Move Participants to Lobby ---
+        // --- Clean up Player Mappings AND Move REAL Participants to Lobby ---
         const playerIds = Array.from(gameInstance.players.keys());
         console.log(`[GameManager] Cleaning up mappings and moving participants to lobby for game ${gameId}:`, playerIds);
         playerIds.forEach(playerId => {
@@ -4272,12 +4615,16 @@ class GameManager {
             const playerData = gameInstance.players.get(playerId);
             const playerSocket = playerData ? playerData.socket : null;
 
-            // Add participant back to the pending list if still connected
+            // Add participant back to the pending list ONLY IF they have a socket AND are connected
+            // This prevents trying to add the dummy bot back to the lobby.
             if (playerSocket && playerSocket.connected) {
                  console.log(`[GameManager] Adding participant ${playerId} back to pendingPlayers.`);
                  this.addPlayer(playerSocket); // Add them back to the lobby list safely
-            } else {
+            } else if (playerSocket) { // Had a socket but disconnected
                  console.log(`[GameManager] Participant ${playerId} not found or disconnected. Cannot add back to lobby.`);
+            } else {
+                // This is likely the dummy bot, no socket to add back.
+                console.log(`[GameManager] Participant ${playerId} (likely dummy bot) has no socket. Not adding to lobby.`);
             }
         });
         // --- End Participant Cleanup/Move ---
@@ -4291,13 +4638,20 @@ class GameManager {
                 players: Array.from(gameInstance.playerNames.entries()).map(([id, name]) => ({ id, name })),
                 endTime: Date.now()
             };
-            this.recentlyCompletedGames.set(gameId, completedGameData);
-            while (this.recentlyCompletedGames.size > this.maxCompletedGames) {
-                const oldestGameId = this.recentlyCompletedGames.keys().next().value;
-                this.recentlyCompletedGames.delete(oldestGameId);
-                console.log(`[GameManager] Pruned oldest completed game log: ${oldestGameId}`);
+            // Only log non-test games to history (or add a flag to filter client-side)
+            if (!isTestGame) {
+                this.recentlyCompletedGames.set(gameId, completedGameData);
+                while (this.recentlyCompletedGames.size > this.maxCompletedGames) {
+                    const oldestGameId = this.recentlyCompletedGames.keys().next().value;
+                    this.recentlyCompletedGames.delete(oldestGameId);
+                    console.log(`[GameManager] Pruned oldest completed game log: ${oldestGameId}`);
+                }
+                console.log(`[GameManager] Logged completed game: ${gameId} ('${gameName}')`);
+                 // Broadcast Updated Game History ONLY if a non-test game ended
+                this.broadcastGameHistory();
+            } else {
+                console.log(`[GameManager] Test game ${gameId} ('${gameName}') ended. Not adding to public history.`);
             }
-            console.log(`[GameManager] Logged completed game: ${gameId} ('${gameName}')`);
         } else {
             console.warn(`[GameManager] Could not log completed game ${gameId}, instance or playerNames missing.`);
         }
@@ -4315,17 +4669,16 @@ class GameManager {
 
         // Broadcast status now that spectators AND participants are back in pending
         this.broadcastLobbyStatus();
-
-        // --- Broadcast Updated Game History ---
-        this.broadcastGameHistory(); // Call helper function
-        // --- End History Broadcast ---
     }
 
      /** Helper function to broadcast the current game history */
      broadcastGameHistory() {
          // Convert map values to an array, sort by endTime descending (newest first)
          const historyArray = Array.from(this.recentlyCompletedGames.values())
-                                 .sort((a, b) => b.endTime - a.endTime); // Sort newest first
+                                 // Optional: Filter out test games from history?
+                                 // .filter(game => !game.name.startsWith("Test Arena")) // Already filtered during logging
+
+                                  .sort((a, b) => b.endTime - a.endTime); // Sort newest first
          // console.log(`[GameManager] Broadcasting game history (${historyArray.length} entries).`); // Optional Log
          this.io.emit('gameHistoryUpdate', historyArray);
      }
@@ -4353,11 +4706,12 @@ class GameManager {
                 game.removePlayer(socketId); // Tell the GameInstance to handle internal cleanup
 
                 // If the game becomes empty *DURING PLAY* after removal, clean up the game instance itself.
+                // The GameInstance.isEmpty() method now correctly handles dummy bots.
                 if (game.isEmpty()) {
                     console.log(`[GameManager] Active game ${gameId} ('${game.gameName}') has no players left after disconnect. Triggering cleanup.`);
-                    try { if (game.cleanup) game.cleanup(); } catch(e){ console.error("Error cleaning up empty game", e); }
-                    this.activeGames.delete(gameId);
-                    console.log(`[GameManager] Game instance ${gameId} removed from active games.`);
+                    // Use the existing gameOver handling which now manages dummy bots correctly
+                    this.handleGameOverEvent(gameId, { winnerId: null, winnerName: 'None', reason: 'Player Disconnected', wasTestGame: game.gameName.startsWith("Test Arena") });
+                    // Note: handleGameOverEvent deletes the game from activeGames
                 }
             } else {
                  console.warn(`[GameManager] Player ${playerName || socketId} mapped to non-existent game ${gameId}. Cleaning up map.`);
@@ -4371,7 +4725,7 @@ class GameManager {
             console.log(`[GameManager] Player ${playerName || socketId} removed from pending list.`);
              this._tryStartMatch();
         } else if (gameId) {
-             // Logged above
+             // Logged above when calling game.removePlayer()
         } else {
              // Player was neither pending nor in the active game map (e.g., spectator disconnect)
              console.log(`[GameManager] Removed player ${playerName || socketId} (was not pending or in active game map).`);
@@ -4417,7 +4771,26 @@ class GameManager {
         }
     }
 
+    /**
+     * Handles a self-destruct request from a player.
+     * Finds the game instance and tells it to trigger the destruction.
+     * @param {string} socketId - The ID of the player requesting self-destruction.
+     */
+    handleSelfDestruct(socketId) {
+        const gameId = this.playerGameMap.get(socketId);
+        if (gameId) {
+            const game = this.activeGames.get(gameId);
+            if (game && typeof game.triggerSelfDestruct === 'function') {
+                console.log(`[GameManager] Relaying self-destruct for ${socketId} to game ${gameId}`);
+                game.triggerSelfDestruct(socketId); // Delegate to GameInstance
+            } else {
+                 console.warn(`[GameManager] Game instance ${gameId} not found or missing triggerSelfDestruct for player ${socketId}.`);
+            }
+        } // No need for else, socket-handler already warned if not in map
+    }
+
 } // End GameManager Class
+
 
 module.exports = GameManager;
 ```
@@ -4664,14 +5037,14 @@ class ServerRobotInterpreter {
      * Initializes the interpreter for a set of robots.
      * Compiles the code for each robot into a function and creates its sandboxed execution context.
      * @param {ServerRobot[]} robots - An array of ServerRobot instances.
-     * @param {Map<string, {socket: SocketIO.Socket, robot: ServerRobot, code: string}>} playersDataMap - Map from robot ID (socket.id) to player data.
+     * @param {Map<string, {socket: SocketIO.Socket | null, robot: ServerRobot, code: string}>} playersDataMap - Map from robot ID to player data (socket can be null).
      */
     initialize(robots, playersDataMap) {
         console.log("[Interpreter] Initializing robot interpreters (Function Mode)...");
 
         robots.forEach(robot => {
             const playerData = playersDataMap.get(robot.id);
-            const playerSocket = playerData ? playerData.socket : null; // Get socket reference
+            const playerSocket = playerData ? playerData.socket : null; // Get socket ref (could be null for dummy)
 
             // Ensure we have player data and valid code for this robot
             if (!playerData || typeof playerData.code !== 'string' || playerData.code.trim() === '') {
@@ -4686,7 +5059,7 @@ class ServerRobotInterpreter {
             const sandbox = {
                 // Persistent state object (accessible as 'state' or 'this.state' inside function)
                 state: {},
-
+                // NOTE: Dummy bot uses the same API, just no corresponding socket
                 // Safe API object (accessible as 'robot' or 'this.robot')
                 robot: {
                     drive: (direction, speed) => this.safeDrive(robot.id, direction, speed),
@@ -4698,10 +5071,11 @@ class ServerRobotInterpreter {
                     getDirection: () => this.safeGetDirection(robot.id),
                 },
 
-                // --- START MODIFIED CONSOLE ---
+                // --- Console for Robot (Handles Dummy Bot) ---
                 console: {
                     log: (...args) => {
                         // 1. Log server-side as before (optional, but useful for server debug)
+                        // Use robot.id from outer scope which is reliable
                         console.log(`[Robot ${robot.id} Log]`, ...args);
 
                         // 2. Format message for client
@@ -4721,7 +5095,8 @@ class ServerRobotInterpreter {
                         }).join(' ');
 
                         // 3. Emit to the specific client's socket if connected
-                        // Use the playerSocket variable captured in the outer scope
+                        // CRUCIAL: Only emit if playerSocket exists (i.e., not the dummy bot)
+                        // Use the playerSocket variable captured in the outer scope for THIS robot
                         if (playerSocket && playerSocket.connected) {
                             playerSocket.emit('robotLog', { message: messageString });
                         }
@@ -4776,6 +5151,7 @@ class ServerRobotInterpreter {
             } catch (error) {
                 // Handle errors during compilation or the initial run
                 console.error(`[Interpreter] Error compiling/initializing function for robot ${robot.id}:`, error.message);
+                 // CRUCIAL: Only emit if playerSocket exists
                  // Use the playerSocket variable captured in the outer scope
                 if (playerSocket && playerSocket.connected) {
                     playerSocket.emit('codeError', {
@@ -4808,7 +5184,8 @@ class ServerRobotInterpreter {
                 // Set the ID of the currently executing robot for validation in safe methods
                 this.currentRobotId = robot.id;
                 const tickFunction = this.robotTickFunctions[robot.id];
-                const context = this.robotContexts[robot.id]; // The sandbox object
+                const context = this.robotContexts[robot.id]; // The sandbox object for THIS robot
+                // Need player data to check for socket when handling errors
                 const playerData = gameInstance.players.get(robot.id); // Get player data again for socket access in error handling
                 const playerSocket = playerData ? playerData.socket : null; // Get socket for error handling
 
@@ -4820,6 +5197,7 @@ class ServerRobotInterpreter {
                     // Handle runtime errors *inside* the robot's code during the call
                     console.error(`[Interpreter] Runtime error during function execution for robot ${robot.id}:`, error.message);
                     // Notify the client about the runtime error
+                     // CRUCIAL: Only emit if playerSocket exists
                      // Use the playerSocket captured just above
                     if (playerSocket && playerSocket.connected) {
                         playerSocket.emit('codeError', {
@@ -4845,9 +5223,11 @@ class ServerRobotInterpreter {
     /** Safely retrieves the ServerRobot instance for the currently executing robot. @private */
     getCurrentRobot() {
         if (!this.currentRobotId || !this.currentGameInstance) return null;
-        const data = this.currentGameInstance.players.get(this.currentRobotId);
-        return data ? data.robot : null;
+        // Find the robot directly in the gameInstance's robots array
+        // This avoids relying on the players map which might change structure
+        return this.currentGameInstance.robots.find(r => r.id === this.currentRobotId);
     }
+
 
     /** Safely delegates drive command. */
     safeDrive(robotId, direction, speed) {
@@ -4864,13 +5244,16 @@ class ServerRobotInterpreter {
     safeScan(robotId, direction, resolution) {
         if (robotId !== this.currentRobotId || !this.currentGameInstance) return null;
         const robot = this.getCurrentRobot();
-        if (robot && typeof direction === 'number' && typeof resolution === 'number') {
-            return this.currentGameInstance.performScan(robot, direction, resolution);
+        if (robot && typeof direction === 'number') {
+            // Use default resolution if not provided or invalid
+            const res = (typeof resolution === 'number' && resolution > 0) ? resolution : 10;
+            return this.currentGameInstance.performScan(robot, direction, res);
         } else if (robot) {
             console.warn(`[Interpreter] Invalid scan(${direction}, ${resolution}) call for robot ${robotId}`);
         }
         return null;
     }
+
 
     /** Safely delegates fire command and returns success/failure. */
     safeFire(robotId, direction, power) {
@@ -5180,7 +5563,8 @@ const GameManager = require('./game-manager');
 /**
  * Initializes Socket.IO event handlers for the application.
  * Manages player connections, disconnections, data submission, readiness signals, chat,
- * routes players to spectate if games are in progress, and sends initial game history. // <-- Added history mention
+ * test game requests, self-destruct requests, routes players to spectate if games are in progress, // <-- Added self-destruct
+ * and sends initial game history.
  * Delegates game logic to the GameManager.
  * @param {SocketIO.Server} io - The Socket.IO server instance.
  */
@@ -5197,14 +5581,20 @@ function initializeSocketHandler(io) {
 
         // --- SPECTATOR CHECK ---
         let wasSpectator = false; // Flag if routed to spectate initially
+        let spectateTarget = null; // Store target game if spectating
         if (gameManager.activeGames.size > 0) {
             // Simple logic: pick the first active game found
             try {
-                const [gameId, gameInstance] = gameManager.activeGames.entries().next().value;
+                // Use Array.from to safely get an iterator and take the first entry
+                const firstGameEntry = Array.from(gameManager.activeGames.entries())[0];
+                if (!firstGameEntry) {
+                     throw new Error("Active games map was not empty but couldn't get first entry.");
+                }
+                const [gameId, gameInstance] = firstGameEntry;
                 const gameName = gameInstance.gameName || `Game ${gameId}`;
                 const spectatorRoom = `spectator-${gameId}`;
 
-                spectateTarget = { gameId, gameName };
+                spectateTarget = { gameId, gameName }; // Store the game being spectated
                 console.log(`[Socket ${socket.id}] Active game found ('${gameName}' - ${gameId}). Routing to spectate.`);
 
                 // 1. Join the specific spectator room for this game
@@ -5221,7 +5611,7 @@ function initializeSocketHandler(io) {
                 wasSpectator = true; // Mark as routed to spectate
 
             } catch (error) {
-                 console.error(`[Socket ${socket.id}] Error finding active game to spectate: ${error}. Adding to lobby instead.`);
+                 console.error(`[Socket ${socket.id}] Error finding/processing active game to spectate: ${error}. Adding to lobby instead.`);
                  // Fallback to normal lobby logic
                  gameManager.addPlayer(socket);
                  io.emit('lobbyEvent', { message: `Player ${socket.id.substring(0, 4)}... connected.` });
@@ -5270,7 +5660,7 @@ function initializeSocketHandler(io) {
         socket.on('submitPlayerData', (data) => {
             // --- Check if player is allowed to submit (must be in pendingPlayers) ---
             if (!gameManager.pendingPlayers.has(socket.id)) {
-                const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : 'spectating or unknown';
+                const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : (spectateTarget ? `spectating ${spectateTarget.gameName}` : 'unknown state');
                 console.warn(`[Socket ${socket.id}] Attempted to submit data while ${state}. Ignoring.`);
                 socket.emit('lobbyEvent', { message: `Cannot submit data while ${state}.`, type: "error" });
                 return;
@@ -5301,7 +5691,7 @@ function initializeSocketHandler(io) {
         socket.on('playerUnready', () => {
             // --- Check if player is allowed to unready (must be in pendingPlayers) ---
              if (!gameManager.pendingPlayers.has(socket.id)) {
-                 const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : 'spectating or unknown';
+                 const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : (spectateTarget ? `spectating ${spectateTarget.gameName}` : 'unknown state');
                  console.warn(`[Socket ${socket.id}] Attempted to unready while ${state}. Ignoring.`);
                  socket.emit('lobbyEvent', { message: `Cannot unready while ${state}.`, type: "error" });
                  return;
@@ -5313,6 +5703,34 @@ function initializeSocketHandler(io) {
             gameManager.setPlayerReadyStatus(socket.id, false);
         });
 
+        // --- Handle Request for Single-Player Test Game ---
+        socket.on('requestTestGame', (data) => {
+            // Check if player is allowed to start a test (must be in pendingPlayers)
+            if (!gameManager.pendingPlayers.has(socket.id)) {
+                const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : (spectateTarget ? `spectating ${spectateTarget.gameName}` : 'unknown state');
+                console.warn(`[Socket ${socket.id}] Attempted to start test game while ${state}. Ignoring.`);
+                socket.emit('lobbyEvent', { message: `Cannot start test while ${state}.`, type: "error" });
+                return;
+            }
+
+            // Validate received data structure
+            if (data && typeof data.code === 'string' && typeof data.appearance === 'string' && typeof data.name === 'string') {
+                // Sanitize/validate name server-side
+                const name = data.name.trim();
+                const sanitizedName = name.substring(0, 24) || `Anon_${socket.id.substring(0,4)}`;
+                const finalName = sanitizedName.replace(/<[^>]*>/g, ""); // Strip HTML tags
+
+                console.log(`[Socket ${socket.id}] Received Test Game Request: Name='${finalName}', Appearance='${data.appearance}'`);
+
+                // Call the new GameManager method
+                gameManager.startTestGameForPlayer(socket, data.code, data.appearance, finalName);
+            } else {
+                console.warn(`[Socket ${socket.id}] Received invalid test game request data:`, data);
+                socket.emit('submissionError', { message: 'Invalid data format received by server for test game.' });
+            }
+        });
+        // --- END: Test Game Request Handler ---
+
         // Handle incoming chat messages from a client
         socket.on('chatMessage', (data) => {
             if (data && typeof data.text === 'string') {
@@ -5323,7 +5741,7 @@ function initializeSocketHandler(io) {
                  if (!senderName) {
                      // Check if they might be spectating by checking rooms they are in
                      const rooms = Array.from(socket.rooms);
-                     if (rooms.length > 1) {
+                     if (rooms.length > 1) { // Usually [socket.id, spectateRoom]
                          const spectatingRoom = rooms.find(room => room.startsWith('spectator-'));
                          if (spectatingRoom) {
                             senderName = `Spectator_${socket.id.substring(0,4)}`;
@@ -5337,8 +5755,8 @@ function initializeSocketHandler(io) {
                 const messageText = data.text.trim().substring(0, 100);
 
                 if (messageText) { // Ensure message isn't empty after trimming
-                    // Basic sanitization
-                    const sanitizedText = messageText.replace(/</g, "<").replace(/>/g, ">"); // Use HTML entities
+                    // Basic sanitization (encode basic HTML chars)
+                    const sanitizedText = messageText.replace(/</g, "<").replace(/>/g, ">");
 
                     console.log(`[Chat] ${senderName}: ${sanitizedText}`);
 
@@ -5353,6 +5771,21 @@ function initializeSocketHandler(io) {
                  console.warn(`[Socket ${socket.id}] Received invalid chat message format:`, data);
             }
         });
+
+        // --- Handle Self Destruct Request ---
+        socket.on('selfDestruct', () => {
+             console.log(`[Socket ${socket.id}] Received selfDestruct signal.`);
+             // Validate: Player must be in an active game map
+             const gameId = gameManager.playerGameMap.get(socket.id);
+             if (!gameId) {
+                 console.warn(`[Socket ${socket.id}] Sent selfDestruct but is not in playerGameMap. Ignoring.`);
+                 // Optionally send feedback? socket.emit('lobbyEvent', { message: "Cannot self-destruct: Not in game.", type: "error" });
+                 return;
+             }
+             // Delegate to game manager
+             gameManager.handleSelfDestruct(socket.id);
+        });
+        // --- END: Self Destruct Handler ---
 
         // Listener for player actions during a game (currently unused placeholder)
         // socket.on('robotAction', (action) => {

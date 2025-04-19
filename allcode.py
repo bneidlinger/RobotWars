@@ -29,7 +29,8 @@ def export_project_files(project_dir, output_file):
         "server/server-collision.js",
         "server/server-interpreter.js",
         "server/server-robot.js",
-        "server/socket-handler.js"
+        "server/socket-handler.js",
+        "server/dummy-bit-ai.js"
     ]
 
     with open(output_file, 'w', encoding='utf-8') as out:

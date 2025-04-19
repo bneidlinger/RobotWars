@@ -3,8 +3,9 @@
 /**
  * Handles client-side network communication with the server using Socket.IO.
  * Connects to the server, sends player data (including name), readiness signals,
- * receives game state updates, handles spectating, processes lobby/chat events,
- * receives game history updates, and handles robot log messages. // <-- Updated description
+ * requests test games, sends self-destruct signals, receives game state updates, // <-- Updated description
+ * handles spectating, processes lobby/chat events,
+ * receives game history updates, and handles robot log messages.
  */
 class Network {
     /**
@@ -105,7 +106,7 @@ class Network {
                  if (!this.isSpectating && typeof window.updateLobbyStatus === 'function') {
                       // Check if UI is currently in the lobby state
                       if (typeof controls !== 'undefined' && controls.uiState === 'lobby') {
-                         window.updateLobbyStatus('Enter name & code, then Ready Up!');
+                         window.updateLobbyStatus('Enter name & code, then Ready Up or Test Code!'); // Updated prompt
                       }
                  }
             });
@@ -168,7 +169,7 @@ class Network {
                 }
             });
 
-            // Server signals that the game is starting (for players)
+            // Server signals that the game is starting (for players - includes test games)
             this.socket.on('gameStart', (data) => {
                  // Ignore if spectating
                  if (this.isSpectating) {
@@ -180,7 +181,9 @@ class Network {
                      this.game.handleGameStart(data); // This will update gameId and gameName
                  }
                  // Update lobby status - Game class handleGameStart should update button text now
-                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus(`Playing Game: ${data.gameName || data.gameId}`);
+                 // Add a check for the test game flag
+                 const statusPrefix = data.isTestGame ? 'Testing Code vs AI:' : 'Playing Game:';
+                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus(`${statusPrefix} ${data.gameName || data.gameId}`);
                  if (typeof window.addEventLogMessage === 'function') {
                      window.addEventLogMessage(`Your game '${data.gameName || data.gameId}' is starting!`, 'event');
                  }
@@ -190,7 +193,7 @@ class Network {
                  }
              });
 
-            // Server signals that the game has ended (for players)
+            // Server signals that the game has ended (for players - includes test games)
              this.socket.on('gameOver', (data) => {
                  // Ignore if spectating
                  if (this.isSpectating) {
@@ -204,7 +207,8 @@ class Network {
                          this.game.handleGameOver(data); // This should reset controls UI state
                      }
                      // Update lobby status after game over
-                     if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Game Over. Ready Up for another match!');
+                     const prompt = data.wasTestGame ? 'Test Complete. Ready Up or Test Again!' : 'Game Over. Ready Up for another match!';
+                     if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus(prompt);
                       if (typeof window.addEventLogMessage === 'function') {
                          const endedGameName = this.game.gameName || data.gameId;
                          window.addEventLogMessage(`Your game '${endedGameName}' finished! Winner: ${data.winnerName || 'None'}`, 'event');
@@ -235,7 +239,7 @@ class Network {
                      if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
                          controls.setState('lobby');
                      }
-                     if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Code error detected. Please fix and Ready Up again.');
+                     if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Code error detected. Please fix and Ready Up or Test again.');
                  }
             });
 
@@ -250,7 +254,7 @@ class Network {
                  if (!this.isSpectating && typeof controls !== 'undefined' && typeof controls.setState === 'function') {
                      controls.setState('lobby'); // Reset to lobby state
                  }
-                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Game Error Occurred. Ready Up again.');
+                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Game Error Occurred. Ready Up or Test again.');
                   if (this.game) this.game.stop(); // Stop rendering
              });
 
@@ -429,5 +433,49 @@ class Network {
         }
     }
 
-} // End Network Class
+    /**
+     * Sends a request to the server to start a single-player test game.
+     * Called by the Controls class when the 'Test Code' button is clicked.
+     * @param {string} code - The robot AI code written by the player.
+     * @param {string} appearance - The identifier for the chosen robot appearance.
+     * @param {string} name - The player's chosen name.
+     */
+    requestTestGame(code, appearance, name) {
+        // Basic check: ensure socket is connected
+        if (!this.socket || !this.socket.connected) {
+             console.error("Socket not available or not connected. Cannot request test game.");
+             alert("Not connected to server. Please check connection and try again.");
+             return;
+        }
+         // Basic check: ensure player is in lobby state (client-side check)
+         if (typeof controls === 'undefined' || controls.uiState !== 'lobby') {
+             console.warn("Attempted to request test game while not in lobby state. Ignored.");
+             return;
+         }
 
+        console.log(`Sending test game request to server: { name: '${name}', appearance: '${appearance}', code: ... }`);
+        this.socket.emit('requestTestGame', {
+             code: code,
+             appearance: appearance,
+             name: name
+        });
+        // The server will respond with 'gameStart' if successful, which will transition the client state.
+        // Optionally, update lobby status immediately:
+        if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Requesting Test Game...');
+    }
+
+    /**
+     * Sends a signal to the server for the player's robot to self-destruct.
+     * Called by the Controls class.
+     */
+    sendSelfDestructSignal() {
+        if (!this.socket || !this.socket.connected) {
+             console.error("Socket not available or not connected. Cannot send self-destruct signal.");
+             alert("Not connected to server.");
+             return;
+        }
+        console.log("Client sending selfDestruct event."); // Added log
+        this.socket.emit('selfDestruct');
+    }
+
+} // End Network Class

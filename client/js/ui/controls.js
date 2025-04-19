@@ -4,7 +4,8 @@
  * Controls handler for Robot Wars.
  * Manages UI state ('lobby', 'waiting', 'playing', 'spectating'), button interactions,
  * code loading, appearance selection, player name input, code loadout saving/loading,
- * and sends relevant data/signals to the server via the network handler.
+ * test game requests, self-destruct requests, and sends relevant data/signals
+ * to the server via the network handler. // Updated description
  */
 class Controls {
     /**
@@ -22,6 +23,7 @@ class Controls {
         // --- START: Loadout Properties ---
         this.localStorageKey = 'robotWarsLoadouts';
         // --- END: Loadout Properties ---
+        this.testGameActive = false; // Track if a test game is running client-side (Might be useful later)
 
         if (!this.game || !this.network) {
              console.error("Controls initialized without valid game or network reference!");
@@ -69,6 +71,8 @@ class Controls {
         const playerNameInput = document.getElementById('playerName');
         const sampleCodeSelect = document.getElementById('sample-code');
         const resetButton = document.getElementById('btn-reset');
+        const selfDestructButton = document.getElementById('btn-self-destruct'); // Get self-destruct
+        const testButton = document.getElementById('btn-test-code'); // Get test button
         // --- START: Get Loadout Elements ---
         const saveButton = document.getElementById('btn-save-code');
         const loadSelect = document.getElementById('loadout-select');
@@ -82,6 +86,8 @@ class Controls {
         let readyButtonDisabled = true;
         let inputsDisabled = true;
         let editorReadOnly = true;
+        let selfDestructVisible = false; // Hide self-destruct by default
+        let testButtonDisabled = true; // Disable test button by default
         let loadoutControlsDisabled = true; // Disable save/load/delete by default
 
         switch (this.uiState) {
@@ -91,6 +97,8 @@ class Controls {
                 readyButtonDisabled = false;
                 inputsDisabled = false;
                 editorReadOnly = false;
+                selfDestructVisible = false; // Hide self-destruct
+                testButtonDisabled = false; // Enable test button
                 loadoutControlsDisabled = false; // Enable loadout controls
                 break;
 
@@ -100,15 +108,19 @@ class Controls {
                 readyButtonDisabled = false; // Must be enabled to unready
                 inputsDisabled = true; // Other inputs locked
                 editorReadOnly = true;
+                selfDestructVisible = false; // Hide self-destruct
+                testButtonDisabled = true;
                 loadoutControlsDisabled = true;
                 break;
 
-            case 'playing': // All interaction disabled
+            case 'playing': // All interaction disabled (includes test games)
                 readyButtonText = "Game in Progress...";
                 readyButtonColor = '#777'; // Grey
                 readyButtonDisabled = true;
                 inputsDisabled = true;
                 editorReadOnly = true;
+                selfDestructVisible = true; // SHOW self-destruct during play
+                testButtonDisabled = true;
                 loadoutControlsDisabled = true;
                 break;
 
@@ -118,6 +130,8 @@ class Controls {
                 readyButtonDisabled = true;
                 inputsDisabled = true;
                 editorReadOnly = true;
+                selfDestructVisible = false; // Hide self-destruct
+                testButtonDisabled = true;
                 loadoutControlsDisabled = true;
                 break;
 
@@ -146,6 +160,15 @@ class Controls {
 
         if (resetButton) { resetButton.disabled = inputsDisabled; } // Reset follows other inputs now
          else { console.warn("Reset button not found during UI update."); }
+
+        if (selfDestructButton) { // Show/hide and enable/disable self-destruct
+             selfDestructButton.style.display = selfDestructVisible ? 'inline-block' : 'none';
+             selfDestructButton.disabled = !selfDestructVisible; // Disable if not visible (i.e., not playing)
+        } else { console.warn("Self Destruct button not found during UI update."); }
+
+        if (testButton) { testButton.disabled = testButtonDisabled; } // Update test button state
+         else { console.warn("Test Code button not found during UI update."); }
+
 
         // --- START: Update Loadout Control State ---
         if (saveButton) { saveButton.disabled = loadoutControlsDisabled; }
@@ -182,17 +205,22 @@ class Controls {
         const sampleCodeSelect = document.getElementById('sample-code');
         const appearanceSelect = document.getElementById('robot-appearance-select');
         const playerNameInput = document.getElementById('playerName');
+        const selfDestructButton = document.getElementById('btn-self-destruct'); // Get self-destruct
+        const testButton = document.getElementById('btn-test-code'); // Get test button
         // --- START: Get Loadout Elements ---
         const saveButton = document.getElementById('btn-save-code');
         const loadSelect = document.getElementById('loadout-select');
         const deleteButton = document.getElementById('btn-delete-loadout');
         // --- END: Get Loadout Elements ---
 
+
         // Check if elements exist to prevent errors
         if (!readyButton || !resetButton || !sampleCodeSelect || !appearanceSelect || !playerNameInput ||
             // --- START: Check Loadout Elements ---
-            !saveButton || !loadSelect || !deleteButton) {
-            console.error("One or more control elements (button#btn-ready, select, player name input, save/load/delete) not found in the DOM!");
+            !saveButton || !loadSelect || !deleteButton ||
+            // --- END: Check Loadout Elements ---
+            !testButton || !selfDestructButton) { // Check test and self-destruct buttons
+            console.error("One or more control elements (button#btn-ready, test, self-destruct, reset, select, player name input, save/load/delete) not found in the DOM!");
             return; // Stop setup if elements are missing
         }
 
@@ -369,6 +397,61 @@ class Controls {
         });
 
         // --- END: Loadout Event Listeners ---
+
+        // --- START: Test Code Button Listener ---
+        testButton.addEventListener('click', () => {
+            if (this.uiState !== 'lobby') {
+                console.warn(`Test Code button clicked in non-lobby state: ${this.uiState}. Ignoring.`);
+                return;
+            }
+            if (!this.network || !this.network.socket || !this.network.socket.connected) {
+                 console.error("Network handler not available or not connected in Controls for Test Code.");
+                 alert("Not connected to server. Please check connection and refresh.");
+                 return;
+            }
+
+            console.log('Test Code button clicked (State: lobby)');
+            const playerCode = (typeof editor !== 'undefined') ? editor.getValue() : '';
+            const nameValue = playerNameInput.value.trim();
+            const chosenAppearance = appearanceSelect.value || 'default';
+
+            // Validate inputs before sending
+            if (!playerCode) { alert("Code editor is empty!"); return; }
+            if (!nameValue) { alert("Please enter a player name."); return; }
+
+            // Sanitize name
+            const finalPlayerName = nameValue.substring(0, 24).replace(/<[^>]*>/g, "");
+            if (!finalPlayerName) { alert("Invalid player name."); return; }
+            playerNameInput.value = finalPlayerName; // Update input field with sanitized name
+
+            this.savePlayerName(finalPlayerName); // Save name locally too
+
+            // Emit the request to the server via network handler
+            this.network.requestTestGame(playerCode, chosenAppearance, finalPlayerName);
+            // Server response ('gameStart') will trigger state change
+        });
+        // --- END: Test Code Button Listener ---
+
+        // --- START: Self Destruct Button Listener ---
+        selfDestructButton.addEventListener('click', () => {
+            // Should only be clickable when uiState is 'playing' due to updateUIForState logic,
+            // but double-check state and network connection
+            if (this.uiState !== 'playing') {
+                 console.warn("Self Destruct button clicked when not playing. Ignoring.");
+                 return; // Ignore click if not playing
+            }
+            if (!this.network || !this.network.socket || !this.network.socket.connected) {
+                console.error("Network not available for Self Destruct.");
+                alert("Not connected to server.");
+                return;
+            }
+            if (confirm("Are you sure you want to self-destruct your robot?")) {
+                console.log("Sending self-destruct signal...");
+                this.network.sendSelfDestructSignal();
+            }
+        });
+        // --- END: Self Destruct Button Listener ---
+
 
     } // End setupEventListeners
 
