@@ -12,12 +12,16 @@ Robot Wars is a programming game where players write JavaScript code to control 
 
 ## Features
 
-- 🎮 In-browser JavaScript coding environment
-- 🔄 Real-time multiplayer battles
-- 🎨 Multiple robot appearance options
-- 📊 Live battle statistics
+- 🎮 In-browser JavaScript coding environment with code save/load functionality
+- 🔄 Real-time multiplayer battles with spectator mode
+- 🎭 Multiple robot appearance options (Default, Tank, Spike, Tri)
+- 📊 Live battle statistics and damage tracking
+- 💬 In-game chat system for players and spectators
+- 📜 Game history tracking
+- 🎮 Robot console output for debugging
 - 🌐 WebSocket-based communication
 - 🛡️ Secure sandboxed code execution
+- 📱 Responsive design for desktop and mobile
 
 ## Getting Started
 
@@ -46,9 +50,13 @@ Alternatively, you can access the latest version directly at:
 ## How to Play
 
 1. **Write Your Robot AI**: Use the in-browser code editor to program your robot's behavior
-2. **Choose Appearance**: Select from different robot designs  
-3. **Battle**: Click "Run Simulation" to join a match against other players
-4. **Analyze**: Study the results and refine your strategy
+2. **Enter Your Name**: Add your player name to be displayed in the arena
+3. **Choose Appearance**: Select from different robot designs
+4. **Ready Up**: Click "Ready Up" to join the matchmaking queue
+5. **Battle**: When enough players are ready, a match begins automatically
+6. **Spectate**: Watch ongoing matches when you join during active games
+7. **Chat**: Communicate with other players using the in-game chat
+8. **Save Loadouts**: Save your best code for future matches
 
 ## Robot API
 
@@ -59,6 +67,9 @@ robot.drive(direction, speed); // Move in a direction (0-359 degrees) at speed (
 robot.scan(direction, resolution); // Scan for enemies in an arc
 robot.fire(direction, power); // Fire a missile (power 1-3)
 robot.damage(); // Get current damage level (0-100)
+robot.getX(); // Get current X coordinate
+robot.getY(); // Get current Y coordinate
+robot.getDirection(); // Get current direction (degrees)
 ```
 
 State is preserved between ticks with the `state` object:
@@ -73,6 +84,14 @@ if (typeof state.counter === 'undefined') {
 state.counter++;
 ```
 
+## Console Output
+
+Your robot can log messages to the dedicated Robot Console using:
+
+```javascript
+console.log("Enemy detected at distance: " + scanResult.distance);
+```
+
 ## Project Structure
 
 ```
@@ -81,6 +100,8 @@ state.counter++;
 │   ├── assets/       # Images and resources
 │   ├── css/          # Styling
 │   ├── js/           # Client-side logic
+│   │   ├── engine/   # Game engine components
+│   │   └── ui/       # User interface components
 │   └── index.html    # Main HTML file
 └── server/           # Backend Node.js code
     ├── game-*.js     # Game logic
@@ -90,9 +111,10 @@ state.counter++;
 
 ## Technologies
 
-- **Frontend**: HTML5 Canvas, JavaScript, Socket.IO client
+- **Frontend**: HTML5 Canvas, JavaScript, Socket.IO client, CodeMirror editor
 - **Backend**: Node.js, Express, Socket.IO
 - **Code Execution**: Node.js VM for sandboxed evaluation
+- **Networking**: Real-time WebSocket communication
 
 ## Inspirations
 
@@ -106,7 +128,7 @@ This project is inspired by the original [CROBOTS](https://github.com/tpoindex/c
 
 - [Play Now on GitHub Pages](https://bneidlinger.github.io/RobotWars)
 - [Play on Render](https://robotwars-c198.onrender.com) (Always up-to-date with latest features)
-- [View Demo Video](https://youtube.com/...)
+- [GitHub Repository](https://github.com/bneidlinger/RobotWars)
 - [Leave Feedback](https://github.com/bneidlinger/RobotWars/issues)
 
 ---

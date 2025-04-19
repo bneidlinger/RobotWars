@@ -42,12 +42,19 @@ body {
     background-color: #1e1e1e;
     color: #e0e0e0;
     line-height: 1.6;
+    display: flex; /* Use flexbox for body */
+    flex-direction: column; /* Stack content vertically */
+    min-height: 100vh; /* Ensure body takes at least full viewport height */
 }
 
 .container {
     max-width: 1200px;
+    width: 100%; /* Ensure container uses available width up to max */
     margin: 0 auto;
     padding: 20px;
+    display: flex; /* Use flexbox for container children */
+    flex-direction: column; /* Stack main and lobby */
+    flex-grow: 1; /* Allow container to grow */
 }
 
 header {
@@ -57,6 +64,8 @@ header {
     margin-bottom: 20px;
     padding-bottom: 10px;
     border-bottom: 1px solid #444;
+    flex-wrap: wrap; /* Allow header items to wrap */
+    flex-shrink: 0; /* Prevent header shrinking */
 }
 
 header h1 {
@@ -64,15 +73,17 @@ header h1 {
     font-family: 'Press Start 2P', cursive;
     font-size: 1.8rem; /* Adjust if needed */
     /* --- End Retro Font --- */
-
     color: #4CAF50;
-    margin: 0;
+    margin: 0 10px 0 0; /* Add some right margin */
 }
 
 nav {
     display: flex;
     gap: 10px;
     align-items: center;
+    flex-wrap: wrap; /* Allow nav items to wrap on smaller screens */
+    flex-grow: 1; /* Allow nav to take remaining space */
+    justify-content: flex-end; /* Align nav items to the right */
 }
 
 /* Keep modern button and select styling */
@@ -137,66 +148,99 @@ input#playerName:disabled {
 }
 
 
-/* Keep modern grid layout */
+/* Grid for main content (Arena/Editor) */
 main {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1.6fr 1fr; /* Give more space to game area */
     gap: 20px;
+    flex-grow: 1; /* Allow main grid to grow vertically */
+    min-height: 0; /* Important for flex context */
+    width: 100%; /* Take full width of container */
 }
 
 .game-container {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    min-height: 0; /* Prevent flex items from overflowing grid cell */
 }
 
 #arena {
-    /* Keep modern arena styling */
     background-color: #2c2c2c;
     border: 2px solid #444;
     border-radius: 8px;
-    /* width/height set by HTML attributes */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    max-width: 100%;
-    display: block; /* Helps prevent extra space below */
+    max-width: 100%; /* Ensure canvas scales down if container is smaller */
+    display: block;
+    aspect-ratio: 1 / 1; /* Maintain square shape */
 }
 
-/* Keep modern stats panel styling */
-.stats-panel {
-    background-color: #333;
-    padding: 15px;
+/* --- START: Shared styles for log panels --- */
+.console-panel {
+    background-color: #333; /* Default background for panels */
+    padding: 10px 15px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0; /* Prevent panel from shrinking */
 }
 
-/* Apply retro font to panel titles */
-.stats-panel h3, .editor-container h3, .api-help h4, #lobby-area h3, #game-history-log h4 {
+/* Basic structure for log boxes (overflow, font) */
+.log-box {
+    overflow-y: scroll;
+    font-family: 'VT323', monospace;
+    word-wrap: break-word;
+    /* Specific background/color/border applied per log type */
+}
+/* --- END: Shared styles for log panels --- */
+
+
+/* Constrain Stats Panel Height MORE */
+.stats-panel {
+    /* Apply console-panel base styles */
+    background-color: #333;
+    padding: 15px; /* Keep original padding */
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    /* REDUCED Max height */
+    max-height: 180px; /* ADJUST THIS VALUE */
+    overflow-y: auto; /* Add scrollbar if content exceeds max-height */
+}
+
+/* Apply retro font to panel/section titles */
+.stats-panel h3, .editor-container h3, .api-help h4, #lobby-area h3, #game-history-log h4,
+.console-panel h3 { /* Added .console-panel h3 */
      /* --- 80s Retro Font --- */
     font-family: 'VT323', monospace;
     font-size: 18px; /* Adjust if needed */
      /* --- End Retro Font --- */
      margin-bottom: 10px;
      color: #4CAF50; /* Match header color accent */
+     flex-shrink: 0; /* Prevent titles from shrinking */
 }
-
 
 .editor-container {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    min-height: 0; /* Prevent flex items from overflowing grid cell */
 }
 
-/* CodeMirror Styling */
+/* CodeMirror Styling - INCREASED min-height */
 .CodeMirror {
-    height: 400px; /* Adjust height as needed */
+    flex-grow: 1; /* Allow editor to grow vertically */
+    /* INCREASED Minimum height */
+    min-height: 500px; /* ADJUST THIS VALUE - Should be enough for ~25+ lines */
     border-radius: 8px;
-    border: 1px solid #444; /* Subtle border */
+    border: 1px solid #444;
 
     /* --- 80s Retro Font --- */
     font-family: 'VT323', monospace;
     font-size: 16px; /* Adjust for readability */
     /* --- End Retro Font --- */
 }
+
+
 /* Style CodeMirror when read-only */
 .CodeMirror-readonly .CodeMirror-cursor {
     display: none !important; /* Hide cursor when read-only */
@@ -205,13 +249,17 @@ main {
     background-color: #2a2a2a !important; /* Slightly different background when read-only */
 }
 
-
-/* Keep modern API help styling */
+/* Constrain API Help Height MORE */
 .api-help {
+    /* Apply console-panel base styles */
     background-color: #333;
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    /* REDUCED Max height */
+    max-height: 150px; /* ADJUST THIS VALUE */
+    overflow-y: auto; /* Add scrollbar if content exceeds max-height */
 }
 
 .api-help ul {
@@ -223,40 +271,131 @@ main {
     margin-bottom: 5px;
 }
 
-/* Style code snippets within API help */
 .api-help code {
-    /* --- 80s Retro Font --- */
     font-family: 'VT323', monospace;
-    /* Inherit size or slightly smaller */
-    /* --- End Retro Font --- */
-
-    background-color: #444; /* Keep modern snippet style */
+    background-color: #444;
     padding: 2px 4px;
     border-radius: 3px;
-    color: #f0f0f0; /* Lighter color for code */
+    color: #f0f0f0;
 }
 
+/* START: Styling for Editor Controls (Added in Loadout Feature) */
+.editor-controls {
+    /* Using inline styles for layout in HTML for now, but could be moved here */
+     margin-top: 10px;
+     display: flex;
+     gap: 10px;
+     align-items: center;
+}
+#btn-delete-loadout {
+    padding: 4px 8px; /* Make delete button smaller */
+    font-size: 14px;
+    background-color: #c0392b; /* Reddish color for delete */
+}
+#btn-delete-loadout:hover {
+    background-color: #a93226; /* Darker red on hover */
+}
+#btn-delete-loadout:disabled {
+    background-color: #555; /* Use standard disabled grey */
+    color: #aaa;
+}
+#loadout-status {
+    font-size: 14px;
+    margin-top: 5px;
+    min-height: 1.2em; /* Prevent layout shift when empty */
+    color: #aaa; /* Default color for status */
+    /* Color overridden by JS for success/error */
+}
+/* END: Styling for Editor Controls */
 
-/* --- Lobby Area Grid Layout --- */
+
+/* --- START: Robot Console Log Specific Styles (FALLOUT TERMINAL) --- */
+#robot-console-log {
+    margin-top: 15px;
+    background-color: #1a1a1a; /* Darker bg for the whole panel */
+    border: 1px solid #0f290f; /* Dark green border */
+    padding: 8px;
+    /* Inherits .console-panel shadow, radius */
+}
+
+#robot-console-log h3 {
+    color: #00b300; /* Bright green title */
+    text-align: center;
+    margin-bottom: 8px;
+    text-shadow: 0 0 3px #00b300; /* Subtle glow */
+}
+
+#robot-log-messages {
+    height: 200px; /* Adjust height as needed */
+    background-color: #000000; /* True black background */
+    color: #00FF41; /* Classic terminal green text */
+    font-size: 16px;
+    border: 1px inset #004d00; /* Inset border for depth */
+    padding: 10px;
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.5); /* Text glow */
+    word-wrap: break-word;
+    overflow-y: scroll; /* Keep scroll */
+    font-family: 'VT323', monospace; /* Explicitly set font here too */
+
+    /* Scanline preparation: Parent MUST have relative positioning */
+    position: relative; /* Already added previously */
+    overflow: hidden; /* Crucial: Keep the ::after pseudo-element clipped */
+}
+
+/* --- START: Scanline Effect (Adapted from ealertguide.html) --- */
+#robot-log-messages::after {
+    content: '';
+    position: absolute;
+    top: 0; /* Start at the top (animated) */
+    left: 0;
+    right: 0;
+    height: 2px; /* Thickness of the scanline */
+    /* Semi-transparent green background */
+    background: rgba(0, 255, 0, 0.15); /* Adjust alpha for visibility */
+    /* Optional subtle blur/glow effect */
+    box-shadow: 0 0 4px 1px rgba(0, 255, 0, 0.15);
+    z-index: 1; /* Place above text content if needed (usually fine) */
+    pointer-events: none; /* Ensure it doesn't interfere with interaction */
+    /* Link to the animation */
+    animation: scanline-log 6s linear infinite; /* Use unique animation name */
+}
+
+/* --- START: Scanline Animation Keyframes (Adapted from ealertguide.html) --- */
+/* Use translateY for potentially smoother performance than changing 'top' */
+@keyframes scanline-log {
+    0% {
+        transform: translateY(0%); /* Start at the top */
+        opacity: 0.1; /* Start slightly faded */
+    }
+    50% {
+        opacity: 0.3; /* Slightly brighter mid-scan */
+    }
+    100% {
+        transform: translateY(calc(100% - 2px)); /* Move to bottom edge (minus height) */
+        opacity: 0.1; /* Fade out towards the bottom */
+    }
+}
+/* --- END: Scanline Effect --- */
+/* --- END: Robot Console Log Specific Styles --- */
+
+
+/* Lobby Area - Pushed down */
 #lobby-area {
-    margin-top: 20px;
+    margin-top: 20px; /* Add space above lobby */
     background: #333;
     padding: 15px;
     border-radius: 8px;
-    display: grid; /* Use grid */
-    grid-template-columns: 1fr 1fr; /* Two equal columns */
-    gap: 20px; /* Space between columns */
-    border-top: 2px solid #444; /* Add a separator from main content */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    border-top: 2px solid #444;
+    flex-shrink: 0; /* Prevent lobby from shrinking */
+    width: 100%; /* Take full width */
 }
 
-/* Styles for elements within the first column of the lobby area */
-#lobby-area > div:first-child {
-    /* Styles specific to the first column if needed */
-}
-
-/* Styles for elements within the second column (Game History) */
+#lobby-area > div:first-child,
 #lobby-area > div:last-child {
-    /* Styles specific to the second column if needed */
+    /* Column content styling if needed */
 }
 
 #lobby-status {
@@ -265,16 +404,21 @@ main {
     color: #e0e0e0;
 }
 
+/* Styles for Event Log */
 #event-log {
-    height: 150px; /* Adjust height as needed */
+    /* Apply .log-box base styles */
     overflow-y: scroll;
-    border: 1px solid #555;
-    margin-bottom: 10px;
-    padding: 5px;
-    background: #222;
-    font-size: 14px;
     font-family: 'VT323', monospace;
+    word-wrap: break-word;
+    /* Specifics */
+    height: 150px;
+    margin-bottom: 10px;
+    padding: 5px 8px;
+    background: #222; /* Slightly lighter than robot log bg */
+    font-size: 14px;
+    border: 1px solid #555;
 }
+
 
 #chat-area {
     display: flex;
@@ -293,40 +437,38 @@ main {
 }
 
 #send-chat {
-    /* Inherits general button styles */
-    /* Add specific overrides if needed */
-    padding: 8px 16px; /* Match other buttons */
+    padding: 8px 16px;
     font-size: 15px;
 }
 
 
-/* --- Game History Log Styling --- */
 #game-history-log {
-    /* Container takes up the second grid column */
-    font-family: 'VT323', monospace; /* Use retro font */
+    font-family: 'VT323', monospace;
 }
 
-/* #game-history-log h4 already styled by shared header styles */
-
+/* Styles for Game History List */
 #game-history-list {
-    /* Style the list area */
-    height: 195px; /* Roughly match event log height, adjusted for less padding */
-    overflow-y: auto; /* Scroll if content exceeds height */
-    background: #222; /* Match event log background */
-    border: 1px solid #555; /* Match event log border */
+    /* Apply .log-box base styles */
+    overflow-y: auto; /* Use auto instead of scroll */
+    font-family: 'VT323', monospace;
+    word-wrap: break-word;
+    /* Specifics */
+    height: 195px;
+    background: #222;
+    border: 1px solid #555;
     padding: 8px;
-    font-size: 14px; /* Match event log font size */
+    font-size: 14px;
 }
 
-#game-history-list > div { /* Style individual history entries */
+
+#game-history-list > div {
     margin-bottom: 4px;
     padding-bottom: 4px;
-    border-bottom: 1px dashed #444; /* Separator line */
-    color: #cccccc; /* Slightly dimmer than chat */
-    word-wrap: break-word; /* Prevent long names from breaking layout */
+    border-bottom: 1px dashed #444;
+    color: #cccccc; /* Inherited from .log-box */
 }
 
-#game-history-list > div:last-child { /* Remove border from last item */
+#game-history-list > div:last-child {
     border-bottom: none;
     margin-bottom: 0;
 }
@@ -335,15 +477,60 @@ main {
 @media (max-width: 900px) {
     main {
         grid-template-columns: 1fr; /* Stack game and editor */
+        min-height: 60vh; /* Give main area a min height when stacked */
     }
+    .editor-container {
+        min-height: 400px; /* Still useful */
+    }
+     #arena {
+         max-height: 50vh; /* Limit arena height when stacked */
+         width: auto; /* Allow width to adjust based on height */
+         max-width: 90%; /* Prevent excessive width */
+         margin: 0 auto; /* Center arena */
+     }
+     .stats-panel {
+         max-height: 150px; /* Further reduce stats height when stacked */
+     }
+    #robot-console-log {
+        /* Keep reasonable height when stacked */
+        margin-top: 10px;
+    }
+    #robot-log-messages {
+        height: 150px; /* Adjust stacked height */
+    }
+    /* Optional: Slow down or disable scanline on mobile? */
+    /* #robot-log-messages::after { animation: none; } */
 }
 
-@media (max-width: 768px) { /* Adjust breakpoint if needed */
-    #lobby-area {
-        grid-template-columns: 1fr; /* Stack lobby columns */
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+    nav {
+        justify-content: center;
+        gap: 8px;
+    }
+     #lobby-area {
+        grid-template-columns: 1fr;
     }
     #game-history-log {
-         margin-top: 20px; /* Add space when stacked */
+         margin-top: 20px;
+    }
+     .CodeMirror {
+        min-height: 350px;
+    }
+    .stats-panel, .api-help {
+        max-height: 130px; /* Even smaller on mobile */
+    }
+     #robot-console-log {
+         /* Use same max-height as stats/api on mobile */
+         max-height: 130px;
+     }
+     #robot-log-messages {
+        height: 100px; /* Further reduce height */
+        font-size: 14px; /* Maybe smaller font too */
     }
 }
 ```
@@ -1466,8 +1653,8 @@ class Missile {
 /**
  * Controls handler for Robot Wars.
  * Manages UI state ('lobby', 'waiting', 'playing', 'spectating'), button interactions,
- * code loading, appearance selection, player name input, and sends relevant data/signals
- * to the server via the network handler.
+ * code loading, appearance selection, player name input, code loadout saving/loading,
+ * and sends relevant data/signals to the server via the network handler.
  */
 class Controls {
     /**
@@ -1482,12 +1669,20 @@ class Controls {
         this.uiState = 'lobby'; // Initial state
         this.isClientReady = false; // Still track if ready *within* lobby/waiting states
 
+        // --- START: Loadout Properties ---
+        this.localStorageKey = 'robotWarsLoadouts';
+        // --- END: Loadout Properties ---
+
         if (!this.game || !this.network) {
              console.error("Controls initialized without valid game or network reference!");
         }
         this.setupEventListeners();
         this.loadPlayerName();
         this.updateUIForState(); // Set initial UI based on 'lobby' state
+
+        // --- START: Initialize Loadouts ---
+        this.populateLoadoutUI(); // Populate dropdown on load
+        // --- END: Initialize Loadouts ---
         console.log('Controls initialized with game and network references');
     }
 
@@ -1524,6 +1719,11 @@ class Controls {
         const playerNameInput = document.getElementById('playerName');
         const sampleCodeSelect = document.getElementById('sample-code');
         const resetButton = document.getElementById('btn-reset');
+        // --- START: Get Loadout Elements ---
+        const saveButton = document.getElementById('btn-save-code');
+        const loadSelect = document.getElementById('loadout-select');
+        const deleteButton = document.getElementById('btn-delete-loadout');
+        // --- END: Get Loadout Elements ---
         const editorIsAvailable = typeof editor !== 'undefined';
 
         // Defaults (most restrictive)
@@ -1532,6 +1732,7 @@ class Controls {
         let readyButtonDisabled = true;
         let inputsDisabled = true;
         let editorReadOnly = true;
+        let loadoutControlsDisabled = true; // Disable save/load/delete by default
 
         switch (this.uiState) {
             case 'lobby': // Can interact, ready button shows "Ready Up"
@@ -1540,6 +1741,7 @@ class Controls {
                 readyButtonDisabled = false;
                 inputsDisabled = false;
                 editorReadOnly = false;
+                loadoutControlsDisabled = false; // Enable loadout controls
                 break;
 
             case 'waiting': // Can only click "Unready"
@@ -1548,6 +1750,7 @@ class Controls {
                 readyButtonDisabled = false; // Must be enabled to unready
                 inputsDisabled = true; // Other inputs locked
                 editorReadOnly = true;
+                loadoutControlsDisabled = true;
                 break;
 
             case 'playing': // All interaction disabled
@@ -1556,6 +1759,7 @@ class Controls {
                 readyButtonDisabled = true;
                 inputsDisabled = true;
                 editorReadOnly = true;
+                loadoutControlsDisabled = true;
                 break;
 
             case 'spectating': // All interaction disabled
@@ -1564,6 +1768,7 @@ class Controls {
                 readyButtonDisabled = true;
                 inputsDisabled = true;
                 editorReadOnly = true;
+                loadoutControlsDisabled = true;
                 break;
 
             default:
@@ -1592,6 +1797,16 @@ class Controls {
         if (resetButton) { resetButton.disabled = inputsDisabled; } // Reset follows other inputs now
          else { console.warn("Reset button not found during UI update."); }
 
+        // --- START: Update Loadout Control State ---
+        if (saveButton) { saveButton.disabled = loadoutControlsDisabled; }
+         else { console.warn("Save Code button not found during UI update."); }
+        if (loadSelect) { loadSelect.disabled = loadoutControlsDisabled; }
+         else { console.warn("Load Code select not found during UI update."); }
+        // Delete button is also disabled if no loadout is selected (handled in its listener/populate)
+        if (deleteButton) { deleteButton.disabled = loadoutControlsDisabled || (loadSelect && !loadSelect.value); }
+         else { console.warn("Delete Loadout button not found during UI update."); }
+        // --- END: Update Loadout Control State ---
+
         try {
             if (editorIsAvailable) {
                 editor.setOption("readOnly", editorReadOnly);
@@ -1617,10 +1832,17 @@ class Controls {
         const sampleCodeSelect = document.getElementById('sample-code');
         const appearanceSelect = document.getElementById('robot-appearance-select');
         const playerNameInput = document.getElementById('playerName');
+        // --- START: Get Loadout Elements ---
+        const saveButton = document.getElementById('btn-save-code');
+        const loadSelect = document.getElementById('loadout-select');
+        const deleteButton = document.getElementById('btn-delete-loadout');
+        // --- END: Get Loadout Elements ---
 
         // Check if elements exist to prevent errors
-        if (!readyButton || !resetButton || !sampleCodeSelect || !appearanceSelect || !playerNameInput) {
-            console.error("One or more control elements (button#btn-ready, select, player name input) not found in the DOM!");
+        if (!readyButton || !resetButton || !sampleCodeSelect || !appearanceSelect || !playerNameInput ||
+            // --- START: Check Loadout Elements ---
+            !saveButton || !loadSelect || !deleteButton) {
+            console.error("One or more control elements (button#btn-ready, select, player name input, save/load/delete) not found in the DOM!");
             return; // Stop setup if elements are missing
         }
 
@@ -1745,12 +1967,194 @@ class Controls {
              }
          });
 
+        // --- START: Loadout Event Listeners ---
+
+        // Save Button Listener
+        saveButton.addEventListener('click', () => {
+            if (this.uiState !== 'lobby') return; // Only allow in lobby
+
+            const currentCode = (typeof editor !== 'undefined') ? editor.getValue() : '';
+            if (!currentCode.trim()) {
+                alert("Code editor is empty. Cannot save.");
+                this.updateLoadoutStatus("Save failed: Editor empty.", true);
+                return;
+            }
+
+            const loadoutName = prompt("Enter a name for this code loadout:", "");
+            if (loadoutName === null) return; // User cancelled prompt
+
+            const trimmedName = loadoutName.trim();
+            if (!trimmedName) {
+                alert("Loadout name cannot be empty.");
+                 this.updateLoadoutStatus("Save failed: Invalid name.", true);
+                return;
+            }
+
+            // Optional: Confirm overwrite? For simplicity, we'll just overwrite now.
+            this.saveLoadout(trimmedName, currentCode);
+        });
+
+        // Load Dropdown Listener
+        loadSelect.addEventListener('change', () => {
+            if (this.uiState !== 'lobby') return; // Only allow in lobby
+
+            const selectedName = loadSelect.value;
+            if (selectedName) { // Check if it's not the default "" value
+                this.loadLoadout(selectedName);
+            }
+            // Update delete button state based on selection
+            deleteButton.disabled = !selectedName || this.uiState !== 'lobby';
+        });
+
+        // Delete Button Listener
+        deleteButton.addEventListener('click', () => {
+            if (this.uiState !== 'lobby') return; // Only allow in lobby
+
+            const selectedName = loadSelect.value;
+            if (!selectedName) return; // No loadout selected
+
+            if (confirm(`Are you sure you want to delete the loadout "${selectedName}"?`)) {
+                this.deleteLoadout(selectedName);
+            }
+        });
+
+        // --- END: Loadout Event Listeners ---
+
     } // End setupEventListeners
 
 
     // --- The methods setReadyState, setPlayingState, setSpectatingState ---
     // --- have been REMOVED. Use controls.setState('lobby' | 'waiting' | 'playing' | 'spectating') ---
     // --- from game.js or other relevant places. ---
+
+    // --- START: Loadout Management Methods ---
+
+    /** Safely gets loadouts from localStorage, handling errors. */
+    _getLoadouts() {
+        try {
+            const storedData = localStorage.getItem(this.localStorageKey);
+            if (storedData) {
+                return JSON.parse(storedData);
+            }
+        } catch (error) {
+            console.error("Error reading or parsing loadouts from localStorage:", error);
+            // Optionally clear corrupted data: localStorage.removeItem(this.localStorageKey);
+        }
+        return {}; // Return empty object if nothing stored or error occurred
+    }
+
+    /** Safely saves loadouts to localStorage, handling errors. */
+    _setLoadouts(loadouts) {
+        try {
+            localStorage.setItem(this.localStorageKey, JSON.stringify(loadouts));
+            return true; // Indicate success
+        } catch (error) {
+            console.error("Error saving loadouts to localStorage:", error);
+            if (error.name === 'QuotaExceededError') {
+                alert("Could not save loadout: Browser storage quota exceeded. You may need to delete old loadouts.");
+            } else {
+                alert("An error occurred while trying to save the loadout.");
+            }
+            return false; // Indicate failure
+        }
+    }
+
+    /** Saves a named code loadout to localStorage. */
+    saveLoadout(name, code) {
+        if (typeof localStorage === 'undefined') {
+             alert("localStorage is not available in this browser. Cannot save loadouts.");
+             this.updateLoadoutStatus("Save failed: localStorage unavailable.", true);
+             return;
+        }
+        if (!name) {
+            console.warn("Attempted to save loadout with empty name.");
+             this.updateLoadoutStatus("Save failed: Name cannot be empty.", true);
+            return;
+        }
+
+        const loadouts = this._getLoadouts();
+        loadouts[name] = code;
+
+        if (this._setLoadouts(loadouts)) {
+             console.log(`Loadout "${name}" saved.`);
+             this.populateLoadoutUI(name); // Repopulate and select the saved item
+             this.updateLoadoutStatus(`Loadout "${name}" saved successfully.`);
+        } else {
+             this.updateLoadoutStatus(`Failed to save loadout "${name}".`, true);
+        }
+    }
+
+    /** Loads code from a named loadout into the editor. */
+    loadLoadout(name) {
+        if (!name || typeof editor === 'undefined') return;
+
+        const loadouts = this._getLoadouts();
+        if (loadouts.hasOwnProperty(name)) {
+            editor.setValue(loadouts[name]);
+            console.log(`Loadout "${name}" loaded into editor.`);
+            this.updateLoadoutStatus(`Loaded "${name}".`);
+        } else {
+            console.warn(`Loadout "${name}" not found.`);
+             this.updateLoadoutStatus(`Loadout "${name}" not found.`, true);
+        }
+    }
+
+    /** Deletes a named loadout from localStorage. */
+    deleteLoadout(name) {
+        if (typeof localStorage === 'undefined' || !name) return;
+
+        const loadouts = this._getLoadouts();
+        if (loadouts.hasOwnProperty(name)) {
+            delete loadouts[name];
+            if (this._setLoadouts(loadouts)) {
+                console.log(`Loadout "${name}" deleted.`);
+                this.populateLoadoutUI(); // Repopulate, will select default
+                 // Optional: Clear editor if the deleted loadout was loaded?
+                 // if (editor.getValue() === codeToDelete) { editor.setValue(''); }
+                 this.updateLoadoutStatus(`Deleted "${name}".`);
+            } else {
+                 this.updateLoadoutStatus(`Failed to delete "${name}".`, true);
+            }
+        } else {
+            console.warn(`Attempted to delete non-existent loadout "${name}".`);
+             this.updateLoadoutStatus(`Loadout "${name}" not found for deletion.`, true);
+        }
+    }
+
+    /** Populates the loadout dropdown from localStorage. */
+    populateLoadoutUI(selectName = null) {
+        const loadSelect = document.getElementById('loadout-select');
+        const deleteButton = document.getElementById('btn-delete-loadout');
+        if (!loadSelect || !deleteButton) return;
+
+        const loadouts = this._getLoadouts();
+        const names = Object.keys(loadouts).sort(); // Sort names alphabetically
+
+        // Clear existing options (keep the first placeholder)
+        while (loadSelect.options.length > 1) {
+            loadSelect.remove(1);
+        }
+
+        // Add options for each saved loadout
+        names.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            loadSelect.appendChild(option);
+        });
+
+        // Select the specified item if provided (e.g., after saving)
+        if (selectName && loadouts.hasOwnProperty(selectName)) {
+            loadSelect.value = selectName;
+        } else {
+            loadSelect.value = ""; // Select the default "Load Code..."
+        }
+
+        // Update delete button state
+        deleteButton.disabled = !loadSelect.value || this.uiState !== 'lobby';
+    }
+
+    // --- END: Loadout Management Methods ---
 
 
     /**
@@ -1788,6 +2192,21 @@ class Controls {
             } else {
                  console.log('No player name found in localStorage.');
             }
+        }
+    }
+
+    /** Updates the small status text below the editor controls */
+    updateLoadoutStatus(message, isError = false) {
+        const statusElement = document.getElementById('loadout-status');
+        if (statusElement) {
+            statusElement.textContent = message;
+            statusElement.style.color = isError ? '#e74c3c' : '#4CAF50'; // Red for error, Green for success
+            // Clear the message after a few seconds
+            setTimeout(() => {
+                 if (statusElement.textContent === message) { // Only clear if message hasn't changed
+                     statusElement.textContent = '';
+                 }
+            }, 4000); // Clear after 4 seconds
         }
     }
 
@@ -2209,7 +2628,8 @@ if (!state.searchMode && state.targetDirection !== null) {
 ```code
 // client/js/ui/lobby.js
 
-const MAX_LOG_MESSAGES = 50; // Keep the log from getting too long
+const MAX_LOG_MESSAGES = 50; // Keep the event log from getting too long
+const MAX_ROBOT_LOG_MESSAGES = 100; // Allow more robot messages
 
 /**
  * Updates the text content of the lobby status display.
@@ -2280,58 +2700,118 @@ function clearEventLog() {
      const logElement = document.getElementById('event-log');
      if (logElement) {
          logElement.innerHTML = ''; // Clear content
-         addEventLogMessage("Log cleared.", "info");
+         addEventLogMessage("Event Log cleared.", "info");
      }
 }
 
 
-// --- Make functions globally accessible (simple approach) ---
-// This allows network.js to call them easily without complex imports/exports yet
+// --- START: New function for Robot Console Log ---
+/**
+ * Adds a message to the robot's console log display. Handles scrolling.
+ * @param {string} message - The message text from the robot's console.log.
+ */
+function addRobotLogMessage(message) {
+    const logElement = document.getElementById('robot-log-messages'); // Target new element
+    if (!logElement) {
+        console.warn("Robot log messages element '#robot-log-messages' not found.");
+        return;
+    }
+
+    const wasScrolledToBottom = logElement.scrollHeight - logElement.clientHeight <= logElement.scrollTop + 1;
+
+    const messageDiv = document.createElement('div');
+    messageDiv.textContent = message; // Use textContent for security
+    messageDiv.style.marginBottom = '2px'; // Tighter spacing than event log maybe
+    // Style is mostly inherited from .log-box, color set in CSS
+
+    logElement.appendChild(messageDiv);
+
+    // Remove old messages if log is too long
+    while (logElement.childNodes.length > MAX_ROBOT_LOG_MESSAGES) {
+        logElement.removeChild(logElement.firstChild);
+    }
+
+    // Auto-scroll to bottom if already scrolled to bottom
+    if (wasScrolledToBottom) {
+        logElement.scrollTop = logElement.scrollHeight;
+    }
+}
+
+/** Clears the robot console log */
+function clearRobotLog() {
+     const logElement = document.getElementById('robot-log-messages');
+     if (logElement) {
+         logElement.innerHTML = '';
+         // Optionally add a cleared message
+         addRobotLogMessage("-- Robot Log Cleared --");
+     }
+}
+// --- END: New function for Robot Console Log ---
+
+
+// --- Make functions globally accessible ---
 window.updateLobbyStatus = updateLobbyStatus;
 window.addEventLogMessage = addEventLogMessage;
-window.clearEventLog = clearEventLog; // Optional clear function
+window.clearEventLog = clearEventLog;
+window.addRobotLogMessage = addRobotLogMessage; // Add new function to window
+window.clearRobotLog = clearRobotLog; // Optional clear function
 
 
-// --- Initialize Chat Input/Button Listeners ---
-// (We'll put chat logic here too for simplicity)
+// --- Initialize Chat Input/Button Listeners & Clear Placeholders ---
 document.addEventListener('DOMContentLoaded', () => {
     const chatInput = document.getElementById('chat-input');
     const sendButton = document.getElementById('send-chat');
 
-    if (!chatInput || !sendButton) {
+    if (chatInput && sendButton) {
+         sendButton.addEventListener('click', sendChatMessageFromInput);
+         chatInput.addEventListener('keypress', (event) => {
+             if (event.key === 'Enter') {
+                 event.preventDefault(); // Prevent default form submission (if any)
+                 sendChatMessageFromInput();
+             }
+         });
+    } else {
         console.warn("Chat input or send button not found.");
-        return;
     }
-
-    // Send on button click
-    sendButton.addEventListener('click', sendChatMessageFromInput);
-
-    // Send on Enter key press in input field
-    chatInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault(); // Prevent default form submission (if any)
-            sendChatMessageFromInput();
-        }
-    });
 
     function sendChatMessageFromInput() {
         const messageText = chatInput.value;
+        // Ensure network object exists and has the method before calling
         if (messageText.trim() && typeof network !== 'undefined' && network.sendChatMessage) {
             network.sendChatMessage(messageText); // Assumes global 'network' object exists
             chatInput.value = ''; // Clear input field after sending
+        } else if (typeof network === 'undefined' || !network.sendChatMessage) {
+             console.error("Network object or sendChatMessage method not available.");
+             // Optionally inform user via event log
+             // addEventLogMessage("Error: Cannot send chat message.", "error");
         }
          chatInput.focus(); // Keep focus on input
     }
 
-    // Clear placeholder text on initial load
-    const logElement = document.getElementById('event-log');
-    if(logElement && logElement.textContent === 'Event Log Loading...') {
-         logElement.textContent = ''; // Clear loading text
+
+    // --- Clear placeholder text on initial load for BOTH logs ---
+    const eventLogElement = document.getElementById('event-log');
+    // Check for the specific placeholder text before clearing
+    if(eventLogElement && eventLogElement.textContent.trim() === 'Event Log Loading...') {
+         eventLogElement.innerHTML = ''; // Clear content directly
          addEventLogMessage("Welcome! Connect to chat and wait for players...", "info");
     }
+
+    const robotLogElement = document.getElementById('robot-log-messages');
+     // Check for the specific placeholder text before clearing
+    if (robotLogElement && robotLogElement.textContent.trim() === 'Waiting for robot messages...') {
+        robotLogElement.innerHTML = ''; // Clear placeholder
+        // --- START: Add Thematic Message ---
+        addRobotLogMessage("ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL");
+        addRobotLogMessage("ENTER PASSWORD NOW");
+        addRobotLogMessage(" "); // Blank line
+        addRobotLogMessage("> R.O.S. V1.3 INITIALIZING...");
+        // --- END: Add Thematic Message ---
+    }
+    // --- End Placeholder Clearing ---
 });
 
-console.log("Lobby UI functions initialized (lobby.js).");
+console.log("Lobby UI functions initialized (lobby.js). Includes Robot Log handler.");
 ```
 
 ## client/js/main.js
@@ -2410,7 +2890,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Handles client-side network communication with the server using Socket.IO.
  * Connects to the server, sends player data (including name), readiness signals,
  * receives game state updates, handles spectating, processes lobby/chat events,
- * and receives game history updates. // <-- Updated description
+ * receives game history updates, and handles robot log messages. // <-- Updated description
  */
 class Network {
     /**
@@ -2468,6 +2948,10 @@ class Network {
                  if (typeof window.addEventLogMessage === 'function') {
                     window.addEventLogMessage("--> Connected to server.", "event");
                  }
+                 // Clear robot log on new connection
+                 if (typeof window.clearRobotLog === 'function') {
+                     window.clearRobotLog();
+                 }
             });
 
             // On disconnection from the server
@@ -2522,6 +3006,10 @@ class Network {
                     this.game.handleSpectateStart(data); // Pass game info to game handler
                     if (typeof window.addEventLogMessage === 'function') {
                         window.addEventLogMessage(`Started spectating game: ${this.spectatingGameName}`, 'event');
+                    }
+                    // Clear robot log when starting spectate
+                    if (typeof window.clearRobotLog === 'function') {
+                         window.clearRobotLog();
                     }
                 } else {
                     console.error("Game object or handleSpectateStart method not available!");
@@ -2582,6 +3070,10 @@ class Network {
                  if (typeof window.addEventLogMessage === 'function') {
                      window.addEventLogMessage(`Your game '${data.gameName || data.gameId}' is starting!`, 'event');
                  }
+                 // Clear robot log at game start
+                 if (typeof window.clearRobotLog === 'function') {
+                      window.clearRobotLog();
+                 }
              });
 
             // Server signals that the game has ended (for players)
@@ -2611,11 +3103,18 @@ class Network {
             // Server reports an error in the robot's code (compilation or runtime)
             this.socket.on('codeError', (data) => {
                 console.error(`Received Code Error for Robot ${data.robotId}:`, data.message);
+                const robotIdentifier = (data.robotId === this.playerId) ? "Your Robot" : `Robot ${data.robotId.substring(0,4)}...`;
+                // Log to general event log
                 if (typeof window.addEventLogMessage === 'function') {
-                    const robotIdentifier = (data.robotId === this.playerId) ? "Your Robot" : `Robot ${data.robotId.substring(0,4)}...`;
                     window.addEventLogMessage(`Code Error (${robotIdentifier}): ${data.message}`, 'error');
                 }
-                // Display error and reset UI only if it's our robot AND we are not spectating
+                // Also log to the specific robot's log if it's ours
+                if (data.robotId === this.playerId && typeof window.addRobotLogMessage === 'function') {
+                     window.addRobotLogMessage(`--- CODE ERROR ---`);
+                     window.addRobotLogMessage(data.message);
+                     window.addRobotLogMessage(`------------------`);
+                }
+                // Display alert and reset UI only if it's our robot AND we are not spectating
                 if (data.robotId === this.playerId && !this.isSpectating) {
                      alert(`Your Robot Code Error:\n${data.message}\n\nYou might need to reset and fix your code.`);
                      // Reset Controls UI to lobby state
@@ -2708,7 +3207,19 @@ class Network {
             });
             // --- End Game History Listener ---
 
-            // --- End Lobby/Chat/History Listeners ---
+            // --- Add Robot Log Listener ---
+            this.socket.on('robotLog', (data) => {
+                if (data && typeof data.message === 'string') {
+                    // Call the UI update function (defined in lobby.js)
+                    if (typeof window.addRobotLogMessage === 'function') {
+                        window.addRobotLogMessage(data.message);
+                    } else {
+                        console.warn("addRobotLogMessage function not found!");
+                    }
+                }
+            });
+            // --- End Robot Log Listener ---
+
 
         } catch (error) {
              console.error("Error initializing Socket.IO connection:", error);
@@ -2805,6 +3316,7 @@ class Network {
     }
 
 } // End Network Class
+
 ```
 
 ## client/index.html
@@ -2856,20 +3368,31 @@ class Network {
 
         <main>
             <div class="game-container">
-                <!-- Canvas with fixed dimensions -->
-                <canvas id="arena" width="600" height="600"></canvas>
+                <!-- Canvas with updated dimensions -->
+                <canvas id="arena" width="900" height="900"></canvas>
+
                 <div class="stats-panel">
                     <h3>Robot Stats</h3>
-                    <!-- Dashboard elements (title, list) are created/managed by dashboard.js -->
                     <div id="robot-stats">
-                        <!-- Initial placeholder content might be added by dashboard.js -->
+                        <!-- Dashboard elements created/managed by dashboard.js -->
                     </div>
                 </div>
+
+                <!-- START: Added Robot Console Log -->
+                <div id="robot-console-log" class="console-panel">
+                    <h3>Robot Console Output</h3>
+                    <div id="robot-log-messages" class="log-box">
+                        <!-- Robot console messages will appear here -->
+                        <div>Waiting for robot messages...</div>
+                    </div>
+                </div>
+                <!-- END: Added Robot Console Log -->
+
             </div>
 
             <div class="editor-container">
                 <h3>Robot Code Editor</h3>
-                <textarea id="code-editor"></textarea>
+                <!-- API Help moved above editor -->
                 <div class="api-help">
                     <h4>API Reference</h4>
                     <ul>
@@ -2882,6 +3405,25 @@ class Network {
                         <li><code>getDirection()</code> - Get current direction (degrees)</li>
                     </ul>
                 </div>
+
+                <textarea id="code-editor"></textarea>
+
+                <!-- START: Editor Controls (Save/Load/Delete) -->
+                <div class="editor-controls" style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+                    <button id="btn-save-code">Save Code</button>
+                    <select id="loadout-select">
+                        <option value="" selected>Load Code...</option>
+                        <!-- Loadout options will be populated by JS -->
+                    </select>
+                    <button id="btn-delete-loadout" disabled title="Delete selected loadout">
+                        <!-- Simple 'X' or Trash Icon text for now -->
+                        ✖
+                    </button>
+                </div>
+                <div id="loadout-status" style="font-size: 14px; margin-top: 5px; min-height: 1.2em; color: #aaa;">
+                    <!-- Status messages like 'Saved.' or 'Loaded MyTank.' -->
+                </div>
+                <!-- END: Editor Controls -->
             </div>
         </main>
 
@@ -2890,7 +3432,7 @@ class Network {
              <div> <!-- Column 1: Status, Log, Chat -->
                  <h3 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Lobby Status</h3>
                  <div id="lobby-status" style="margin-bottom: 10px;">Connecting...</div>
-                 <div id="event-log" style="height: 150px; overflow-y: scroll; border: 1px solid #555; margin-bottom: 10px; padding: 5px; background: #222; font-size: 14px; font-family: 'VT323', monospace;">Event Log Loading...</div>
+                 <div id="event-log" class="log-box" style="height: 150px; margin-bottom: 10px;">Event Log Loading...</div> <!-- Added log-box class -->
                  <div id="chat-area" style="display: flex; gap: 5px;">
                      <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;" maxlength="100"> <!-- Added maxlength -->
                      <button id="send-chat" style="background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'VT323', monospace; font-size: 15px;">Send</button>
@@ -2901,7 +3443,7 @@ class Network {
                  <div id="game-history-log"> <!-- Outer container for styling/header -->
                      <h4 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Recent Game Results</h4>
                      <!-- The actual list element that history.js targets -->
-                     <div id="game-history-list" style="/* Styles are in main.css */">
+                     <div id="game-history-list" class="log-box" style="height: 195px;"> <!-- Added log-box class -->
                          <!-- History will appear here -->
                          <div>No games finished yet.</div>
                      </div>
@@ -2917,6 +3459,9 @@ class Network {
     <!-- CodeMirror Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script> <!-- Added for bracket matching -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script> <!-- Added for auto-close brackets -->
+
 
     <!-- Game Engine Scripts -->
     <script src="js/engine/arena.js"></script>
@@ -2926,7 +3471,7 @@ class Network {
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
     <script src="js/ui/controls.js"></script>
-    <script src="js/ui/lobby.js"></script>
+    <script src="js/ui/lobby.js"></script> <!-- Handles both Event Log and Robot Log now -->
     <script src="js/ui/history.js"></script> <!-- History script added -->
 
     <!-- Network Handler Script -->
@@ -2948,8 +3493,8 @@ const ServerCollisionSystem = require('./server-collision'); // Handles collisio
 
 // --- Game Simulation Constants ---
 const TICK_RATE = 30; // Updates per second
-const ARENA_WIDTH = 600; // Match canvas size
-const ARENA_HEIGHT = 600; // Match canvas size
+const ARENA_WIDTH = 900; // Match canvas size
+const ARENA_HEIGHT = 900; // Match canvas size
 
 /**
  * Represents a single active game match on the server.
@@ -3926,8 +4471,10 @@ server.listen(PORT, () => {
 class ServerCollisionSystem {
     constructor(gameInstance) {
         this.game = gameInstance; // Reference to the GameInstance
-        this.arenaWidth = 600; // TODO: Get these from GameInstance or config
-        this.arenaHeight = 600;
+        // START CHANGE
+        this.arenaWidth = 900; // TODO: Get these from GameInstance or config
+        this.arenaHeight = 900;
+        // END CHANGE
     }
 
     /**
@@ -3979,12 +4526,16 @@ class ServerCollisionSystem {
                         const wasDestroyed = targetRobot.takeDamage(damageAmount);
                         console.log(`[Collision] Missile from ${firingRobot.id} hit ${targetRobot.id}. Damage: ${damageAmount}. Destroyed: ${wasDestroyed}`);
 
+                        // Trigger explosion effect on the GameInstance
+                        // It will add this to the list broadcast in the next gameStateUpdate
+                        if (typeof this.game.createExplosion === 'function') {
+                            this.game.createExplosion(missile.x, missile.y, missile.power);
+                        } else {
+                             console.warn(`[Collision] GameInstance missing createExplosion method.`);
+                        }
+
                         // Remove the missile from the firing robot's list
                         firingRobot.missiles.splice(i, 1);
-
-                        // TODO: Trigger explosion effect?
-                        // The GameInstance could have an 'explosions' array or emit an event.
-                        // this.game.createExplosion(missile.x, missile.y, missile.power);
 
                         // If the target was destroyed, maybe credit the firing robot? (Future feature)
                         // if (wasDestroyed) { ... }
@@ -4030,7 +4581,7 @@ class ServerCollisionSystem {
                     const separationY = dy / distance;
 
                     // --- START COLLISION DEBUG LOGGING ---
-                    console.log(`[DEBUG COLL ${robotA.id}/${robotB.id}] Pre-Push: A=(${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)}), B=(${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
+                    // console.log(`[DEBUG COLL ${robotA.id}/${robotB.id}] Pre-Push: A=(${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)}), B=(${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
                     // --- END COLLISION DEBUG LOGGING ---
 
                     // Move robots apart by half the overlap distance each
@@ -4041,7 +4592,7 @@ class ServerCollisionSystem {
                     robotB.y += separationY * moveDist;
 
                     // --- START COLLISION DEBUG LOGGING ---
-                    console.log(`[DEBUG COLL ${robotA.id}/${robotB.id}] Post-Push: A=(${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)}), B=(${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
+                    // console.log(`[DEBUG COLL ${robotA.id}/${robotB.id}] Post-Push: A=(${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)}), B=(${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
                     // --- END COLLISION DEBUG LOGGING ---
 
 
@@ -4063,12 +4614,12 @@ class ServerCollisionSystem {
 
                     // --- START COLLISION DEBUG LOGGING ---
                     // Log ONLY if clamping actually changed the value
-                    if (robotA.x !== preClampAx || robotA.y !== preClampAy) {
-                         console.log(`[DEBUG COLL ${robotA.id}] Clamped A after push from (${preClampAx.toFixed(2)}, ${preClampAy.toFixed(2)}) to (${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)})`);
-                    }
-                    if (robotB.x !== preClampBx || robotB.y !== preClampBy) {
-                         console.log(`[DEBUG COLL ${robotB.id}] Clamped B after push from (${preClampBx.toFixed(2)}, ${preClampBy.toFixed(2)}) to (${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
-                    }
+                    // if (robotA.x !== preClampAx || robotA.y !== preClampAy) {
+                    //      console.log(`[DEBUG COLL ${robotA.id}] Clamped A after push from (${preClampAx.toFixed(2)}, ${preClampAy.toFixed(2)}) to (${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)})`);
+                    // }
+                    // if (robotB.x !== preClampBx || robotB.y !== preClampBy) {
+                    //      console.log(`[DEBUG COLL ${robotB.id}] Clamped B after push from (${preClampBx.toFixed(2)}, ${preClampBy.toFixed(2)}) to (${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
+                    // }
                     // --- END COLLISION DEBUG LOGGING ---
 
                 } // End if (overlap detected)
@@ -4113,13 +4664,14 @@ class ServerRobotInterpreter {
      * Initializes the interpreter for a set of robots.
      * Compiles the code for each robot into a function and creates its sandboxed execution context.
      * @param {ServerRobot[]} robots - An array of ServerRobot instances.
-     * @param {Map<string, {socket: Socket, robot: ServerRobot, code: string}>} playersDataMap - Map from robot ID (socket.id) to player data.
+     * @param {Map<string, {socket: SocketIO.Socket, robot: ServerRobot, code: string}>} playersDataMap - Map from robot ID (socket.id) to player data.
      */
     initialize(robots, playersDataMap) {
         console.log("[Interpreter] Initializing robot interpreters (Function Mode)...");
 
         robots.forEach(robot => {
             const playerData = playersDataMap.get(robot.id);
+            const playerSocket = playerData ? playerData.socket : null; // Get socket reference
 
             // Ensure we have player data and valid code for this robot
             if (!playerData || typeof playerData.code !== 'string' || playerData.code.trim() === '') {
@@ -4146,12 +4698,36 @@ class ServerRobotInterpreter {
                     getDirection: () => this.safeGetDirection(robot.id),
                 },
 
-                // Safe console (accessible as 'console' or 'this.console')
+                // --- START MODIFIED CONSOLE ---
                 console: {
                     log: (...args) => {
+                        // 1. Log server-side as before (optional, but useful for server debug)
                         console.log(`[Robot ${robot.id} Log]`, ...args);
+
+                        // 2. Format message for client
+                        // Simple approach: convert all args to strings and join
+                        const messageString = args.map(arg => {
+                            try {
+                                // Handle different types reasonably
+                                if (typeof arg === 'object' && arg !== null) {
+                                    // Be careful with circular references in complex objects
+                                    // A simple depth limit or specific property selection might be safer
+                                    return JSON.stringify(arg, null, 2); // Pretty print object slightly
+                                }
+                                return String(arg); // Convert others to string
+                            } catch (e) {
+                                return '[Unloggable Value]';
+                            }
+                        }).join(' ');
+
+                        // 3. Emit to the specific client's socket if connected
+                        // Use the playerSocket variable captured in the outer scope
+                        if (playerSocket && playerSocket.connected) {
+                            playerSocket.emit('robotLog', { message: messageString });
+                        }
                     }
                 },
+                // --- END MODIFIED CONSOLE ---
 
                 // Standard Math library (accessible as 'Math' or 'this.Math')
                 Math: Math,
@@ -4200,8 +4776,9 @@ class ServerRobotInterpreter {
             } catch (error) {
                 // Handle errors during compilation or the initial run
                 console.error(`[Interpreter] Error compiling/initializing function for robot ${robot.id}:`, error.message);
-                if (playerData.socket) {
-                    playerData.socket.emit('codeError', {
+                 // Use the playerSocket variable captured in the outer scope
+                if (playerSocket && playerSocket.connected) {
+                    playerSocket.emit('codeError', {
                         robotId: robot.id,
                         message: `Compilation/Initialization Error: ${error.message}`
                     });
@@ -4232,32 +4809,20 @@ class ServerRobotInterpreter {
                 this.currentRobotId = robot.id;
                 const tickFunction = this.robotTickFunctions[robot.id];
                 const context = this.robotContexts[robot.id]; // The sandbox object
-
-                // Optional Debug Log (shows context exists, useful for verifying 'state')
-                // console.log(`[Interpreter Debug] Executing function for ${robot.id}. Context keys:`, Object.keys(context));
+                const playerData = gameInstance.players.get(robot.id); // Get player data again for socket access in error handling
+                const playerSocket = playerData ? playerData.socket : null; // Get socket for error handling
 
                 try {
                     // *** Execute the stored function for this tick ***
-                    // We use .call() to explicitly set 'this' inside the function
-                    // to be the sandbox context itself. This ensures that if the user
-                    // writes `this.state.x = 1` it works as expected.
-                    // Direct access `state.x = 1` also works because `state` is a global in the context.
                     tickFunction.call(context /*, arguments if any */);
-
-                    // Note on Timeouts: The 'timeout' option in vm.Script applies to runInContext.
-                    // When calling the function directly (.call), there's no built-in per-call timeout
-                    // enforcement from the VM module itself in this simple setup.
-                    // True per-tick timeout enforcement would require a more complex solution
-                    // (like worker threads or interrupting VMs), which adds significant overhead.
-                    // For now, we rely on the initial compile timeout and assume non-malicious code.
 
                 } catch (error) {
                     // Handle runtime errors *inside* the robot's code during the call
                     console.error(`[Interpreter] Runtime error during function execution for robot ${robot.id}:`, error.message);
                     // Notify the client about the runtime error
-                    const playerData = gameInstance.players.get(robot.id);
-                    if (playerData && playerData.socket) {
-                        playerData.socket.emit('codeError', {
+                     // Use the playerSocket captured just above
+                    if (playerSocket && playerSocket.connected) {
+                        playerSocket.emit('codeError', {
                             robotId: robot.id,
                             message: `Runtime Error: ${error.message}`
                         });
@@ -4276,7 +4841,6 @@ class ServerRobotInterpreter {
     } // End executeTick()
 
     // --- Safe API Methods ---
-    // These remain unchanged. They bridge the sandbox call to the actual game logic.
 
     /** Safely retrieves the ServerRobot instance for the currently executing robot. @private */
     getCurrentRobot() {
@@ -4313,6 +4877,7 @@ class ServerRobotInterpreter {
         if (robotId !== this.currentRobotId) return false;
         const robot = this.getCurrentRobot();
         if (robot && typeof direction === 'number') {
+            // Allow power to be optional or undefined, defaulting inside robot.fire
             return robot.fire(direction, power);
         } else if (robot) {
             console.warn(`[Interpreter] Invalid fire(${direction}, ${power}) call for robot ${robotId}`);
@@ -4322,7 +4887,7 @@ class ServerRobotInterpreter {
 
     /** Safely retrieves robot damage. */
     safeDamage(robotId) {
-        if (robotId !== this.currentRobotId) return 100;
+        if (robotId !== this.currentRobotId) return 100; // Assume max damage if invalid call
         const robot = this.getCurrentRobot();
         return robot ? robot.damage : 100;
     }

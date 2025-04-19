@@ -3,8 +3,8 @@
 /**
  * Controls handler for Robot Wars.
  * Manages UI state ('lobby', 'waiting', 'playing', 'spectating'), button interactions,
- * code loading, appearance selection, player name input, and sends relevant data/signals
- * to the server via the network handler.
+ * code loading, appearance selection, player name input, code loadout saving/loading,
+ * and sends relevant data/signals to the server via the network handler.
  */
 class Controls {
     /**
@@ -19,12 +19,20 @@ class Controls {
         this.uiState = 'lobby'; // Initial state
         this.isClientReady = false; // Still track if ready *within* lobby/waiting states
 
+        // --- START: Loadout Properties ---
+        this.localStorageKey = 'robotWarsLoadouts';
+        // --- END: Loadout Properties ---
+
         if (!this.game || !this.network) {
              console.error("Controls initialized without valid game or network reference!");
         }
         this.setupEventListeners();
         this.loadPlayerName();
         this.updateUIForState(); // Set initial UI based on 'lobby' state
+
+        // --- START: Initialize Loadouts ---
+        this.populateLoadoutUI(); // Populate dropdown on load
+        // --- END: Initialize Loadouts ---
         console.log('Controls initialized with game and network references');
     }
 
@@ -61,6 +69,11 @@ class Controls {
         const playerNameInput = document.getElementById('playerName');
         const sampleCodeSelect = document.getElementById('sample-code');
         const resetButton = document.getElementById('btn-reset');
+        // --- START: Get Loadout Elements ---
+        const saveButton = document.getElementById('btn-save-code');
+        const loadSelect = document.getElementById('loadout-select');
+        const deleteButton = document.getElementById('btn-delete-loadout');
+        // --- END: Get Loadout Elements ---
         const editorIsAvailable = typeof editor !== 'undefined';
 
         // Defaults (most restrictive)
@@ -69,6 +82,7 @@ class Controls {
         let readyButtonDisabled = true;
         let inputsDisabled = true;
         let editorReadOnly = true;
+        let loadoutControlsDisabled = true; // Disable save/load/delete by default
 
         switch (this.uiState) {
             case 'lobby': // Can interact, ready button shows "Ready Up"
@@ -77,6 +91,7 @@ class Controls {
                 readyButtonDisabled = false;
                 inputsDisabled = false;
                 editorReadOnly = false;
+                loadoutControlsDisabled = false; // Enable loadout controls
                 break;
 
             case 'waiting': // Can only click "Unready"
@@ -85,6 +100,7 @@ class Controls {
                 readyButtonDisabled = false; // Must be enabled to unready
                 inputsDisabled = true; // Other inputs locked
                 editorReadOnly = true;
+                loadoutControlsDisabled = true;
                 break;
 
             case 'playing': // All interaction disabled
@@ -93,6 +109,7 @@ class Controls {
                 readyButtonDisabled = true;
                 inputsDisabled = true;
                 editorReadOnly = true;
+                loadoutControlsDisabled = true;
                 break;
 
             case 'spectating': // All interaction disabled
@@ -101,6 +118,7 @@ class Controls {
                 readyButtonDisabled = true;
                 inputsDisabled = true;
                 editorReadOnly = true;
+                loadoutControlsDisabled = true;
                 break;
 
             default:
@@ -129,6 +147,16 @@ class Controls {
         if (resetButton) { resetButton.disabled = inputsDisabled; } // Reset follows other inputs now
          else { console.warn("Reset button not found during UI update."); }
 
+        // --- START: Update Loadout Control State ---
+        if (saveButton) { saveButton.disabled = loadoutControlsDisabled; }
+         else { console.warn("Save Code button not found during UI update."); }
+        if (loadSelect) { loadSelect.disabled = loadoutControlsDisabled; }
+         else { console.warn("Load Code select not found during UI update."); }
+        // Delete button is also disabled if no loadout is selected (handled in its listener/populate)
+        if (deleteButton) { deleteButton.disabled = loadoutControlsDisabled || (loadSelect && !loadSelect.value); }
+         else { console.warn("Delete Loadout button not found during UI update."); }
+        // --- END: Update Loadout Control State ---
+
         try {
             if (editorIsAvailable) {
                 editor.setOption("readOnly", editorReadOnly);
@@ -154,10 +182,17 @@ class Controls {
         const sampleCodeSelect = document.getElementById('sample-code');
         const appearanceSelect = document.getElementById('robot-appearance-select');
         const playerNameInput = document.getElementById('playerName');
+        // --- START: Get Loadout Elements ---
+        const saveButton = document.getElementById('btn-save-code');
+        const loadSelect = document.getElementById('loadout-select');
+        const deleteButton = document.getElementById('btn-delete-loadout');
+        // --- END: Get Loadout Elements ---
 
         // Check if elements exist to prevent errors
-        if (!readyButton || !resetButton || !sampleCodeSelect || !appearanceSelect || !playerNameInput) {
-            console.error("One or more control elements (button#btn-ready, select, player name input) not found in the DOM!");
+        if (!readyButton || !resetButton || !sampleCodeSelect || !appearanceSelect || !playerNameInput ||
+            // --- START: Check Loadout Elements ---
+            !saveButton || !loadSelect || !deleteButton) {
+            console.error("One or more control elements (button#btn-ready, select, player name input, save/load/delete) not found in the DOM!");
             return; // Stop setup if elements are missing
         }
 
@@ -282,12 +317,194 @@ class Controls {
              }
          });
 
+        // --- START: Loadout Event Listeners ---
+
+        // Save Button Listener
+        saveButton.addEventListener('click', () => {
+            if (this.uiState !== 'lobby') return; // Only allow in lobby
+
+            const currentCode = (typeof editor !== 'undefined') ? editor.getValue() : '';
+            if (!currentCode.trim()) {
+                alert("Code editor is empty. Cannot save.");
+                this.updateLoadoutStatus("Save failed: Editor empty.", true);
+                return;
+            }
+
+            const loadoutName = prompt("Enter a name for this code loadout:", "");
+            if (loadoutName === null) return; // User cancelled prompt
+
+            const trimmedName = loadoutName.trim();
+            if (!trimmedName) {
+                alert("Loadout name cannot be empty.");
+                 this.updateLoadoutStatus("Save failed: Invalid name.", true);
+                return;
+            }
+
+            // Optional: Confirm overwrite? For simplicity, we'll just overwrite now.
+            this.saveLoadout(trimmedName, currentCode);
+        });
+
+        // Load Dropdown Listener
+        loadSelect.addEventListener('change', () => {
+            if (this.uiState !== 'lobby') return; // Only allow in lobby
+
+            const selectedName = loadSelect.value;
+            if (selectedName) { // Check if it's not the default "" value
+                this.loadLoadout(selectedName);
+            }
+            // Update delete button state based on selection
+            deleteButton.disabled = !selectedName || this.uiState !== 'lobby';
+        });
+
+        // Delete Button Listener
+        deleteButton.addEventListener('click', () => {
+            if (this.uiState !== 'lobby') return; // Only allow in lobby
+
+            const selectedName = loadSelect.value;
+            if (!selectedName) return; // No loadout selected
+
+            if (confirm(`Are you sure you want to delete the loadout "${selectedName}"?`)) {
+                this.deleteLoadout(selectedName);
+            }
+        });
+
+        // --- END: Loadout Event Listeners ---
+
     } // End setupEventListeners
 
 
     // --- The methods setReadyState, setPlayingState, setSpectatingState ---
     // --- have been REMOVED. Use controls.setState('lobby' | 'waiting' | 'playing' | 'spectating') ---
     // --- from game.js or other relevant places. ---
+
+    // --- START: Loadout Management Methods ---
+
+    /** Safely gets loadouts from localStorage, handling errors. */
+    _getLoadouts() {
+        try {
+            const storedData = localStorage.getItem(this.localStorageKey);
+            if (storedData) {
+                return JSON.parse(storedData);
+            }
+        } catch (error) {
+            console.error("Error reading or parsing loadouts from localStorage:", error);
+            // Optionally clear corrupted data: localStorage.removeItem(this.localStorageKey);
+        }
+        return {}; // Return empty object if nothing stored or error occurred
+    }
+
+    /** Safely saves loadouts to localStorage, handling errors. */
+    _setLoadouts(loadouts) {
+        try {
+            localStorage.setItem(this.localStorageKey, JSON.stringify(loadouts));
+            return true; // Indicate success
+        } catch (error) {
+            console.error("Error saving loadouts to localStorage:", error);
+            if (error.name === 'QuotaExceededError') {
+                alert("Could not save loadout: Browser storage quota exceeded. You may need to delete old loadouts.");
+            } else {
+                alert("An error occurred while trying to save the loadout.");
+            }
+            return false; // Indicate failure
+        }
+    }
+
+    /** Saves a named code loadout to localStorage. */
+    saveLoadout(name, code) {
+        if (typeof localStorage === 'undefined') {
+             alert("localStorage is not available in this browser. Cannot save loadouts.");
+             this.updateLoadoutStatus("Save failed: localStorage unavailable.", true);
+             return;
+        }
+        if (!name) {
+            console.warn("Attempted to save loadout with empty name.");
+             this.updateLoadoutStatus("Save failed: Name cannot be empty.", true);
+            return;
+        }
+
+        const loadouts = this._getLoadouts();
+        loadouts[name] = code;
+
+        if (this._setLoadouts(loadouts)) {
+             console.log(`Loadout "${name}" saved.`);
+             this.populateLoadoutUI(name); // Repopulate and select the saved item
+             this.updateLoadoutStatus(`Loadout "${name}" saved successfully.`);
+        } else {
+             this.updateLoadoutStatus(`Failed to save loadout "${name}".`, true);
+        }
+    }
+
+    /** Loads code from a named loadout into the editor. */
+    loadLoadout(name) {
+        if (!name || typeof editor === 'undefined') return;
+
+        const loadouts = this._getLoadouts();
+        if (loadouts.hasOwnProperty(name)) {
+            editor.setValue(loadouts[name]);
+            console.log(`Loadout "${name}" loaded into editor.`);
+            this.updateLoadoutStatus(`Loaded "${name}".`);
+        } else {
+            console.warn(`Loadout "${name}" not found.`);
+             this.updateLoadoutStatus(`Loadout "${name}" not found.`, true);
+        }
+    }
+
+    /** Deletes a named loadout from localStorage. */
+    deleteLoadout(name) {
+        if (typeof localStorage === 'undefined' || !name) return;
+
+        const loadouts = this._getLoadouts();
+        if (loadouts.hasOwnProperty(name)) {
+            delete loadouts[name];
+            if (this._setLoadouts(loadouts)) {
+                console.log(`Loadout "${name}" deleted.`);
+                this.populateLoadoutUI(); // Repopulate, will select default
+                 // Optional: Clear editor if the deleted loadout was loaded?
+                 // if (editor.getValue() === codeToDelete) { editor.setValue(''); }
+                 this.updateLoadoutStatus(`Deleted "${name}".`);
+            } else {
+                 this.updateLoadoutStatus(`Failed to delete "${name}".`, true);
+            }
+        } else {
+            console.warn(`Attempted to delete non-existent loadout "${name}".`);
+             this.updateLoadoutStatus(`Loadout "${name}" not found for deletion.`, true);
+        }
+    }
+
+    /** Populates the loadout dropdown from localStorage. */
+    populateLoadoutUI(selectName = null) {
+        const loadSelect = document.getElementById('loadout-select');
+        const deleteButton = document.getElementById('btn-delete-loadout');
+        if (!loadSelect || !deleteButton) return;
+
+        const loadouts = this._getLoadouts();
+        const names = Object.keys(loadouts).sort(); // Sort names alphabetically
+
+        // Clear existing options (keep the first placeholder)
+        while (loadSelect.options.length > 1) {
+            loadSelect.remove(1);
+        }
+
+        // Add options for each saved loadout
+        names.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            loadSelect.appendChild(option);
+        });
+
+        // Select the specified item if provided (e.g., after saving)
+        if (selectName && loadouts.hasOwnProperty(selectName)) {
+            loadSelect.value = selectName;
+        } else {
+            loadSelect.value = ""; // Select the default "Load Code..."
+        }
+
+        // Update delete button state
+        deleteButton.disabled = !loadSelect.value || this.uiState !== 'lobby';
+    }
+
+    // --- END: Loadout Management Methods ---
 
 
     /**
@@ -325,6 +542,21 @@ class Controls {
             } else {
                  console.log('No player name found in localStorage.');
             }
+        }
+    }
+
+    /** Updates the small status text below the editor controls */
+    updateLoadoutStatus(message, isError = false) {
+        const statusElement = document.getElementById('loadout-status');
+        if (statusElement) {
+            statusElement.textContent = message;
+            statusElement.style.color = isError ? '#e74c3c' : '#4CAF50'; // Red for error, Green for success
+            // Clear the message after a few seconds
+            setTimeout(() => {
+                 if (statusElement.textContent === message) { // Only clear if message hasn't changed
+                     statusElement.textContent = '';
+                 }
+            }, 4000); // Clear after 4 seconds
         }
     }
 

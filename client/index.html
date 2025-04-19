@@ -84,6 +84,22 @@
 
                 <textarea id="code-editor"></textarea>
 
+                <!-- START: Editor Controls (Save/Load/Delete) -->
+                <div class="editor-controls" style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+                    <button id="btn-save-code">Save Code</button>
+                    <select id="loadout-select">
+                        <option value="" selected>Load Code...</option>
+                        <!-- Loadout options will be populated by JS -->
+                    </select>
+                    <button id="btn-delete-loadout" disabled title="Delete selected loadout">
+                        <!-- Simple 'X' or Trash Icon text for now -->
+                        ✖
+                    </button>
+                </div>
+                <div id="loadout-status" style="font-size: 14px; margin-top: 5px; min-height: 1.2em; color: #aaa;">
+                    <!-- Status messages like 'Saved.' or 'Loaded MyTank.' -->
+                </div>
+                <!-- END: Editor Controls -->
             </div>
         </main>
 

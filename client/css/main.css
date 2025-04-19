@@ -253,72 +253,103 @@ main {
     color: #f0f0f0;
 }
 
+/* START: Styling for Editor Controls (Added in Loadout Feature) */
+.editor-controls {
+    /* Using inline styles for layout in HTML for now, but could be moved here */
+     margin-top: 10px;
+     display: flex;
+     gap: 10px;
+     align-items: center;
+}
+#btn-delete-loadout {
+    padding: 4px 8px; /* Make delete button smaller */
+    font-size: 14px;
+    background-color: #c0392b; /* Reddish color for delete */
+}
+#btn-delete-loadout:hover {
+    background-color: #a93226; /* Darker red on hover */
+}
+#btn-delete-loadout:disabled {
+    background-color: #555; /* Use standard disabled grey */
+    color: #aaa;
+}
+#loadout-status {
+    font-size: 14px;
+    margin-top: 5px;
+    min-height: 1.2em; /* Prevent layout shift when empty */
+    color: #aaa; /* Default color for status */
+    /* Color overridden by JS for success/error */
+}
+/* END: Styling for Editor Controls */
+
+
 /* --- START: Robot Console Log Specific Styles (FALLOUT TERMINAL) --- */
 #robot-console-log {
     margin-top: 15px;
-    background-color: #1a1a1a;
-    border: 1px solid #0f290f;
+    background-color: #1a1a1a; /* Darker bg for the whole panel */
+    border: 1px solid #0f290f; /* Dark green border */
     padding: 8px;
     /* Inherits .console-panel shadow, radius */
 }
 
 #robot-console-log h3 {
-    color: #00b300;
+    color: #00b300; /* Bright green title */
     text-align: center;
     margin-bottom: 8px;
-    text-shadow: 0 0 3px #00b300;
+    text-shadow: 0 0 3px #00b300; /* Subtle glow */
 }
 
 #robot-log-messages {
     height: 200px; /* Adjust height as needed */
-    background-color: #000000;
-    color: #00FF41;
+    background-color: #000000; /* True black background */
+    color: #00FF41; /* Classic terminal green text */
     font-size: 16px;
-    border: 1px inset #004d00;
+    border: 1px inset #004d00; /* Inset border for depth */
     padding: 10px;
-    text-shadow: 0 0 5px #00ff41;
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.5); /* Text glow */
     word-wrap: break-word;
-    overflow-y: scroll;
+    overflow-y: scroll; /* Keep scroll */
     font-family: 'VT323', monospace; /* Explicitly set font here too */
 
     /* Scanline preparation: Parent MUST have relative positioning */
-    position: relative;
+    position: relative; /* Already added previously */
     overflow: hidden; /* Crucial: Keep the ::after pseudo-element clipped */
 }
 
-/* Scanline Effect - Adapted from ealertguide.html */
+/* --- START: Scanline Effect (Adapted from ealertguide.html) --- */
 #robot-log-messages::after {
     content: '';
     position: absolute;
     top: 0; /* Start at the top (animated) */
     left: 0;
     right: 0;
-    height: 2px; /* Thickness */
-    /* Simple green background like ealertguide */
-    background: rgba(0, 255, 0, 0.15); /* Slightly more visible green */
-    /* Add a subtle blur */
+    height: 2px; /* Thickness of the scanline */
+    /* Semi-transparent green background */
+    background: rgba(0, 255, 0, 0.15); /* Adjust alpha for visibility */
+    /* Optional subtle blur/glow effect */
     box-shadow: 0 0 4px 1px rgba(0, 255, 0, 0.15);
-    z-index: 1;
-    pointer-events: none;
-    /* Link to the new animation */
+    z-index: 1; /* Place above text content if needed (usually fine) */
+    pointer-events: none; /* Ensure it doesn't interfere with interaction */
+    /* Link to the animation */
     animation: scanline-log 6s linear infinite; /* Use unique animation name */
 }
 
-/* Scanline Animation Keyframes - Adapted from ealertguide.html */
-/* Use translateY for potentially smoother perf than changing 'top' */
+/* --- START: Scanline Animation Keyframes (Adapted from ealertguide.html) --- */
+/* Use translateY for potentially smoother performance than changing 'top' */
 @keyframes scanline-log {
     0% {
-        transform: translateY(0%);
+        transform: translateY(0%); /* Start at the top */
         opacity: 0.1; /* Start slightly faded */
     }
     50% {
-        opacity: 0.3; /* Fade in */
+        opacity: 0.3; /* Slightly brighter mid-scan */
     }
     100% {
         transform: translateY(calc(100% - 2px)); /* Move to bottom edge (minus height) */
-        opacity: 0.1; /* Fade out */
+        opacity: 0.1; /* Fade out towards the bottom */
     }
 }
+/* --- END: Scanline Effect --- */
 /* --- END: Robot Console Log Specific Styles --- */
 
 
@@ -357,7 +388,7 @@ main {
     height: 150px;
     margin-bottom: 10px;
     padding: 5px 8px;
-    background: #222;
+    background: #222; /* Slightly lighter than robot log bg */
     font-size: 14px;
     border: 1px solid #555;
 }
