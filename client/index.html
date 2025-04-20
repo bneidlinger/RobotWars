@@ -15,14 +15,23 @@
     <!-- Code Mirror for the editor -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/monokai.min.css">
+
+    <!-- Favicon Link -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Robot Wars</h1>
+            <!-- ****** MODIFIED H1 TO INCLUDE LOGO ****** -->
+            <h1>
+                <img src="/assets/images/RobotwarsLogo.png" alt="Robot Wars Logo" class="header-logo"> <!-- Added logo image -->
+                Robot Wars
+            </h1>
+            <!-- *************************************** -->
             <nav>
                 <!-- Player Name Input Field -->
-                <input type="text" id="playerName" placeholder="Enter Name" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: #e0e0e0; margin-right: 5px;" maxlength="24"> <!-- Added maxlength -->
+                <input type="text" id="playerName" placeholder="Enter Name" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: #e0e0e0; margin-right: 5px;" maxlength="24">
                 <!-- End Player Name Input -->
 
                 <select id="robot-appearance-select" title="Choose Robot Appearance">
@@ -31,9 +40,9 @@
                     <option value="spike">Spike Bot</option>
                     <option value="tri">Tri Bot</option>
                 </select>
-                <button id="btn-ready">Ready Up</button> <!-- State managed by controls.js -->
-                <button id="btn-test-code">Test Code</button> <!-- Test Code Button -->
-                <button id="btn-self-destruct" style="display: none;">Self-Destruct</button> <!-- Self Destruct Button (Initially hidden) -->
+                <button id="btn-ready">Ready Up</button>
+                <button id="btn-test-code">Test Code</button>
+                <button id="btn-self-destruct" style="display: none;">Self-Destruct</button>
                 <button id="btn-reset">Reset</button>
                 <select id="sample-code">
                     <option value="">Load Sample Code...</option>
@@ -46,31 +55,28 @@
 
         <main>
             <div class="game-container">
-                <!-- Canvas with updated dimensions -->
+                <!-- Canvas -->
                 <canvas id="arena" width="900" height="900"></canvas>
 
                 <div class="stats-panel">
                     <h3>Robot Stats</h3>
                     <div id="robot-stats">
-                        <!-- Dashboard elements created/managed by dashboard.js -->
+                        <!-- Dashboard elements -->
                     </div>
                 </div>
 
-                <!-- START: Added Robot Console Log -->
+                <!-- Robot Console Log -->
                 <div id="robot-console-log" class="console-panel">
                     <h3>Robot Console Output</h3>
                     <div id="robot-log-messages" class="log-box">
-                        <!-- Robot console messages will appear here -->
                         <div>Waiting for robot messages...</div>
                     </div>
                 </div>
-                <!-- END: Added Robot Console Log -->
-
             </div>
 
             <div class="editor-container">
                 <h3>Robot Code Editor</h3>
-                <!-- API Help moved above editor -->
+                <!-- API Help -->
                 <div class="api-help">
                     <h4>API Reference</h4>
                     <ul>
@@ -86,77 +92,58 @@
 
                 <textarea id="code-editor"></textarea>
 
-                <!-- START: Editor Controls (Save/Load/Delete) -->
+                <!-- Editor Controls -->
                 <div class="editor-controls" style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
                     <button id="btn-save-code">Save Code</button>
                     <select id="loadout-select">
                         <option value="" selected>Load Code...</option>
-                        <!-- Loadout options will be populated by JS -->
                     </select>
-                    <button id="btn-delete-loadout" disabled title="Delete selected loadout">
-                        <!-- Simple 'X' or Trash Icon text for now -->
-                        ✖
-                    </button>
+                    <button id="btn-delete-loadout" disabled title="Delete selected loadout">✖</button>
                 </div>
-                <div id="loadout-status" style="font-size: 14px; margin-top: 5px; min-height: 1.2em; color: #aaa;">
-                    <!-- Status messages like 'Saved.' or 'Loaded MyTank.' -->
-                </div>
-                <!-- END: Editor Controls -->
+                <div id="loadout-status" style="font-size: 14px; margin-top: 5px; min-height: 1.2em; color: #aaa;"></div>
             </div>
         </main>
 
-        <!-- Lobby Area - Using CSS Grid -->
-        <div id="lobby-area"> <!-- style is now in main.css -->
-             <div> <!-- Column 1: Status, Log, Chat -->
+        <!-- Lobby Area -->
+        <div id="lobby-area">
+             <div> <!-- Column 1 -->
                  <h3 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Lobby Status</h3>
                  <div id="lobby-status" style="margin-bottom: 10px;">Connecting...</div>
-                 <div id="event-log" class="log-box" style="height: 150px; margin-bottom: 10px;">Event Log Loading...</div> <!-- Added log-box class -->
+                 <div id="event-log" class="log-box" style="height: 150px; margin-bottom: 10px;">Event Log Loading...</div>
                  <div id="chat-area" style="display: flex; gap: 5px;">
-                     <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;" maxlength="100"> <!-- Added maxlength -->
+                     <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;" maxlength="100">
                      <button id="send-chat" style="background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'VT323', monospace; font-size: 15px;">Send</button>
                  </div>
              </div>
-
-             <div> <!-- Column 2: Game History -->
-                 <div id="game-history-log"> <!-- Outer container for styling/header -->
+             <div> <!-- Column 2 -->
+                 <div id="game-history-log">
                      <h4 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Recent Game Results</h4>
-                     <!-- The actual list element that history.js targets -->
-                     <div id="game-history-list" class="log-box" style="height: 195px;"> <!-- Added log-box class -->
-                         <!-- History will appear here -->
+                     <div id="game-history-list" class="log-box" style="height: 195px;">
                          <div>No games finished yet.</div>
                      </div>
                  </div>
              </div>
-        </div>
-        <!-- End Lobby Area -->
+        </div> <!-- End Lobby Area -->
+
+        <!-- No footer logo div -->
 
     </div> <!-- End .container -->
 
-    <!-- Socket.IO Client Library -->
+    <!-- Scripts -->
     <script src="/socket.io/socket.io.js"></script>
-    <!-- CodeMirror Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script> <!-- Added for bracket matching -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script> <!-- Added for auto-close brackets -->
-
-
-    <!-- Game Engine Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
     <script src="js/engine/arena.js"></script>
     <script src="js/engine/game.js"></script>
     <script src="js/engine/audio.js"></script>
-
-    <!-- UI Component Scripts -->
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
     <script src="js/ui/controls.js"></script>
-    <script src="js/ui/lobby.js"></script> <!-- Handles both Event Log and Robot Log now -->
-    <script src="js/ui/history.js"></script> <!-- History script added -->
-
-    <!-- Network Handler Script -->
+    <script src="js/ui/lobby.js"></script>
+    <script src="js/ui/history.js"></script>
     <script src="js/network.js"></script>
-
-    <!-- Main Application Entry Point -->
-    <script src="js/main.js"></script> <!-- This should always be the last script -->
+    <script src="js/main.js"></script>
 </body>
 </html>

@@ -22,15 +22,14 @@ body {
 }
 
 .container {
-    /* --- Change: Use full width up to a max --- */
-    width: 100%;         /* Use full available width */
-    max-width: 1400px;   /* Increase max-width slightly for wider screens */
-    /* --- End Change --- */
+    /* Use full width up to a max */
+    width: 100%;
+    max-width: 1400px; /* Increased max-width */
     margin: 0 auto;
     padding: 20px;
-    display: flex; /* Use flexbox for container children */
-    flex-direction: column; /* Stack main and lobby */
-    flex-grow: 1; /* Allow container to grow */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
 }
 
 header {
@@ -50,8 +49,20 @@ header h1 {
     font-size: 1.8rem; /* Adjust if needed */
     /* --- End Retro Font --- */
     color: #4CAF50;
-    margin: 0 10px 0 0; /* Add some right margin */
+    margin: 0 10px 0 0; /* Keep existing margin */
+    /* ****** MODIFIED FOR LOGO ALIGNMENT ****** */
+    display: flex; /* Use flex to align logo and text */
+    align-items: center; /* Vertically center items in the flex container */
+    /* *************************************** */
 }
+
+/* ****** ADDED CSS FOR HEADER LOGO ****** */
+.header-logo {
+    height: 35px;       /* Control size via height (adjust as needed) */
+    width: auto;        /* Maintain aspect ratio */
+    margin-right: 12px; /* Space between logo and text */
+}
+/* ************************************* */
 
 nav {
     display: flex;
@@ -134,6 +145,7 @@ input#playerName {
     border-radius: 4px;
     margin-right: 5px;
 }
+
 input#playerName:disabled {
     background-color: #555;
     color: #aaa;
@@ -144,27 +156,24 @@ input#playerName:disabled {
 /* Grid for main content (Arena/Editor) */
 main {
     display: grid;
-    /* --- Change: Use minmax for more robust column sizing --- */
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr); /* Explicitly allow shrinking */
-    /* --- End Change --- */
+    /* Use minmax for more robust column sizing */
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr);
     gap: 20px;
-    flex-grow: 1; /* Allow main grid to grow vertically */
-    min-height: 0; /* Important for flex/grid context */
-    width: 100%; /* Take full width of container */
-    /* --- Add: Prevent main itself from overflowing --- */
-    overflow: hidden; /* Hide scrollbars if main itself overflows container padding */
-    /* --- End Add --- */
+    flex-grow: 1;
+    min-height: 0;
+    width: 100%;
+    /* Prevent main itself from overflowing */
+    overflow: hidden;
 }
 
 .game-container {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    min-height: 0; /* Prevent flex items from overflowing grid cell */
+    min-height: 0;
     min-width: 0; /* Keep this */
-    /* --- Add: Prevent game container itself from overflowing --- */
-    overflow: hidden; /* Hide scrollbars if this container overflows grid track */
-    /* --- End Add --- */
+    /* Prevent game container itself from overflowing */
+    overflow: hidden;
 }
 
 #arena {
@@ -172,19 +181,19 @@ main {
     border: 2px solid #444;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    width: 100%; /* Let width be determined by grid column */
-    max-width: 100%; /* Ensure canvas scales down if container is smaller */
+    width: 100%;
+    max-width: 100%;
     display: block;
-    aspect-ratio: 1 / 1; /* Maintain square shape */
+    aspect-ratio: 1 / 1;
 }
 
 /* --- START: Shared styles for log panels --- */
 .console-panel {
-    background-color: #333; /* Default background for panels */
+    background-color: #333;
     padding: 10px 15px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    flex-shrink: 0; /* Prevent panel from shrinking */
+    flex-shrink: 0;
 }
 
 /* Basic structure for log boxes (overflow, font) */
@@ -192,7 +201,6 @@ main {
     overflow-y: scroll;
     font-family: 'VT323', monospace;
     word-wrap: break-word;
-    /* Specific background/color/border applied per log type */
 }
 /* --- END: Shared styles for log panels --- */
 
@@ -201,74 +209,67 @@ main {
 .stats-panel {
     /* Apply console-panel base styles */
     background-color: #333;
-    padding: 15px; /* Keep original padding */
+    padding: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
-    /* REDUCED Max height */
-    max-height: 180px; /* ADJUST THIS VALUE */
-    overflow-y: auto; /* Add scrollbar if content exceeds max-height */
+    max-height: 180px;
+    overflow-y: auto;
 }
 
 /* Apply retro font to panel/section titles */
 .stats-panel h3, .editor-container h3, .api-help h4, #lobby-area h3, #game-history-log h4,
-.console-panel h3 { /* Added .console-panel h3 */
-     /* --- 80s Retro Font --- */
-    font-family: 'VT323', monospace;
-    font-size: 18px; /* Adjust if needed */
-     /* --- End Retro Font --- */
+.console-panel h3 {
+     font-family: 'VT323', monospace;
+     font-size: 18px;
      margin-bottom: 10px;
-     color: #4CAF50; /* Match header color accent */
-     flex-shrink: 0; /* Prevent titles from shrinking */
+     color: #4CAF50;
+     flex-shrink: 0;
 }
 
 .editor-container {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    min-height: 0; /* Prevent flex items from overflowing grid cell */
-    min-width: 0; /* <<< Allows this grid item to shrink below its content width */
-    /* --- Change: Be explicit with horizontal overflow --- */
-    overflow-y: hidden; /* Prevent vertical scrolling on the container itself */
+    min-height: 0;
+    min-width: 0; /* Keep this */
+    /* Be explicit with horizontal overflow */
+    overflow-y: hidden; /* Prevent vertical scroll */
     overflow-x: hidden; /* Explicitly hide horizontal scrollbar on the CONTAINER */
-    /* --- End Change --- */
 }
 
-/* CodeMirror Styling - INCREASED min-height */
+/* CodeMirror Styling */
 .CodeMirror {
-    flex-grow: 1; /* Allow editor to grow vertically */
-    min-height: 500px; /* ADJUST THIS VALUE - Should be enough for ~25+ lines */
+    flex-grow: 1;
+    min-height: 500px;
     border-radius: 8px;
     border: 1px solid #444;
     font-family: 'VT323', monospace;
-    font-size: 16px; /* Adjust for readability */
-    /* --- Re-confirm: Ensure CodeMirror handles its OWN scrolling --- */
+    font-size: 16px;
+    /* Ensure CodeMirror handles its OWN scrolling */
     overflow: auto !important;
-    /* --- Add: Help with sizing within flex parent --- */
-    min-width: 0; /* Allow CM itself to shrink */
-    /* --- End Add --- */
+    /* Help with sizing within flex parent */
+    min-width: 0;
 }
 
 
 /* Style CodeMirror when read-only */
 .CodeMirror-readonly .CodeMirror-cursor {
-    display: none !important; /* Hide cursor when read-only */
+    display: none !important;
 }
 .CodeMirror-readonly {
-    background-color: #2a2a2a !important; /* Slightly different background when read-only */
+    background-color: #2a2a2a !important;
 }
 
 /* Constrain API Help Height MORE */
 .api-help {
-    /* Apply console-panel base styles */
     background-color: #333;
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
-    /* REDUCED Max height */
-    max-height: 150px; /* ADJUST THIS VALUE */
-    overflow-y: auto; /* Add scrollbar if content exceeds max-height */
+    max-height: 150px;
+    overflow-y: auto;
 }
 
 .api-help ul {
@@ -288,64 +289,62 @@ main {
     color: #f0f0f0;
 }
 
-/* START: Styling for Editor Controls (Added in Loadout Feature) */
+/* START: Styling for Editor Controls */
 .editor-controls {
      margin-top: 10px;
      display: flex;
      gap: 10px;
      align-items: center;
-     flex-shrink: 0; /* Prevent controls from shrinking vertically if container runs out of space */
+     flex-shrink: 0;
 }
 #btn-delete-loadout {
-    padding: 4px 8px; /* Make delete button smaller */
+    padding: 4px 8px;
     font-size: 14px;
-    background-color: #c0392b; /* Reddish color for delete */
+    background-color: #c0392b;
 }
 #btn-delete-loadout:hover {
-    background-color: #a93226; /* Darker red on hover */
+    background-color: #a93226;
 }
 #btn-delete-loadout:disabled {
-    background-color: #555; /* Use standard disabled grey */
+    background-color: #555;
     color: #aaa;
 }
 #loadout-status {
     font-size: 14px;
     margin-top: 5px;
-    min-height: 1.2em; /* Prevent layout shift when empty */
-    color: #aaa; /* Default color for status */
-    /* Color overridden by JS for success/error */
-     flex-shrink: 0;
+    min-height: 1.2em;
+    color: #aaa;
+    flex-shrink: 0;
 }
 /* END: Styling for Editor Controls */
 
 
-/* --- START: Robot Console Log Specific Styles (FALLOUT TERMINAL) --- */
+/* --- START: Robot Console Log Specific Styles --- */
 #robot-console-log {
     margin-top: 15px;
-    background-color: #1a1a1a; /* Darker bg for the whole panel */
-    border: 2px solid #0f400f; /* Slightly thicker/darker green border for panel */
+    background-color: #1a1a1a;
+    border: 2px solid #0f400f;
     padding: 8px;
-    /* Inherits .console-panel shadow, radius */
 }
 
 #robot-console-log h3 {
-    color: #00dd00; /* Bright green title */
+    color: #00dd00;
     text-align: center;
     margin-bottom: 8px;
-    text-shadow: 0 0 4px #00dd00; /* Slightly stronger glow */
+    text-shadow: 0 0 4px #00dd00;
 }
 
 #robot-log-messages {
-    height: 200px; /* Adjust height as needed */
-    background-color: #000000; /* True black background */
-    color: #00FF41; /* Classic terminal green text */
+    height: 200px;
+    background-color: #000000;
+    color: #00FF41;
     font-size: 16px;
-    border: 2px solid #004d00; /* Solid, slightly thicker border */
+    border: 2px solid #004d00;
     padding: 10px;
-    text-shadow: 0 0 5px rgba(0, 255, 65, 0.5); /* Text glow */
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
     word-wrap: break-word;
     overflow-y: scroll; /* Keep vertical scroll */
-    font-family: 'VT323', monospace; /* Explicitly set font here too */
+    font-family: 'VT323', monospace;
     position: relative;
     overflow-x: hidden; /* Hide horizontal scroll if scanline effect causes it */
 }
@@ -373,15 +372,15 @@ main {
 #robot-log-messages::after {
     content: '';
     position: absolute;
-    top: 0; /* Start at the top (animated) */
+    top: 0;
     left: 0;
     right: 0;
-    height: 2px; /* Thickness of the scanline */
-    background: rgba(0, 255, 0, 0.15); /* Adjust alpha for visibility */
+    height: 2px;
+    background: rgba(0, 255, 0, 0.15);
     box-shadow: 0 0 4px 1px rgba(0, 255, 0, 0.15);
-    z-index: 3; /* Ensure it's above noise if enabled */
-    pointer-events: none; /* Ensure it doesn't interfere with interaction */
-    animation: scanline-log 6s linear infinite; /* Use unique animation name */
+    z-index: 3;
+    pointer-events: none;
+    animation: scanline-log 6s linear infinite;
 }
 
 @keyframes scanline-log {
@@ -395,7 +394,7 @@ main {
 
 /* Lobby Area - Pushed down */
 #lobby-area {
-    margin-top: 20px; /* Add space above lobby */
+    margin-top: 20px;
     background: #333;
     padding: 15px;
     border-radius: 8px;
@@ -403,14 +402,13 @@ main {
     grid-template-columns: 1fr 1fr;
     gap: 20px;
     border-top: 2px solid #444;
-    flex-shrink: 0; /* Prevent lobby from shrinking */
-    width: 100%; /* Take full width */
+    flex-shrink: 0;
+    width: 100%;
 }
 
 #lobby-area > div:first-child,
 #lobby-area > div:last-child {
-    /* Column content styling if needed */
-     min-width: 0; /* Help prevent overflow within grid columns */
+     min-width: 0;
 }
 
 #lobby-status {
@@ -421,15 +419,13 @@ main {
 
 /* Styles for Event Log */
 #event-log {
-    /* Apply .log-box base styles */
     overflow-y: scroll;
     font-family: 'VT323', monospace;
     word-wrap: break-word;
-    /* Specifics */
     height: 150px;
     margin-bottom: 10px;
     padding: 5px 8px;
-    background: #222; /* Slightly lighter than robot log bg */
+    background: #222;
     font-size: 14px;
     border: 1px solid #555;
 }
@@ -449,13 +445,13 @@ main {
     color: #e0e0e0;
     font-family: 'VT323', monospace;
     font-size: 14px;
-    min-width: 50px; /* Prevent input from becoming too small */
+    min-width: 50px;
 }
 
 #send-chat {
     padding: 8px 16px;
     font-size: 15px;
-    flex-shrink: 0; /* Prevent button shrinking */
+    flex-shrink: 0;
 }
 
 
@@ -465,11 +461,9 @@ main {
 
 /* Styles for Game History List */
 #game-history-list {
-    /* Apply .log-box base styles */
-    overflow-y: auto; /* Use auto instead of scroll */
+    overflow-y: auto;
     font-family: 'VT323', monospace;
     word-wrap: break-word;
-    /* Specifics */
     height: 195px;
     background: #222;
     border: 1px solid #555;
@@ -482,7 +476,7 @@ main {
     margin-bottom: 4px;
     padding-bottom: 4px;
     border-bottom: 1px dashed #444;
-    color: #cccccc; /* Inherited from .log-box */
+    color: #cccccc;
 }
 
 #game-history-list > div:last-child {
@@ -501,7 +495,7 @@ main {
     .editor-container {
         min-height: 400px; /* Still useful */
         min-width: 0; /* Ensure fix applies here too */
-        overflow: hidden; /* Keep clipping container overflow if needed */
+        overflow: hidden; /* Keep clipping container */
     }
     .game-container {
        overflow: visible; /* Allow vertical scroll when stacked */
@@ -516,7 +510,6 @@ main {
          max-height: 150px; /* Further reduce stats height when stacked */
      }
     #robot-console-log {
-        /* Keep reasonable height when stacked */
         margin-top: 10px;
     }
     #robot-log-messages {
@@ -527,8 +520,12 @@ main {
 @media (max-width: 768px) {
     header {
         flex-direction: column;
-        align-items: center;
+        align-items: center; /* Center title/logo and nav when stacked */
         gap: 10px;
+    }
+    /* Ensure logo+title stay together */
+    header h1 {
+        margin-right: 0; /* Remove right margin when stacked */
     }
     nav {
         justify-content: center;
@@ -543,9 +540,10 @@ main {
      .CodeMirror {
         min-height: 350px;
     }
-    .stats-panel, .api-help {
+     .stats-panel, .api-help {
         max-height: 130px; /* Even smaller on mobile */
-    }
+     }
+
      #robot-console-log {
          /* Use same max-height as stats/api on mobile */
          max-height: 130px;
