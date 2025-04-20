@@ -3,8 +3,8 @@
 /**
  * Handles client-side network communication with the server using Socket.IO.
  * Connects to the server, sends player data (including name), readiness signals,
- * requests test games, sends self-destruct signals, receives game state updates, // <-- Updated description
- * handles spectating, processes lobby/chat events,
+ * requests test games, sends self-destruct signals, receives game state updates,
+ * handles spectating, processes lobby/chat events, handles robot destruction events, // <-- Updated description
  * receives game history updates, and handles robot log messages.
  */
 class Network {
@@ -149,7 +149,7 @@ class Network {
                      this.spectatingGameId = null;
                      this.spectatingGameName = null;
                  } else {
-                    console.log(`Received spectateGameOver for irrelevant game ${data.gameId}. Current spectate: ${this.spectatingGameId}. Ignoring.`);
+                    // console.log(`Received spectateGameOver for irrelevant game ${data.gameId}. Current spectate: ${this.spectatingGameId}. Ignoring.`); // Optional log
                  }
             });
             // --- END Spectator Event Handlers ---
@@ -162,10 +162,7 @@ class Network {
                      const relevantGameId = this.isSpectating ? this.spectatingGameId : this.game.gameId;
                      if (relevantGameId && relevantGameId === gameState.gameId) {
                         this.game.updateFromServer(gameState);
-                     } else {
-                         // This can happen briefly during transitions, usually safe to ignore.
-                         // console.log(`Received gameStateUpdate for irrelevant game ${gameState.gameId}`);
-                     }
+                     } // else: ignore updates for irrelevant games
                 }
             });
 
@@ -204,6 +201,7 @@ class Network {
                  // Check if this gameOver matches the game we *think* we are playing
                  if (this.game && this.game.gameId === data.gameId) {
                      if (typeof this.game.handleGameOver === 'function') {
+                         // IMPORTANT: The actual UI transition happens here AFTER the delay/explosion has played out client-side
                          this.game.handleGameOver(data); // This should reset controls UI state
                      }
                      // Update lobby status after game over
@@ -217,6 +215,23 @@ class Network {
                       console.warn(`Received gameOver for game ${data.gameId}, but current game is ${this.game ? this.game.gameId : 'None'}. Ignoring.`);
                  }
              });
+
+            // --- START: Listen for Robot Destruction Event ---
+            this.socket.on('robotDestroyed', (data) => {
+                // Only process if the game object exists and has the handler
+                if (this.game && typeof this.game.handleRobotDestroyed === 'function') {
+                    // Check if the event is for the current game we are playing or spectating
+                    const relevantGameId = this.isSpectating ? this.spectatingGameId : this.game.gameId;
+                    // Note: Server currently sends this to everyone in the game room/spectator room,
+                    // so we don't strictly need to check gameId here, but it's safer.
+                    // Let game handler decide what to do based on robot ID.
+                    this.game.handleRobotDestroyed(data);
+                } else {
+                     console.warn("Received robotDestroyed event, but game object or handler missing.");
+                }
+            });
+            // --- END: Listen for Robot Destruction Event ---
+
 
             // Server reports an error in the robot's code (compilation or runtime)
             this.socket.on('codeError', (data) => {

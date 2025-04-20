@@ -1,18 +1,21 @@
 // server/game-instance.js
 const ServerRobot = require('./server-robot');
-const ServerRobotInterpreter = require('./server-interpreter'); // Corrected require name
-const ServerCollisionSystem = require('./server-collision'); // Handles collisions
+const ServerRobotInterpreter = require('./server-interpreter');
+const ServerCollisionSystem = require('./server-collision');
 
 // --- Game Simulation Constants ---
 const TICK_RATE = 30; // Updates per second
 const ARENA_WIDTH = 900; // Match canvas size
 const ARENA_HEIGHT = 900; // Match canvas size
+// START CHANGE: Delay for explosion/visuals before game over screen
+const DESTRUCTION_VISUAL_DELAY_MS = 1500; // 1.5 seconds
+// END CHANGE
 
 /**
  * Represents a single active game match on the server.
  * Manages the game state, robots (including potential AI dummies),
- * interpreter, collisions, game loop,
- * broadcasts state to players and spectators, handles self-destruct requests, // <-- Added self-destruct
+ * interpreter, collisions, game loop, delayed game over logic, // <-- Updated description
+ * broadcasts state to players and spectators, handles self-destruct requests,
  * and notifies the GameManager upon game completion via a callback.
  */
 class GameInstance {
@@ -23,445 +26,461 @@ class GameInstance {
      * @param {Array<{socket: SocketIO.Socket | null, code: string, appearance: string, name: string, isReady: boolean}>} playersData - Array of player data (socket can be null for AI).
      * @param {Function} gameOverCallback - Function provided by GameManager to call when the game ends. Expects (gameId, winnerData) object.
      * @param {string} gameName - Thematic name for the game
+     * @param {boolean} isTestGame - Flag indicating if this is a test game vs AI.
      */
-    constructor(gameId, io, playersData, gameOverCallback, gameName = '') {
+    constructor(gameId, io, playersData, gameOverCallback, gameName = '', isTestGame = false) { // Added isTestGame flag
         this.gameId = gameId;
         this.io = io; // Socket.IO server instance for broadcasting
-        // Map: socket.id (for real players) or dummy ID -> { socket, robot, code, appearance, name }
-        this.players = new Map();
+        this.players = new Map(); // robot.id -> { socket, robot, code, appearance, name }
         this.robots = []; // Array of ServerRobot instances in this game
         this.playerNames = new Map(); // Map: robot.id -> name (for easier lookup during logs/events)
         this.interpreter = new ServerRobotInterpreter(); // Handles robot code execution
         this.collisionSystem = new ServerCollisionSystem(this); // Handles collisions
         this.gameLoopInterval = null; // Stores the setInterval ID for the game loop
         this.lastTickTime = 0; // Timestamp of the last tick
-        // Stores explosion data generated this tick to send to clients
-        this.explosionsToBroadcast = [];
-        // Store the callback function provided by GameManager
+        this.explosionsToBroadcast = []; // Stores explosion data generated this tick
         this.gameOverCallback = gameOverCallback;
-        // Store game name
         this.gameName = gameName || `Game ${gameId}`; // Use provided name or generate default
-        // Define the spectator room name for this instance
         this.spectatorRoom = `spectator-${this.gameId}`;
+        this.gameEnded = false; // Flag to prevent multiple game over triggers
+        this.isTestGame = isTestGame; // Store if this is a test game
 
 
-        console.log(`[${this.gameId} - '${this.gameName}'] Initializing Game Instance...`);
+        console.log(`[${this.gameId} - '${this.gameName}'] Initializing Game Instance (Test: ${this.isTestGame})...`);
 
-        // Initialize players and their robots based on received data
+        // Initialize players and their robots
         playersData.forEach((playerData, index) => {
-            // Assign starting positions (simple alternating sides)
-            const startX = index % 2 === 0 ? 150 : ARENA_WIDTH - 150; // Spread out a bit more
+            const startX = index % 2 === 0 ? 150 : ARENA_WIDTH - 150;
             const startY = 100 + Math.floor(index / 2) * (ARENA_HEIGHT - 200);
             const startDir = index % 2 === 0 ? 0 : 180;
-
-            // Determine the ID: socket ID for real players, dummy ID for AI
-            // Use gameId in dummy ID to ensure uniqueness across multiple test games
             const robotId = playerData.socket ? playerData.socket.id : `dummy-bot-${this.gameId}`;
 
-            // Create the ServerRobot instance, passing appearance
-            const robot = new ServerRobot(
-                robotId, // Use determined ID
-                startX, startY, startDir,
-                playerData.appearance // Pass the appearance identifier
-            );
-            // Assign the name directly to the robot instance
+            const robot = new ServerRobot(robotId, startX, startY, startDir, playerData.appearance);
             robot.name = playerData.name;
             this.robots.push(robot);
 
-            // Store player data associated with the robot, using the robot's ID as the key
             this.players.set(robotId, {
-                socket: playerData.socket, // Can be null
+                socket: playerData.socket,
                 robot: robot,
                 code: playerData.code,
                 appearance: playerData.appearance,
-                name: playerData.name // Store name here as well
+                name: playerData.name
             });
-            // Store name in the separate map for quick lookups using robot ID
             this.playerNames.set(robot.id, playerData.name);
 
-            console.log(`[${this.gameId} - '${this.gameName}'] Added participant ${playerData.name} (${robot.id}) (Appearance: ${playerData.appearance}) with Robot ${robot.id}. Socket: ${playerData.socket ? 'Yes' : 'No'}`);
+            console.log(`[${this.gameId}] Added participant ${playerData.name} (${robot.id}), Socket: ${playerData.socket ? 'Yes' : 'No'}`);
 
-            // Add the player's socket to the dedicated Socket.IO room for this game
-            // Only join room if it's a real player with a socket
             if (playerData.socket) {
                 playerData.socket.join(this.gameId);
-                console.log(`[${this.gameId} - '${this.gameName}'] Player ${playerData.name} joined Socket.IO room.`);
+                console.log(`[${this.gameId}] Player ${playerData.name} joined game room.`);
             }
         });
 
-        // Initialize the interpreter AFTER all robots and player data are set up
-        // Pass the list of robots and the full players map (which includes null sockets for dummies)
-        this.interpreter.initialize(this.robots, this.players); // Pass the map containing potentially null sockets
-
-        console.log(`[${this.gameId} - '${this.gameName}'] Game Instance Initialization complete.`);
+        this.interpreter.initialize(this.robots, this.players);
+        console.log(`[${this.gameId}] Game Instance Initialization complete.`);
     }
 
-    /**
-     * Starts the main game loop interval.
-     */
+    /** Starts the main game loop interval. */
     startGameLoop() {
-        console.log(`[${this.gameId} - '${this.gameName}'] Starting game loop (Tick Rate: ${TICK_RATE}/s).`);
+        console.log(`[${this.gameId}] Starting game loop.`);
         this.lastTickTime = Date.now();
+        this.gameEnded = false; // Reset ended flag
 
         if (this.gameLoopInterval) clearInterval(this.gameLoopInterval);
 
         this.gameLoopInterval = setInterval(() => {
+            if (this.gameEnded) { // Double check before ticking
+                this.stopGameLoop();
+                return;
+            }
             const now = Date.now();
-            // Calculate delta time in seconds for physics/movement calculations
             const deltaTime = (now - this.lastTickTime) / 1000.0;
             this.lastTickTime = now;
-            // Execute one tick of the game simulation
             this.tick(deltaTime);
         }, 1000 / TICK_RATE);
     }
 
-    /**
-     * Stops the main game loop interval and performs cleanup.
-     */
+    /** Stops the main game loop interval and performs cleanup. */
     stopGameLoop() {
-        console.log(`[${this.gameId} - '${this.gameName}'] Stopping game loop.`);
+        console.log(`[${this.gameId}] Stopping game loop.`);
         if (this.gameLoopInterval) {
             clearInterval(this.gameLoopInterval);
             this.gameLoopInterval = null;
         }
-        this.interpreter.stop(); // Clean up interpreter state
-        // Note: Spectator room cleanup will happen in GameManager when the instance is removed
+        // Don't stop interpreter here, wait until game instance is fully removed
     }
 
-    /**
-     * Executes a single tick of the game simulation: AI, movement, collisions, game over check, state broadcast.
-     * @param {number} deltaTime - The time elapsed since the last tick, in seconds.
-     */
+    /** Executes a single tick of the game simulation. */
     tick(deltaTime) {
         try {
-            // --- Start of Tick ---
-            this.explosionsToBroadcast = []; // Clear transient data from the previous tick
+            if (this.gameEnded) return; // Prevent tick execution after game over is decided
 
-            // 1. Execute Robot AI Code (Interpreter handles both real and dummy AI)
+            this.explosionsToBroadcast = [];
+
+            // 1. Execute Robot AI Code
             this.interpreter.executeTick(this.robots, this);
 
             // 2. Update Robot and Missile Physics/Movement
             this.robots.forEach(robot => {
-                // Pass arena dimensions to robot update
                 robot.update(deltaTime, ARENA_WIDTH, ARENA_HEIGHT);
             });
 
             // 3. Check for and Resolve Collisions
-            this.collisionSystem.checkAllCollisions(); // Needs access to ARENA dimensions if boundary checks move there
+            // Collision system calls robot.takeDamage(), which might change state
+            this.collisionSystem.checkAllCollisions();
 
-            // 4. Check for Game Over Condition
+            // START CHANGE: Emit robotDestroyed event for newly destroyed robots
+            this.robots.forEach(robot => {
+                if (robot.state === 'destroyed' && !robot.destructionNotified) {
+                    const destructionData = {
+                        robotId: robot.id,
+                        x: robot.x,
+                        y: robot.y,
+                        cause: robot.lastDamageCause || 'missile' // Get cause stored by takeDamage
+                    };
+                    // Emit to game room AND spectator room
+                    this.io.to(this.gameId).to(this.spectatorRoom).emit('robotDestroyed', destructionData);
+                    robot.destructionNotified = true; // Mark as notified
+                    console.log(`[${this.gameId}] Emitted robotDestroyed for ${robot.id} (Cause: ${destructionData.cause})`);
+                }
+            });
+            // END CHANGE
+
+            // 4. Check for Game Over Condition (handles delay now)
             if (this.checkGameOver()) {
-                // checkGameOver calls stopGameLoop and notifies clients/GameManager if true
-                return; // Exit tick processing early as the game has ended
+                // checkGameOver calls stopGameLoop and notifies if true
+                return;
             }
 
-            // --- State Broadcasting ---
-            // 5. Gather the current state of all entities for clients.
+            // 5. Gather and Broadcast State
             const gameState = this.getGameState();
-
-            // 6. Broadcast the state to ALL clients in this game's room AND the spectator room.
-            // For test games, gameId room only contains the one real player.
             this.io.to(this.gameId).to(this.spectatorRoom).emit('gameStateUpdate', gameState);
 
         } catch (error) {
-             console.error(`[${this.gameId} - '${this.gameName}'] CRITICAL ERROR during tick:`, error);
-             // Consider stopping the game or notifying players
-             this.stopGameLoop(); // Stop loop on critical error
-             // Notify players and spectators of the error
-             this.io.to(this.gameId).to(this.spectatorRoom).emit('gameError', { message: `Critical server error during game tick for '${this.gameName}'. Game aborted.` });
-             // Manually trigger game over callback with no winner due to error
+             console.error(`[${this.gameId}] CRITICAL ERROR during tick:`, error);
+             this.stopGameLoop();
+             this.gameEnded = true; // Mark as ended to prevent further processing
+             this.io.to(this.gameId).to(this.spectatorRoom).emit('gameError', { message: `Critical server error in '${this.gameName}'. Game aborted.` });
              if (typeof this.gameOverCallback === 'function') {
-                  // Determine if it was a test game to pass flag back
-                  const wasTest = this.gameName.startsWith("Test Arena");
-                 this.gameOverCallback(this.gameId, { winnerId: null, winnerName: 'None', reason: 'Server Error', wasTestGame: wasTest });
+                 this.gameOverCallback(this.gameId, { winnerId: null, winnerName: 'None', reason: 'Server Error', wasTestGame: this.isTestGame });
              }
         }
     }
 
     /**
-     * Checks if the game has reached an end condition (e.g., only one robot left alive).
-     * If the game is over, it stops the loop, notifies clients (players AND spectators),
-     * and calls the GameManager's game over callback.
+     * Checks if the game has reached an end condition, considering the visual delay.
+     * If the game is over, it stops the loop, notifies clients, and calls the GameManager callback.
      * @returns {boolean} True if the game is over, false otherwise.
      */
     checkGameOver() {
-        // Only proceed if the game loop is actually running
-        // This prevents multiple gameOver events if checkGameOver is called after stopGameLoop
-        if (!this.gameLoopInterval) {
-            return true; // Consider game over if loop isn't running
+        if (this.gameEnded || !this.gameLoopInterval) {
+             return true; // Already ended or loop stopped
         }
 
-        // Count how many robots are still marked as alive
-        const aliveRobots = this.robots.filter(r => r.isAlive);
+        // START CHANGE: Delayed game over logic
+        let potentialLoser = null; // Robot whose timer has expired
+        let destructionPending = false; // Flag if any robot is destroyed but timer hasn't passed
 
-        // Game ends if 1 or 0 robots are left alive (and we started with at least 2 robots).
-        if (aliveRobots.length <= 1 && this.robots.length >= 2) {
-            const winnerRobot = aliveRobots[0]; // Could be undefined if 0 left (draw/mutual destruction)
+        const now = Date.now();
+        for (const robot of this.robots) {
+            if (robot.state === 'destroyed') {
+                if (now >= (robot.destructionTime + DESTRUCTION_VISUAL_DELAY_MS)) {
+                    // Delay has passed for this destroyed robot
+                    potentialLoser = robot;
+                    // Found a loser whose timer expired, no need to check further losers this tick
+                    break;
+                } else {
+                    // A robot is destroyed, but we're waiting for the visual delay
+                    destructionPending = true;
+                }
+            }
+        }
 
-            // Prepare winner data object
-            let winnerData = { // Use let so we can add wasTestGame later if needed
-                gameId: this.gameId, // Add gameId for context on client/server
-                winnerId: winnerRobot ? winnerRobot.id : null,
-                winnerName: winnerRobot ? winnerRobot.name : 'None', // Get name from robot instance
-                reason: winnerRobot ? "Last robot standing!" : "Mutual Destruction!"
+        // If a destruction is pending visual delay, wait for the next tick
+        if (destructionPending && !potentialLoser) {
+            return false; // Game continues, waiting for delay
+        }
+
+        // If we are here, either:
+        // 1. A potentialLoser was found (their timer expired).
+        // 2. No destruction is pending (no one is destroyed, or their timers expired previously).
+
+        // Check active robots *now* (only needed if no potentialLoser was identified by timer)
+        const activeRobots = this.robots.filter(r => r.state === 'active');
+
+        // Determine if the game should end based on loser or remaining active robots
+        let isGameOver = false;
+        let winner = null;
+        let loser = null;
+        let reason = 'elimination';
+
+        if (potentialLoser) {
+             // Game ends because a robot's destruction timer expired
+             isGameOver = true;
+             loser = this.players.get(potentialLoser.id); // Get full player data for loser
+             // Winner is the other participant (assumes 2 player games for now)
+             winner = Array.from(this.players.values()).find(p => p.robot && p.robot.id !== potentialLoser.id);
+             reason = `${loser?.name || 'A robot'} was destroyed!`;
+             console.log(`[${this.gameId}] Game Over: Timer expired for ${potentialLoser.id}`);
+
+        } else if (!destructionPending && activeRobots.length <= 1 && this.robots.length >= 2) {
+             // Game ends because only 0 or 1 robots are left active, and no delay is pending
+             isGameOver = true;
+             if (activeRobots.length === 1) {
+                 winner = this.players.get(activeRobots[0].id);
+                 loser = Array.from(this.players.values()).find(p => p.robot && p.robot.id !== activeRobots[0].id);
+                 reason = "Last robot standing!";
+             } else { // activeRobots.length === 0
+                 reason = "Mutual Destruction!";
+                 // Both players are losers in a draw
+                 winner = null; // No winner
+                 loser = null; // Both destroyed simultaneously, maybe set both? Keep null for simplicity.
+             }
+             console.log(`[${this.gameId}] Game Over: Active robots <= 1. Reason: ${reason}`);
+        }
+
+        // If game over condition met
+        if (isGameOver) {
+            this.gameEnded = true; // Set flag to prevent re-entry/further ticks
+            this.stopGameLoop(); // Stop simulation loop
+
+            // --- Adjust winner/loser for Test Games ---
+            if (this.isTestGame) {
+                const realPlayerEntry = Array.from(this.players.entries()).find(([id, data]) => data.socket !== null);
+                const botEntry = Array.from(this.players.entries()).find(([id, data]) => data.socket === null);
+
+                if (!realPlayerEntry || !botEntry) {
+                     console.error(`[${this.gameId}] Test game over, but couldn't find real player or bot entry!`);
+                     // Fallback to generic no-winner scenario
+                     winner = null;
+                     loser = null;
+                     reason = "Test game ended unexpectedly";
+                } else {
+                    const realPlayer = realPlayerEntry[1];
+                    const botPlayer = botEntry[1];
+
+                    // Determine outcome based on who the potentialLoser was or remaining active state
+                    if (potentialLoser && potentialLoser.id === realPlayer.robot.id) { // Player lost
+                        winner = botPlayer;
+                        loser = realPlayer;
+                        reason = `${realPlayer.name} was destroyed by ${botPlayer.name}!`;
+                    } else if (potentialLoser && potentialLoser.id === botPlayer.robot.id) { // Bot lost
+                        winner = realPlayer;
+                        loser = botPlayer;
+                        reason = `${realPlayer.name} destroyed ${botPlayer.name}!`;
+                    } else if (activeRobots.length === 1 && activeRobots[0].id === realPlayer.robot.id) { // Player is last standing
+                        winner = realPlayer;
+                        loser = botPlayer;
+                        reason = `${realPlayer.name} is the last one standing!`;
+                    } else if (activeRobots.length === 1 && activeRobots[0].id === botPlayer.robot.id) { // Bot is last standing
+                        winner = botPlayer; // Bot wins in this case
+                        loser = realPlayer;
+                        reason = `${botPlayer.name} defeated ${realPlayer.name}!`;
+                    } else if (activeRobots.length === 0) { // Draw
+                        winner = null;
+                        loser = null; // Treat both as losers in draw?
+                        reason = "Mutual Destruction in test game!";
+                    }
+                    // Override display names for clarity
+                    if (winner) winner.name = winner.socket ? winner.name : botPlayer.name; // Use correct bot name
+                    if (loser) loser.name = loser.socket ? loser.name : botPlayer.name; // Use correct bot name
+                }
+            }
+            // --- End Test Game Adjustment ---
+
+
+            // Prepare final winner data object for emission/callback
+            const finalWinnerData = {
+                gameId: this.gameId,
+                winnerId: winner ? winner.robot.id : null,
+                winnerName: winner ? winner.name : 'None', // Use adjusted name
+                reason: reason,
+                wasTestGame: this.isTestGame // Include test game flag
             };
 
-            console.log(`[${this.gameId} - '${this.gameName}'] Game Over detected. Reason: ${winnerData.reason}. Winner: ${winnerData.winnerName} (${winnerData.winnerId || 'N/A'})`);
+            console.log(`[${this.gameId}] Final Game Over. Winner: ${finalWinnerData.winnerName}. Reason: ${finalWinnerData.reason}.`);
 
-            // --- STOP GAME LOOP FIRST ---
-            // Stop the simulation loop for this game instance BEFORE sending events.
-            this.stopGameLoop();
-            // --- END STOP GAME LOOP ---
+            // Notify players IN THE GAME ROOM
+            // For test games, only the real player is in this room.
+             this.io.to(this.gameId).emit('gameOver', finalWinnerData);
+             console.log(`[${this.gameId}] Emitted 'gameOver' to game room ${this.gameId}.`);
 
+            // Notify SPECTATORS
+            this.io.to(this.spectatorRoom).emit('spectateGameOver', finalWinnerData);
+            console.log(`[${this.gameId}] Emitted 'spectateGameOver' to spectator room ${this.spectatorRoom}.`);
 
-            // Identify the real player socket ID in this game (the one that's not null)
-            const realPlayerEntry = Array.from(this.players.entries()).find(([id, data]) => data.socket !== null);
-            const realPlayerSocketId = realPlayerEntry ? realPlayerEntry[0] : null;
-
-            // Notify players *in the game room* about the game end
-            // If it's a test game, target the specific real player socket ID, otherwise broadcast to room
-            const target = realPlayerSocketId || this.gameId;
-            console.log(`[${this.gameId} - '${this.gameName}'] Emitting gameOver to target: ${target}`);
-            this.io.to(target).emit('gameOver', winnerData); // GameManager callback adds wasTestGame flag before passing to client
-
-            // Notify spectators *in the spectator room* about the game end (if any exist)
-            this.io.to(this.spectatorRoom).emit('spectateGameOver', winnerData);
-            console.log(`[${this.gameId} - '${this.gameName}'] Notified spectator room ${this.spectatorRoom} of game over.`);
-
-
-            // Call the GameManager callback to handle lobby events etc.
-            // Pass gameId along with winnerData for context in GameManager
-            // The callback *must* add the wasTestGame flag if appropriate
+            // Call the GameManager callback
             if (typeof this.gameOverCallback === 'function') {
-                this.gameOverCallback(this.gameId, winnerData); // Pass gameId now
+                this.gameOverCallback(this.gameId, finalWinnerData); // Pass final data
             } else {
                 console.warn(`[${this.gameId}] gameOverCallback is not a function!`);
             }
-
-            return true; // Game is over
+            return true; // Game is definitively over
         }
+        // END CHANGE
+
         return false; // Game continues
     }
 
-    /**
-     * Creates data for a visual explosion effect to be sent to clients.
-     * Called by collision system or other logic.
-     * @param {number} x - X coordinate.
-     * @param {number} y - Y coordinate.
-     * @param {number} size - Size multiplier.
-     */
+
+    /** Creates data for a visual explosion effect to be sent to clients. */
     createExplosion(x, y, size) {
         const explosionData = {
             id: `e-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-            x: x,
-            y: y,
-            size: size,
+            x: x, y: y, size: size,
         };
         this.explosionsToBroadcast.push(explosionData);
     }
 
-    /**
-     * Gathers the current state of the game (robots, missiles, effects)
-     * into a serializable object suitable for broadcasting to clients via Socket.IO.
-     * Includes the gameName.
-     * @returns {object} The current game state snapshot.
-     */
+    /** Gathers the current state of the game into a serializable object. */
     getGameState() {
-        // Collect all active missiles from all robots' lists
         const activeMissiles = [];
         this.robots.forEach(robot => {
-            // Keep collecting missiles even if robot just died, until they hit/expire
+            // Collect missiles even from destroyed robots
             activeMissiles.push(...robot.missiles);
         });
 
-        // Construct the state object
         const state = {
             gameId: this.gameId,
-            gameName: this.gameName, // Include game name in state updates
-            // Map robot instances to plain data objects, including name
+            gameName: this.gameName,
             robots: this.robots.map(robot => ({
                 id: robot.id,
-                x: robot.x,
-                y: robot.y,
+                x: robot.x, y: robot.y,
                 direction: robot.direction,
                 damage: robot.damage,
-                color: robot.color, // Color is generated in ServerRobot constructor
+                color: robot.color,
+                // START CHANGE: Send isAlive based on getter for client compatibility
                 isAlive: robot.isAlive,
+                // END CHANGE
                 appearance: robot.appearance,
-                name: robot.name // Include the name stored on the robot instance
+                name: robot.name
             })),
-            // Map missile instances to plain data objects
             missiles: activeMissiles.map(missile => ({
-                id: missile.id,
-                x: missile.x,
-                y: missile.y,
-                radius: missile.radius,
-                ownerId: missile.ownerId // Include owner ID
+                id: missile.id, x: missile.x, y: missile.y,
+                radius: missile.radius, ownerId: missile.ownerId
             })),
-            // Include any explosions triggered during this tick
             explosions: this.explosionsToBroadcast,
-            timestamp: Date.now() // Include a server timestamp
+            timestamp: Date.now()
         };
-
         return state;
     }
 
-    /**
-     * Performs a scan operation for a given robot, finding the nearest opponent within an arc.
-     * Called by the interpreter's safeScan method.
-     * @param {ServerRobot} scanningRobot - The robot performing the scan.
-     * @param {number} direction - The center direction of the scan arc (degrees, 0=East, 90=North).
-     * @param {number} resolution - The width of the scan arc (degrees).
-     * @returns {object | null} An object with { distance, direction, id, name } of the closest detected robot, or null if none found.
-     */
+    /** Performs a scan operation for a given robot. */
     performScan(scanningRobot, direction, resolution) {
-        // Normalize inputs
-        const scanDirection = ((Number(direction) % 360) + 360) % 360;
-        const halfResolution = Math.max(1, Number(resolution) / 2); // Ensure minimum 1 degree arc
-        const scanRange = 800; // Maximum scan distance
+        if (scanningRobot.state !== 'active') return null; // Destroyed robots cannot scan
 
-        // Define scan arc boundaries in degrees [0, 360)
+        const scanDirection = ((Number(direction) % 360) + 360) % 360;
+        const halfResolution = Math.max(1, Number(resolution) / 2);
+        const scanRange = 800;
         let startAngleDeg = (scanDirection - halfResolution + 360) % 360;
         let endAngleDeg = (scanDirection + halfResolution + 360) % 360;
-        const wrapsAround = startAngleDeg > endAngleDeg; // Check if arc crosses the 0/360 degree line
+        const wrapsAround = startAngleDeg > endAngleDeg;
 
-        let closestTargetInfo = null; // Stores { distance, direction, id, name }
-        let closestDistanceSq = scanRange * scanRange; // Use squared distance for comparison efficiency
+        let closestTargetInfo = null;
+        let closestDistanceSq = scanRange * scanRange;
 
         this.robots.forEach(targetRobot => {
-            // Skip self and dead robots
-            if (scanningRobot.id === targetRobot.id || !targetRobot.isAlive) {
+            // Skip self and non-active robots
+            if (scanningRobot.id === targetRobot.id || targetRobot.state !== 'active') {
                 return;
             }
 
             const dx = targetRobot.x - scanningRobot.x;
-            const dy = targetRobot.y - scanningRobot.y; // Use server coordinates
+            const dy = targetRobot.y - scanningRobot.y;
             const distanceSq = dx * dx + dy * dy;
 
-            // Early exit if target is further than current closest or out of max range
-            if (distanceSq >= closestDistanceSq || distanceSq > scanRange * scanRange) {
-                return;
-            }
+            if (distanceSq >= closestDistanceSq) return;
 
-            // Calculate angle to target: atan2(-dy, dx) for 0=East, 90=North convention
             let angleToTargetDeg = Math.atan2(-dy, dx) * 180 / Math.PI;
-            angleToTargetDeg = (angleToTargetDeg + 360) % 360; // Normalize angle to [0, 360)
+            angleToTargetDeg = (angleToTargetDeg + 360) % 360;
 
-            // Check if the calculated angle falls within the scan arc
-            let inArc = false;
-            if (wrapsAround) { // Arc crosses 0/360 (e.g., 350 to 10)
-                inArc = (angleToTargetDeg >= startAngleDeg || angleToTargetDeg <= endAngleDeg);
-            } else { // Arc does not wrap (e.g., 80 to 100)
-                inArc = (angleToTargetDeg >= startAngleDeg && angleToTargetDeg <= endAngleDeg);
-            }
+            let inArc = wrapsAround ? (angleToTargetDeg >= startAngleDeg || angleToTargetDeg <= endAngleDeg)
+                                    : (angleToTargetDeg >= startAngleDeg && angleToTargetDeg <= endAngleDeg);
 
             if (inArc) {
-                // Found a new closest robot within the arc
                 closestDistanceSq = distanceSq;
                 closestTargetInfo = {
-                    distance: Math.sqrt(distanceSq), // Calculate actual distance only for the final result
-                    direction: angleToTargetDeg, // Report angle using the 0=East convention
-                    id: targetRobot.id, // Include the ID of the detected robot
-                    name: targetRobot.name // Include the Name of the detected robot
+                    distance: Math.sqrt(distanceSq),
+                    direction: angleToTargetDeg,
+                    id: targetRobot.id,
+                    name: targetRobot.name
                 };
             }
         });
-
-        return closestTargetInfo; // Return data for the closest robot, or null if none found
+        return closestTargetInfo;
     }
 
-    /**
-     * Triggers the self-destruction sequence for a specific robot.
-     * Marks the robot as dead, applies max damage, creates an explosion,
-     * and checks for game over.
-     * @param {string} robotId - The ID of the robot to self-destruct (should be a real player's socket ID).
-     */
+    /** Triggers the self-destruction sequence for a specific robot. */
     triggerSelfDestruct(robotId) {
          const playerData = this.players.get(robotId);
 
-         if (playerData && playerData.robot && playerData.robot.isAlive) {
+         if (playerData && playerData.robot && playerData.robot.state === 'active') { // Check state
              const robot = playerData.robot;
-             console.log(`[${this.gameId} - '${this.gameName}'] Triggering self-destruct for robot ${robot.name} (${robot.id}).`);
+             console.log(`[${this.gameId}] Triggering self-destruct for robot ${robot.name} (${robot.id}).`);
 
-             // Force death
-             robot.takeDamage(100); // This sets isAlive = false and damage = 100
+             // START CHANGE: Call takeDamage, remove direct checkGameOver
+             // This returns { destroyed: true, ... } and sets state/time internally
+             const result = robot.takeDamage(1000, 'selfDestruct'); // Deal massive damage
 
-             // Create a big explosion
+             // The main tick loop will now detect this state change, emit robotDestroyed,
+             // and eventually trigger checkGameOver after the delay.
+
+             // Create a big explosion (still useful here for immediate visual cue)
              this.createExplosion(robot.x, robot.y, 5); // Size 5 explosion
 
-             // Check game over condition immediately after destruction
-             // This will stop the loop and trigger the callback if necessary
-             this.checkGameOver();
+             console.log(`[${this.gameId}] Self-destruct damage applied. Destruction result:`, result.destroyed);
+             // END CHANGE
+
          } else {
-             console.warn(`[${this.gameId} - '${this.gameName}'] Could not trigger self-destruct for ${robotId}. Robot not found, already dead, or invalid ID.`);
+             console.warn(`[${this.gameId}] Could not trigger self-destruct for ${robotId}. Robot not found or not active.`);
          }
     }
 
-    /**
-     * Removes a player (real or dummy) and marks their robot as inactive upon disconnection or game end.
-     * Called by the GameManager.
-     * @param {string} robotId - The ID of the robot whose participant is being removed.
-     */
+    /** Removes a player and marks their robot as inactive/destroyed. */
     removePlayer(robotId) {
-        // Use the playerNames map for logging
         const playerName = this.playerNames.get(robotId) || robotId.substring(0,8)+'...';
-        console.log(`[${this.gameId} - '${this.gameName}'] Handling removal of participant ${playerName} (${robotId}).`);
+        console.log(`[${this.gameId}] Handling removal of participant ${playerName} (${robotId}).`);
 
         const playerData = this.players.get(robotId);
         if (playerData) {
-            // Mark the robot as inactive
             if (playerData.robot) {
-                 playerData.robot.isAlive = false;
-                 playerData.robot.damage = 100; // Ensure damage reflects death state
-                 playerData.robot.speed = 0; // Stop movement
+                 // START CHANGE: Set state directly for clarity on removal
+                 playerData.robot.state = 'destroyed';
+                 if (!playerData.robot.destructionTime) { // Only set if not already set
+                     playerData.robot.destructionTime = Date.now();
+                 }
+                 playerData.robot.damage = 100; // Ensure damage reflects state
+                 playerData.robot.speed = 0;
                  playerData.robot.targetSpeed = 0;
-                 console.log(`[${this.gameId} - '${this.gameName}'] Marked robot for ${playerName} as inactive.`);
+                 // END CHANGE
+                 console.log(`[${this.gameId}] Marked robot for ${playerName} as destroyed.`);
             }
-
-            // Socket leaving room happens automatically on disconnect for real players
-            // Remove player data from the active players map for this game
             this.players.delete(robotId);
-            // Remove from name map
             this.playerNames.delete(robotId);
-
         } else {
-             console.warn(`[${this.gameId} - '${this.gameName}'] Tried to remove participant ${robotId}, but they were not found in the player map.`);
+             console.warn(`[${this.gameId}] Tried to remove participant ${robotId}, but not found.`);
         }
     }
 
-    /**
-     * Checks if the game instance has no *real* players left in its map.
-     * A game with only a dummy bot (null socket) is considered empty for cleanup.
-     * Used by GameManager to determine if the instance can be cleaned up.
-     * @returns {boolean} True if no real players remain, false otherwise.
-     */
+    /** Checks if the game instance has no *real* players left. */
     isEmpty() {
-        // A test game is considered "empty" for cleanup purposes
-        // if the *only* entry left has a null socket (the dummy bot),
-        // or if the map is completely empty.
-        return this.players.size === 0 || Array.from(this.players.values()).every(p => p.socket === null);
+        // A game is empty if the map is empty OR all remaining entries have null sockets (dummy bots)
+        if (this.players.size === 0) return true;
+        return Array.from(this.players.values()).every(p => p.socket === null);
     }
 
-    // Placeholder for queueAction - remains unchanged
-    queueAction(socketId, action) {
-        const playerName = this.playerNames.get(socketId) || socketId;
-        console.warn(`[${this.gameId}] queueAction called but not implemented for player ${playerName}. Action:`, action);
-    }
-
-    // --- New method for cleanup ---
-    /**
-     * Cleans up resources associated with this game instance, specifically the spectator room.
-     * Called by GameManager before deleting the instance.
-     */
+    /** Cleans up resources associated with this game instance. */
     cleanup() {
-        console.log(`[${this.gameId} - '${this.gameName}'] Cleaning up instance. Making sockets leave spectator room: ${this.spectatorRoom}`);
-        // Force any remaining sockets out of the spectator room
-        // This helps ensure spectators disconnected uncleanly are removed from the room state
+        console.log(`[${this.gameId}] Cleaning up instance. Removing spectators from ${this.spectatorRoom}`);
         this.io.socketsLeave(this.spectatorRoom);
-        // Also force any remaining real players out of the game room (should be redundant)
         this.io.socketsLeave(this.gameId);
+        // Stop interpreter if it's still running (should be stopped by game over, but belt-and-suspenders)
+        if(this.interpreter) {
+            this.interpreter.stop();
+        }
+        console.log(`[${this.gameId}] Cleanup complete.`);
     }
 
-} // End of GameInstance class definition
+} // End GameInstance
 
 module.exports = GameInstance;

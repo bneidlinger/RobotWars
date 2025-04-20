@@ -33,7 +33,7 @@ class ServerMissile {
 /**
  * Represents a Robot's state and behavior on the server side.
  * Managed by the GameInstance and manipulated by the ServerRobotInterpreter.
- * Includes properties for position, damage, appearance, etc.
+ * Includes properties for position, damage, appearance, state, etc.
  */
 class ServerRobot {
     /**
@@ -57,7 +57,11 @@ class ServerRobot {
         this.color = this.generateColor(); // Assign a unique color based on ID
         this.cooldown = 0; // Weapon cooldown in ticks
         this.missiles = []; // Array of ServerMissile objects fired by this robot
-        this.isAlive = true; // Flag indicating if the robot is active
+        // START CHANGE: isAlive replaced by state
+        // this.isAlive = true; // Flag indicating if the robot is active
+        this.state = 'active'; // 'active' | 'destroyed'
+        this.destructionTime = null; // Timestamp when state changed to 'destroyed'
+        // END CHANGE
         // Store the appearance identifier chosen by the player
         this.appearance = appearance;
     }
@@ -69,6 +73,16 @@ class ServerRobot {
     get damage() {
         return this._damage;
     }
+
+    // START CHANGE: Add getter for isAlive based on state
+    /**
+     * Public getter indicating if the robot is currently active.
+     * @returns {boolean} True if the robot's state is 'active'.
+     */
+    get isAlive() {
+        return this.state === 'active';
+    }
+    // END CHANGE
 
     /**
      * Generates a consistent color based on the robot's ID using HSL.
@@ -94,59 +108,54 @@ class ServerRobot {
      * @param {number} arenaHeight - The height of the game arena.
      */
     update(deltaTime, arenaWidth, arenaHeight) {
-        // Only update if the robot is alive
-        if (!this.isAlive) return;
+        // --- START CHANGE: Update logic only applies if active ---
+        if (this.state !== 'active') {
+            // Destroyed robots *do not* update position, speed, direction, or cooldown.
+            // BUT, their missiles *should* continue updating until they hit or expire.
+            // So, we still need the missile update logic outside the 'active' block.
+        } else {
+            // Update weapon cooldown (decrease by 1 each tick)
+            if (this.cooldown > 0) {
+                this.cooldown = Math.max(0, this.cooldown - 1);
+            }
 
-        // Update weapon cooldown (decrease by 1 each tick)
-        if (this.cooldown > 0) {
-            this.cooldown = Math.max(0, this.cooldown - 1);
-        }
+            // Apply target speed and direction set by drive() command instantly
+            this.speed = this.targetSpeed;
+            this.direction = this.targetDirection;
 
-        // Apply target speed and direction set by drive() command instantly
-        this.speed = this.targetSpeed;
-        this.direction = this.targetDirection;
+            // Update position if the robot is moving
+            if (this.speed !== 0) {
+                // Note: Increased multiplier for more noticeable movement per tick
+                const moveSpeed = this.speed * deltaTime * 60; // Scale speed by time and factor (adjust 60 if needed)
+                const radians = this.direction * Math.PI / 180;
+                const dx = Math.cos(radians) * moveSpeed;
+                const dy = Math.sin(radians) * moveSpeed; // Y direction depends on coordinate system
 
-        // Update position if the robot is moving
-        if (this.speed !== 0) {
-            // Note: Increased multiplier for more noticeable movement per tick
-            const moveSpeed = this.speed * deltaTime * 60; // Scale speed by time and factor (adjust 60 if needed)
-            const radians = this.direction * Math.PI / 180;
-            const dx = Math.cos(radians) * moveSpeed;
-            const dy = Math.sin(radians) * moveSpeed; // Y direction depends on coordinate system
+                let newX = this.x + dx;
+                // Assuming server Y matches canvas (up is negative delta):
+                let newY = this.y - dy;
 
-            let newX = this.x + dx;
-            // Assuming server Y matches canvas (up is negative delta):
-            let newY = this.y - dy;
+                // Clamp position to stay within arena boundaries, considering radius
+                newX = Math.max(this.radius, Math.min(arenaWidth - this.radius, newX));
+                newY = Math.max(this.radius, Math.min(arenaHeight - this.radius, newY));
 
-            // --- START DEBUG LOGGING ---
-            console.log(`[DEBUG ${this.id}] Pre-clamp: newX=${newX.toFixed(2)}, newY=${newY.toFixed(2)}, arenaW=${arenaWidth}, arenaH=${arenaHeight}, radius=${this.radius}`);
-            // --- END DEBUG LOGGING ---
+                // Assign the clamped values
+                this.x = newX;
+                this.y = newY;
+            } // End of if (this.speed !== 0)
+        } // --- END CHANGE: Active-only update logic ---
 
-            // Clamp position to stay within arena boundaries, considering radius
-            newX = Math.max(this.radius, Math.min(arenaWidth - this.radius, newX));
-            newY = Math.max(this.radius, Math.min(arenaHeight - this.radius, newY));
-
-            // Assign the clamped values
-            this.x = newX;
-            this.y = newY;
-
-            // --- START DEBUG LOGGING ---
-            console.log(`[DEBUG ${this.id}] Post-clamp: this.x=${this.x.toFixed(2)}, this.y=${this.y.toFixed(2)}`);
-            // --- END DEBUG LOGGING ---
-
-        } // End of if (this.speed !== 0)
-
-        // Update all missiles fired by this robot
+        // --- Missile updates happen regardless of owner's state ---
         for (let i = this.missiles.length - 1; i >= 0; i--) {
             const missile = this.missiles[i];
             missile.update(deltaTime);
             // Remove missile if it goes out of the arena boundaries
             // Check against 0 and arena dimensions for missile center
             if (missile.x < 0 || missile.x > arenaWidth || missile.y < 0 || missile.y > arenaHeight) {
-                // console.log(`[${this.id}] Missile ${missile.id} went out of bounds.`); // Optional: Keep this log if needed
                 this.missiles.splice(i, 1);
             }
         }
+        // --- End Missile Updates ---
     } // End of update method
 
     // --- API Methods (Called via ServerRobotInterpreter's safe methods) ---
@@ -157,7 +166,9 @@ class ServerRobot {
      * @param {number} speed - Target speed (-5 to 5).
      */
     drive(direction, speed) {
-        if (!this.isAlive) return; // Dead robots don't drive
+        // START CHANGE: Check state
+        if (this.state !== 'active') return; // Dead robots don't drive
+        // END CHANGE
 
         // Normalize direction to be within [0, 360)
         this.targetDirection = ((Number(direction) % 360) + 360) % 360;
@@ -172,7 +183,9 @@ class ServerRobot {
      * @returns {boolean} True if the missile was successfully fired, false otherwise.
      */
     fire(direction, power = 1) {
-        if (!this.isAlive || this.cooldown > 0) {
+        // START CHANGE: Check state
+        if (this.state !== 'active' || this.cooldown > 0) {
+        // END CHANGE
             return false; // Cannot fire if dead or cooling down
         }
 
@@ -202,17 +215,20 @@ class ServerRobot {
 
         // Add the missile to this robot's list (GameInstance will collect these for state/collisions)
         this.missiles.push(missile);
-        // console.log(`[${this.id}] Fired missile towards ${fireDirection.toFixed(1)}`); // Debug log
         return true; // Missile fired successfully
     }
 
     /**
-     * Applies damage to the robot. If damage reaches 100, marks the robot as dead.
+     * Applies damage to the robot. If damage reaches 100, marks the robot as destroyed.
      * @param {number} amount - The amount of damage to apply (non-negative).
-     * @returns {boolean} True if this damage caused the robot to be destroyed, false otherwise.
+     * @param {string} [cause='missile'] - The cause of damage (e.g., 'missile', 'collision', 'selfDestruct').
+     * @returns {object} An object indicating if destruction occurred: { destroyed: boolean, x?: number, y?: number, cause?: string }
      */
-    takeDamage(amount) {
-        if (!this.isAlive) return true; // Already dead, count as destroyed
+    takeDamage(amount, cause = 'missile') { // Added cause parameter
+        // START CHANGE: State check and destruction logic
+        if (this.state !== 'active') {
+            return { destroyed: false }; // Cannot damage a destroyed robot
+        }
 
         // Ensure damage amount is non-negative
         const damageAmount = Math.max(0, Number(amount));
@@ -222,14 +238,21 @@ class ServerRobot {
 
         // Check if the robot was destroyed by this damage
         if (this._damage >= 100) {
-            this.isAlive = false; // Mark as destroyed
+            this._damage = 100; // Ensure it's exactly 100
+            this.state = 'destroyed'; // Mark as destroyed
+            this.destructionTime = Date.now(); // Record time
             this.speed = 0; // Stop all movement
             this.targetSpeed = 0;
-            this.missiles = []; // Destroy any active missiles (optional, depends on game rules)
-            console.log(`[${this.id}] Robot destroyed by ${damageAmount} damage!`);
-            return true; // Was destroyed
+            // Keep missiles? Game rule decision. Let's keep them for now.
+            // this.missiles = []; // Optional: Destroy active missiles
+
+            console.log(`[${this.id}] Robot destroyed by ${damageAmount} damage via ${cause}!`);
+            // Return destruction details
+            return { destroyed: true, x: this.x, y: this.y, cause: cause };
         }
-        return false; // Damaged but survived
+
+        return { destroyed: false }; // Damaged but survived
+        // END CHANGE
     }
 }
 
