@@ -12,6 +12,7 @@ def export_project_files(project_dir, output_file):
         "client/css/main.css",
         "client/js/engine/arena.js",
         "client/js/engine/collision.js",
+        "client/js/engine/audio.js"
         "client/js/engine/game.js",
         "client/js/engine/interpreter.js",
         "client/js/engine/robot.js",

@@ -5,51 +5,52 @@
  * Initializes all necessary components after the DOM is loaded.
  */
 
-// Declare variables in the global scope for potential debugging access,
-// but initialization happens within DOMContentLoaded.
+// Declare variables in the global scope
 let game;
 let controls;
 let network;
-// Note: The Dashboard object is initialized within dashboard.js and
-// typically accessed via the global `window.dashboard`.
+let audioManager; // Added AudioManager variable
 
-// Wait for the HTML document structure to be fully loaded and parsed
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Document loaded, initializing game components...');
 
     try {
-        // 1. Initialize the Game engine object
-        //    (Handles rendering and holds client-side state representation)
-        game = new Game('arena'); // 'arena' is the ID of the canvas element
+        // START CHANGE: Initialize AudioManager first
+        // 1. Initialize the Audio Manager
+        audioManager = new AudioManager();
+        window.audioManager = audioManager; // Make globally accessible if needed by Game.js etc.
+        console.log('AudioManager initialized.');
+        // END CHANGE
 
-        // 2. Initialize the Network handler
-        //    (Manages WebSocket connection and communication with the server)
-        network = new Network(game); // Pass the game instance to the network handler
 
-        // 3. Establish connection to the server
-        network.connect(); // Initiates the Socket.IO connection
+        // 2. Initialize the Game engine object
+        game = new Game('arena');
 
-        // 4. Initialize the Controls handler
-        //    (Manages button interactions and sends user actions via the network)
-        controls = new Controls(game, network); // Pass both game and network instances
+        // 3. Initialize the Network handler
+        network = new Network(game);
 
-        // 5. Perform initial drawing
-        //    Draw the static elements like the grid. The actual game elements (robots)
-        //    will be drawn once the game starts and state is received from the server.
-        if (game && game.arena) {
-            game.arena.drawGrid();
+        // 4. Establish connection to the server
+        network.connect();
+
+        // 5. Initialize the Controls handler
+        controls = new Controls(game, network);
+
+        // 6. Perform initial drawing
+        if (game && game.renderer) { // Use game.renderer now
+            game.renderer.redrawArenaBackground(); // Use redraw instead of just grid
         } else {
-            console.error("Failed to draw initial grid: Game or Arena object not found.");
+            console.error("Failed to draw initial background: Game or Renderer object not found.");
         }
 
-        // 6. Initialization Complete
-        console.log('Game, Network, and Controls initialized successfully.');
+        // 7. Initialization Complete
+        console.log('Game, Network, Controls, and AudioManager initialized successfully.');
         console.log('Waiting for server connection and game start signal...');
 
-        // Note: The Dashboard (window.dashboard) should have been initialized
-        // by its own script (js/ui/dashboard.js) also listening for DOMContentLoaded.
         if (!window.dashboard) {
-            console.warn('Dashboard object (window.dashboard) not found. Stats panel might not update.');
+            console.warn('Dashboard object (window.dashboard) not found.');
+        }
+         if (!window.audioManager) { // Should exist now, but check
+            console.warn('AudioManager object (window.audioManager) not found.');
         }
 
     } catch (error) {
@@ -57,6 +58,3 @@ document.addEventListener('DOMContentLoaded', () => {
         alert("Failed to initialize the game client. Check the console for details.");
     }
 });
-
-// No other code should be outside the DOMContentLoaded listener
-// unless it's helper functions or class definitions intended for global scope (which is rare).

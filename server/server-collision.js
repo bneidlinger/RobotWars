@@ -3,90 +3,82 @@
 /**
  * Server-side collision detection system for Robot Wars.
  * Handles interactions between robots, missiles, and arena boundaries.
- * Modifies the game state directly (e.g., applies damage).
+ * Modifies the game state directly (e.g., applies damage) and
+ * notifies the GameInstance about hit events for sound triggers. // <-- Updated description
  */
 class ServerCollisionSystem {
     constructor(gameInstance) {
         this.game = gameInstance; // Reference to the GameInstance
-        // START CHANGE
-        this.arenaWidth = 900; // TODO: Get these from GameInstance or config
+        this.arenaWidth = 900; // TODO: Get from config/GameInstance
         this.arenaHeight = 900;
-        // END CHANGE
     }
 
     /**
      * Checks all relevant collisions for the current game tick.
      */
     checkAllCollisions() {
-        // Order matters: Check missile hits before robot-robot overlaps maybe?
         this.checkMissileRobotCollisions();
         this.checkRobotRobotCollisions();
-         // Missile boundary checks are handled within robot.update now, but could be moved here.
-         // this.checkMissileBoundaryCollisions();
     }
 
     /**
      * Checks for collisions between missiles and robots.
-     * Applies damage and removes missiles upon collision.
+     * Applies damage, removes missiles, and generates hit/explosion events.
      */
     checkMissileRobotCollisions() {
-        const robots = this.game.robots; // Array of ServerRobot
-        // No, we need the central list from game instance
-        // const allMissiles = this.game.allMissiles; // Array of ServerMissile
+        const robots = this.game.robots;
 
-        // Iterate through each robot as a potential target
         robots.forEach(targetRobot => {
-            // Skip already dead robots
-            if (!targetRobot.isAlive) return;
+            // Skip robots that are not active (already destroyed)
+            if (targetRobot.state !== 'active') return; // Use state check
 
-            // Iterate through all *other* robots to check *their* missiles
             robots.forEach(firingRobot => {
-                 // Don't check a robot's missiles against itself
-                 if (targetRobot.id === firingRobot.id) return;
+                if (targetRobot.id === firingRobot.id) return;
 
-                // Check missiles fired by the 'firingRobot'
                 for (let i = firingRobot.missiles.length - 1; i >= 0; i--) {
                     const missile = firingRobot.missiles[i];
 
-                    // Simple circle collision check
                     const dx = targetRobot.x - missile.x;
                     const dy = targetRobot.y - missile.y;
-                    const distanceSquared = dx * dx + dy * dy; // Use squared distance to avoid sqrt
+                    const distanceSquared = dx * dx + dy * dy;
                     const radiiSum = targetRobot.radius + missile.radius;
                     const radiiSumSquared = radiiSum * radiiSum;
 
                     if (distanceSquared < radiiSumSquared) {
                         // --- COLLISION DETECTED ---
+                        const damageAmount = missile.power * 10;
 
-                        // Apply damage to the target robot
-                        const damageAmount = missile.power * 10; // Example damage calculation
-                        const wasDestroyed = targetRobot.takeDamage(damageAmount);
-                        console.log(`[Collision] Missile from ${firingRobot.id} hit ${targetRobot.id}. Damage: ${damageAmount}. Destroyed: ${wasDestroyed}`);
+                        // START CHANGE: Capture result from takeDamage
+                        const result = targetRobot.takeDamage(damageAmount, 'missile'); // Pass cause
+                        // END CHANGE
 
-                        // Trigger explosion effect on the GameInstance
-                        // It will add this to the list broadcast in the next gameStateUpdate
+                        console.log(`[Collision] Missile from ${firingRobot.id} hit ${targetRobot.id}. Damage: ${damageAmount}. Destroyed: ${result.destroyed}. Hit: ${result.hit}`);
+
+                        // START CHANGE: Generate hit event if damage was applied
+                        if (result.hit && typeof this.game.addHitEvent === 'function') {
+                            // Use the location from the result object (where the robot was when hit)
+                            this.game.addHitEvent(result.x, result.y, targetRobot.id);
+                        }
+                        // END CHANGE
+
+                        // Trigger visual explosion effect via GameInstance
                         if (typeof this.game.createExplosion === 'function') {
                             this.game.createExplosion(missile.x, missile.y, missile.power);
-                        } else {
-                             console.warn(`[Collision] GameInstance missing createExplosion method.`);
                         }
 
-                        // Remove the missile from the firing robot's list
+                        // Remove the missile
                         firingRobot.missiles.splice(i, 1);
 
-                        // If the target was destroyed, maybe credit the firing robot? (Future feature)
-                        // if (wasDestroyed) { ... }
-
-                        // Since the missile is gone, continue to the next missile
+                        // Game over check happens later in the game loop after all collisions/updates
                     }
-                } // End loop through firingRobot's missiles
-             }); // End loop through potential firing robots
-        }); // End loop through potential target robots
+                }
+            });
+        });
     }
 
     /**
      * Checks for collisions between robots to prevent overlap.
-     * Applies minor damage and pushes robots apart.
+     * Applies minor damage, pushes robots apart, and generates hit events.
      */
      checkRobotRobotCollisions() {
         const robots = this.game.robots;
@@ -94,11 +86,13 @@ class ServerCollisionSystem {
 
         for (let i = 0; i < numRobots; i++) {
             const robotA = robots[i];
-            if (!robotA.isAlive) continue; // Skip dead robots
+            // Skip non-active robots
+            if (robotA.state !== 'active') continue;
 
             for (let j = i + 1; j < numRobots; j++) {
                 const robotB = robots[j];
-                if (!robotB.isAlive) continue; // Skip dead robots
+                // Skip non-active robots
+                if (robotB.state !== 'active') continue;
 
                 const dx = robotB.x - robotA.x;
                 const dy = robotB.y - robotA.y;
@@ -106,66 +100,44 @@ class ServerCollisionSystem {
                 const minDistance = robotA.radius + robotB.radius;
                 const minDistanceSquared = minDistance * minDistance;
 
-                if (distanceSquared < minDistanceSquared && distanceSquared > 0.001) { // Avoid division by zero if perfectly overlapped
+                if (distanceSquared < minDistanceSquared && distanceSquared > 0.001) {
                     // --- OVERLAP DETECTED ---
-                     // console.log(`[Collision] Robot ${robotA.id} and ${robotB.id} collided.`); // Original log (optional)
-
                     const distance = Math.sqrt(distanceSquared);
                     const overlap = minDistance - distance;
-
-                    // Calculate separation vector (normalized dx, dy)
                     const separationX = dx / distance;
                     const separationY = dy / distance;
-
-                    // --- START COLLISION DEBUG LOGGING ---
-                    // console.log(`[DEBUG COLL ${robotA.id}/${robotB.id}] Pre-Push: A=(${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)}), B=(${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
-                    // --- END COLLISION DEBUG LOGGING ---
-
-                    // Move robots apart by half the overlap distance each
                     const moveDist = overlap / 2;
+
+                    // Move robots apart
                     robotA.x -= separationX * moveDist;
                     robotA.y -= separationY * moveDist;
                     robotB.x += separationX * moveDist;
                     robotB.y += separationY * moveDist;
 
-                    // --- START COLLISION DEBUG LOGGING ---
-                    // console.log(`[DEBUG COLL ${robotA.id}/${robotB.id}] Post-Push: A=(${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)}), B=(${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
-                    // --- END COLLISION DEBUG LOGGING ---
+                    // Apply small collision damage & Generate Hit Events
+                    // START CHANGE: Generate hit events for robot-robot collision
+                    const collisionDamage = 0.5;
+                    const resultA = robotA.takeDamage(collisionDamage, 'collision');
+                    const resultB = robotB.takeDamage(collisionDamage, 'collision');
 
+                    if (resultA.hit && typeof this.game.addHitEvent === 'function') {
+                         this.game.addHitEvent(resultA.x, resultA.y, robotA.id);
+                    }
+                    if (resultB.hit && typeof this.game.addHitEvent === 'function') {
+                         this.game.addHitEvent(resultB.x, resultB.y, robotB.id);
+                    }
+                    // END CHANGE
 
-                    // Apply small collision damage
-                    robotA.takeDamage(0.5); // Very minor damage for bumps
-                    robotB.takeDamage(0.5);
-
-                    // Optional: Apply a small impulse/change in velocity if physics are more complex later
-
-                    // Re-check boundaries after push-apart (simple clamp)
-                    // Store pre-clamp values for comparison logging
-                    const preClampAx = robotA.x; const preClampAy = robotA.y;
-                    const preClampBx = robotB.x; const preClampBy = robotB.y;
-
+                    // Clamp positions after push
                     robotA.x = Math.max(robotA.radius, Math.min(this.arenaWidth - robotA.radius, robotA.x));
                     robotA.y = Math.max(robotA.radius, Math.min(this.arenaHeight - robotA.radius, robotA.y));
                     robotB.x = Math.max(robotB.radius, Math.min(this.arenaWidth - robotB.radius, robotB.x));
                     robotB.y = Math.max(robotB.radius, Math.min(this.arenaHeight - robotB.radius, robotB.y));
 
-                    // --- START COLLISION DEBUG LOGGING ---
-                    // Log ONLY if clamping actually changed the value
-                    // if (robotA.x !== preClampAx || robotA.y !== preClampAy) {
-                    //      console.log(`[DEBUG COLL ${robotA.id}] Clamped A after push from (${preClampAx.toFixed(2)}, ${preClampAy.toFixed(2)}) to (${robotA.x.toFixed(2)}, ${robotA.y.toFixed(2)})`);
-                    // }
-                    // if (robotB.x !== preClampBx || robotB.y !== preClampBy) {
-                    //      console.log(`[DEBUG COLL ${robotB.id}] Clamped B after push from (${preClampBx.toFixed(2)}, ${preClampBy.toFixed(2)}) to (${robotB.x.toFixed(2)}, ${robotB.y.toFixed(2)})`);
-                    // }
-                    // --- END COLLISION DEBUG LOGGING ---
-
-                } // End if (overlap detected)
-            } // End inner loop (robotB)
-        } // End outer loop (robotA)
-    } // End checkRobotRobotCollisions method
-
-    // Optional: Move missile boundary check here if not handled in robot.update
-    // checkMissileBoundaryCollisions() { ... }
+                } // End if overlap
+            } // End inner loop
+        } // End outer loop
+    } // End checkRobotRobotCollisions
 }
 
 module.exports = ServerCollisionSystem;

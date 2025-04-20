@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROBOT WARS - The Battle of Code</title>
+    <style>
+        :root {
+            --dark-metal: #1a1a1a;
+            --gun-metal: #2d3142;
+            --steel-blue: #4f5d75;
+            --battle-red: #b80c09;
+            --american-blue: #0a2463;
+            --industrial-yellow: #f9a03f;
+            --neon-green: #39ff14;
+            --warning-orange: #FF5722;
+            --lakeman-cyan: #00e5ff;
+            --security-purple: #7b1fa2;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background-color: var(--dark-metal);
+            color: #f0f0f0;
+            background-image:
+                linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%),
+                linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%);
+            background-size: 10px 10px;
+            background-position: 0 0, 5px 5px;
+            line-height: 1.6;
+        }
+
+        .retro-terminal {
+            position: relative;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #000;
+            border: 3px solid var(--lakeman-cyan);
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.7),
+                        0 0 30px rgba(0, 229, 255, 0.5),
+                        0 0 45px rgba(0, 229, 255, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .retro-terminal::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(to bottom,
+                        rgba(0, 229, 255, 0.1) 0%,
+                        transparent 100%);
+        }
+
+        .terminal-header {
+            border-bottom: 2px solid var(--lakeman-cyan);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .blink {
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        h1 {
+            font-size: 42px;
+            color: var(--lakeman-cyan);
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px var(--lakeman-cyan);
+        }
+
+        h2 {
+            color: var(--battle-red);
+            margin: 25px 0 10px;
+            text-shadow: 0 0 3px var(--battle-red);
+        }
+
+        .message {
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 3px solid var(--steel-blue);
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .secure {
+            border-left: 3px solid var(--lakeman-cyan);
+            background-color: rgba(0, 229, 255, 0.05);
+        }
+
+        .signature {
+            margin-top: 30px;
+            text-align: right;
+            font-style: italic;
+            color: var(--lakeman-cyan);
+        }
+
+        .audio-component {
+            background-color: rgba(0, 229, 255, 0.05);
+            border: 1px solid var(--lakeman-cyan);
+            border-radius: 5px;
+            padding: 20px;
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .audio-component h3 {
+            color: var(--lakeman-cyan);
+            margin-bottom: 15px;
+            text-shadow: 0 0 3px var(--lakeman-cyan);
+        }
+
+        .audio-component .sound-visualizer {
+            height: 60px;
+            background: #000;
+            margin: 15px 0;
+            position: relative;
+            overflow: hidden;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+        }
+
+        .sound-bar {
+            width: 4px;
+            height: 20px;
+            background-color: var(--lakeman-cyan);
+            margin: 0 2px;
+            border-radius: 2px;
+            animation-name: soundVisualize;
+            animation-iteration-count: infinite;
+            animation-timing-function: ease-in-out;
+        }
+
+        @keyframes soundVisualize {
+            0%, 100% { height: 20px; }
+            50% { height: 40px; }
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 30px 0;
+        }
+
+        @media (max-width: 700px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-card {
+            background-color: var(--gun-metal);
+            border: 1px solid var(--steel-blue);
+            border-radius: 5px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card.highlight {
+            border: 1px solid var(--lakeman-cyan);
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+        }
+
+        .feature-card h3 {
+            color: var(--lakeman-cyan);
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .feature-card p {
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background-color: var(--battle-red);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 25px;
+            font-weight: bold;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            background-color: var(--american-blue);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn-lakeman {
+            background-color: var(--lakeman-cyan);
+            color: #000;
+        }
+
+        .btn-lakeman:hover {
+            background-color: #00b8d4;
+            color: #000;
+        }
+
+        .btn-play {
+            background-color: var(--american-blue);
+        }
+
+        .btn-play:hover {
+            background-color: #083580;
+        }
+
+        .action-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        code {
+            display: block;
+            background-color: rgba(0,0,0,0.3);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+            border-left: 3px solid var(--lakeman-cyan);
+        }
+
+        .features {
+            margin: 30px 0;
+        }
+
+        .features ul {
+            list-style-type: none;
+        }
+
+        .features li {
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+
+        .features li::before {
+            content: "→ ";
+            color: var(--lakeman-cyan);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid var(--gun-metal);
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: rgba(255,255,255,0.1);
+            animation: scan 5s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        .new-feature {
+            color: var(--lakeman-cyan);
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            margin-left: 10px;
+            padding: 2px 8px;
+            background-color: rgba(0, 229, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        .secure-feature {
+            color: #fff;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            margin-left: 10px;
+            padding: 2px 8px;
+            background-color: rgba(123, 31, 162, 0.6);
+            border-radius: 10px;
+        }
+
+        .terminal-animation {
+            position: relative;
+            overflow: hidden;
+            background-color: #000;
+            color: var(--lakeman-cyan);
+            border: 1px solid #00b8d4;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-shadow: 0 0 5px rgba(0, 229, 255, 0.5);
+            font-family: 'Courier New', monospace;
+        }
+
+        .terminal-animation::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(0, 229, 255, 0.2);
+            animation: scan 3s linear infinite;
+        }
+
+        .visual-feedback {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .feedback-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .feedback-item {
+            flex: 1;
+            background-color: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid var(--steel-blue);
+            text-align: center;
+        }
+
+        .feedback-item.highlight {
+            border-color: var(--lakeman-cyan);
+        }
+
+        .feedback-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .audio-wave {
+            display: flex;
+            align-items: center;
+            height: 50px;
+            margin: 15px 0;
+        }
+
+        .wave-bar {
+            background-color: var(--lakeman-cyan);
+            width: 4px;
+            margin: 0 3px;
+            border-radius: 2px;
+            animation: waveAnim infinite ease-in-out;
+        }
+
+        @keyframes waveAnim {
+            0%, 100% { height: 10px; }
+            50% { height: 40px; }
+        }
+
+        .explosion-animation {
+            width: 100%;
+            height: 150px;
+            background-color: #000;
+            border-radius: 5px;
+            margin: 15px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .explosion-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #ff8d00;
+            animation: explode 3s ease-out infinite;
+            opacity: 0;
+        }
+
+        .explosion-shadow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.7);
+            animation: scorch 3s ease-out infinite;
+        }
+
+        @keyframes explode {
+            0% { width: 10px; height: 10px; opacity: 1; background-color: #fff; }
+            10% { width: 80px; height: 80px; opacity: 1; background-color: #ff8d00; }
+            40% { width: 120px; height: 120px; opacity: 0.6; background-color: #ff5722; }
+            100% { width: 140px; height: 140px; opacity: 0; background-color: #333; }
+        }
+
+        @keyframes scorch {
+            0% { width: 0; height: 0; opacity: 0; }
+            50% { width: 40px; height: 40px; opacity: 0.5; }
+            100% { width: 50px; height: 50px; opacity: 0.7; }
+        }
+
+        .screenshots {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 25px 0;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+
+        .screenshot {
+            border: 2px solid var(--lakeman-cyan);
+            border-radius: 5px;
+            overflow: hidden;
+            flex-shrink: 0;
+            width: 250px;
+            height: 150px;
+            background-color: var(--gun-metal);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: rgba(255,255,255,0.7);
+            position: relative;
+        }
+
+        .screenshot::before {
+            content: "SCREENSHOT";
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 10px;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .retro-terminal {
+                margin: 20px;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+            
+            .feedback-row {
+                flex-direction: column;
+            }
+            
+            .sound-visualizer {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+        }
+
+        /* Create 15 sound bars with different heights and animation delays */
+        .sound-bar:nth-child(1) { animation-duration: 0.9s; }
+        .sound-bar:nth-child(2) { animation-duration: 1.3s; }
+        .sound-bar:nth-child(3) { animation-duration: 0.8s; }
+        .sound-bar:nth-child(4) { animation-duration: 1.5s; }
+        .sound-bar:nth-child(5) { animation-duration: 1.1s; }
+        .sound-bar:nth-child(6) { animation-duration: 0.7s; }
+        .sound-bar:nth-child(7) { animation-duration: 1.2s; }
+        .sound-bar:nth-child(8) { animation-duration: 0.6s; }
+        .sound-bar:nth-child(9) { animation-duration: 1.4s; }
+        .sound-bar:nth-child(10) { animation-duration: 1.0s; }
+        .sound-bar:nth-child(11) { animation-duration: 0.8s; }
+        .sound-bar:nth-child(12) { animation-duration: 1.3s; }
+        .sound-bar:nth-child(13) { animation-duration: 0.7s; }
+        .sound-bar:nth-child(14) { animation-duration: 1.2s; }
+        .sound-bar:nth-child(15) { animation-duration: 0.9s; }
+
+        /* Create wave bars with different animation durations and delays */
+        .wave-bar:nth-child(1) { animation-duration: 0.9s; height: 20px; }
+        .wave-bar:nth-child(2) { animation-duration: 1.1s; height: 15px; animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { animation-duration: 0.7s; height: 25px; animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { animation-duration: 1.3s; height: 10px; animation-delay: 0.05s; }
+        .wave-bar:nth-child(5) { animation-duration: 1.0s; height: 30px; animation-delay: 0.15s; }
+        .wave-bar:nth-child(6) { animation-duration: 0.8s; height: 22px; animation-delay: 0.25s; }
+        .wave-bar:nth-child(7) { animation-duration: 1.2s; height: 18px; animation-delay: 0.1s; }
+        .wave-bar:nth-child(8) { animation-duration: 0.6s; height: 35px; animation-delay: 0.2s; }
+        .wave-bar:nth-child(9) { animation-duration: 1.1s; height: 27px; animation-delay: 0.15s; }
+        .wave-bar:nth-child(10) { animation-duration: 0.9s; height: 12px; animation-delay: 0.05s; }
+        .wave-bar:nth-child(11) { animation-duration: 1.0s; height: 20px; animation-delay: 0.1s; }
+        .wave-bar:nth-child(12) { animation-duration: 0.7s; height: 33px; animation-delay: 0.2s; }
+        .wave-bar:nth-child(13) { animation-duration: 1.2s; height: 15px; animation-delay: 0.15s; }
+        .wave-bar:nth-child(14) { animation-duration: 0.8s; height: 25px; animation-delay: 0.05s; }
+        .wave-bar:nth-child(15) { animation-duration: 1.1s; height: 18px; animation-delay: 0.1s; }
+        .wave-bar:nth-child(16) { animation-duration: 0.9s; height: 30px; animation-delay: 0.2s; }
+        .wave-bar:nth-child(17) { animation-duration: 0.6s; height: 22px; animation-delay: 0.15s; }
+        .wave-bar:nth-child(18) { animation-duration: 1.3s; height: 17px; animation-delay: 0.05s; }
+        .wave-bar:nth-child(19) { animation-duration: 1.0s; height: 28px; animation-delay: 0.1s; }
+        .wave-bar:nth-child(20) { animation-duration: 0.8s; height: 15px; animation-delay: 0.2s; }
+
+    </style>
+</head>
+<body>
+    <div class="retro-terminal">
+        <div class="scan-line"></div>
+        <div class="terminal-header">
+            <h1>ROBOT WARS <span class="blink">_</span></h1>
+            <p>TACTICAL COMBAT CODE SYSTEM v4.0</p>
+        </div>
+
+        <div class="message secure">
+            <h2>[ ENCRYPTED TRANSMISSION - EYES ONLY ]</h2>
+            <p>Cool Rick,</p>
+            <p>I've managed to implement the enhancements you requested. You were right about the unwanted attention. I've tracked their digital footprint - we're dealing with a government agency, possibly DARPA or a black-ops division.</p>
+            <p>Your self-destruct protocol was brilliant, but I've gone further. The v4.0 update includes immersive audio-visual feedback for combat events, with delayed game-over sequences to enhance visual impact. Our operatives report the psychological effect is... significant.</p>
+            <p>Key improvements:</p>
+            <p>1. Audio Engine - Sound effects for firing, impact, and explosions add critical sensory feedback during combat.</p>
+            <p>2. Enhanced Visual Effects - Explosions now create persistent scorch marks on the arena floor, providing combat history visualization.</p>
+            <p>3. Delayed Destruction Sequence - Robots now exhibit a dramatic finale with timed explosions and visual feedback.</p>
+            <p>More good news - the Milwaukee incident went cold. They're now focused on a decoy operation I set up in Flagstaff. We should have breathing room for the next phase.</p>
+            <p>Updates deployed to <a href="https://robotwars-c198.onrender.com" style="color: var(--lakeman-cyan);">https://robotwars-c198.onrender.com</a>. Source at <a href="https://github.com/bneidlinger/RobotWars" style="color: var(--lakeman-cyan);">https://github.com/bneidlinger/RobotWars</a>.</p>
+            <p>Using secure channel gamma for future communications. Usual credentials, rotating cipher.</p>
+            <p>I've left something in the basement of the old radio station. You'll know what it means.</p>
+        </div>
+
+        <h2>VERSION 4.0 IMMERSIVE COMBAT EXPERIENCE</h2>
+        <p>The fourth-generation Robot Wars simulation platform introduces comprehensive audio-visual feedback to enhance combat immersion and realism.</p>
+
+        <div class="audio-component">
+            <h3>AUDIO FEEDBACK ENGINE <span class="new-feature">New</span></h3>
+            <p>Complete sound system integration provides real-time auditory feedback during combat operations:</p>
+            
+            <div class="sound-visualizer">
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+            </div>
+            
+            <ul style="list-style-type: none; margin: 15px 0;">
+                <li>→ Weapon firing sound effects with directional awareness</li>
+                <li>→ Impact detection with appropriate audio response</li>
+                <li>→ Catastrophic explosion sound during termination sequence</li>
+                <li>→ Integrated AudioManager with preloaded sound assets</li>
+                <li>→ Server-side event triggers for synchronized audio across all clients</li>
+            </ul>
+            
+            <div class="terminal-animation">
+                <div>> Initializing AudioManager...</div>
+                <div>> Loading sound assets: fire.mp3, hit.mp3, explode.mp3</div>
+                <div>> Adding event listeners for combat actions</div>
+                <div>> Audio Engine calibrated and ready</div>
+                <div>> Test firing sequence initiated...</div>
+                <div>> Sound playback confirmed</div>
+            </div>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card highlight">
+                <h3>ENHANCED VISUAL EFFECTS <span class="new-feature">New</span></h3>
+                <p>Advanced visual feedback system with persistent battle markers:</p>
+                <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ Animated explosion effects with dynamic scaling</li>
+                    <li>→ Persistent scorch marks record battle history</li>
+                    <li>→ Two-layer canvas rendering system</li>
+                    <li>→ Time-based animation system with easing functions</li>
+                    <li>→ Event-driven effects tied to combat actions</li>
+                </ul>
+                
+                <div class="explosion-animation">
+                    <div class="explosion-circle"></div>
+                    <div class="explosion-shadow"></div>
+                </div>
+            </div>
+
+            <div class="feature-card highlight">
+                <h3>DELAYED DESTRUCTION SEQUENCE <span class="secure-feature">Strategic</span></h3>
+                <p>Enhanced robot destruction protocol with dramatic timing:</p>
+                <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ Dramatic pause after robot destruction</li>
+                    <li>→ Server-side state tracking with timestamps</li>
+                    <li>→ Game-over sequence triggered after visual effects</li>
+                    <li>→ Robot state machine ('active'|'destroyed')</li>
+                    <li>→ Customizable delay configuration (currently 1500ms)</li>
+                </ul>
+                
+                <div class="terminal-animation">
+                    <div>> Robot #4d8a21 taking critical damage</div>
+                    <div>> State changing: 'active' → 'destroyed'</div>
+                    <div>> Recording destruction timestamp: 1619482307854</div>
+                    <div>> Initiating explosion sequence</div>
+                    <div>> Delaying game-over notification: 1500ms</div>
+                    <div>> Combat area marked with destruction signature</div>
+                </div>
+            </div>
+        </div>
+
+        <h2>AUDIO-VISUAL FEEDBACK INTEGRATION</h2>
+        <p>The v4.0 update features comprehensive integration between server and client components:</p>
+        
+        <div class="visual-feedback">
+            <div class="feedback-row">
+                <div class="feedback-item highlight">
+                    <div class="feedback-icon">🔊</div>
+                    <h4>Fire Event</h4>
+                    <p>Server generates event when robot fires</p>
+                    <div class="audio-wave">
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                    </div>
+                </div>
+                <div class="feedback-item highlight">
+                    <div class="feedback-icon">💥</div>
+                    <h4>Hit Detection</h4>
+                    <p>Collision system triggers impact sound</p>
+                    <div class="audio-wave">
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                    </div>
+                </div>
+                <div class="feedback-item highlight">
+                    <div class="feedback-icon">💀</div>
+                    <h4>Destruction</h4>
+                    <p>Terminal damage causes explosion effect</p>
+                    <div class="audio-wave">
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>TECHNICAL IMPLEMENTATION</h2>
+        <p>The audio-visual enhancement system utilizes an advanced event-driven architecture:</p>
+        <code>// Server-side robot firing with sound event generation
+safeFire(robotId, direction, power) {
+    if (robotId !== this.currentRobotId) return false;
+    const robot = this.getCurrentRobot();
+
+    if (robot?.state === 'active' && this.currentGameInstance && typeof direction === 'number') {
+        // Delegate the actual firing logic to the robot
+        const fireResult = robot.fire(direction, power);
+
+        // If fire was successful, trigger event on GameInstance
+        if (fireResult.success && fireResult.eventData && typeof this.currentGameInstance.addFireEvent === 'function') {
+            this.currentGameInstance.addFireEvent(fireResult.eventData);
+        }
+
+        return fireResult.success;
+    }
+    return false;
+}
+
+// Client-side explosion effect with canvas rendering
+drawEffects(activeExplosions) {
+    const ctx = this.ctx;
+    if (!ctx || !activeExplosions || activeExplosions.length === 0) return;
+
+    const now = Date.now();
+
+    // Iterate backwards for safe removal
+    for (let i = activeExplosions.length - 1; i >= 0; i--) {
+        const explosion = activeExplosions[i];
+        const elapsedTime = now - explosion.startTime;
+        const progress = Math.min(elapsedTime / explosion.duration, 1);
+
+        // Remove finished explosions
+        if (progress >= 1) {
+            activeExplosions.splice(i, 1);
+            continue;
+        }
+
+        // Calculate current size and color with easing
+        const easeOutProgress = progress * (2 - progress);
+        const currentRadius = explosion.maxRadius * easeOutProgress;
+
+        // Cycle through colors based on progress
+        const colorIndex = Math.floor(progress * explosion.colorSequence.length);
+        const color = explosion.colorSequence[colorIndex] || explosion.colorSequence[explosion.colorSequence.length - 1];
+
+        // Draw the explosion circle
+        ctx.save();
+        ctx.globalAlpha = 1.0 - progress;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(
+            this.translateX(explosion.x),
+            this.translateY(explosion.y),
+            currentRadius,
+            0, Math.PI * 2
+        );
+        ctx.fill();
+        ctx.restore();
+    }
+}</code>
+
+        <h2>IMMERSIVE SENSORY FEEDBACK</h2>
+        <p>The Visual Effects System and Audio Engine combine to create a comprehensive combat experience:</p>
+
+        <div class="screenshots">
+            <div class="screenshot" style="background-image: url('#'); background-size: cover;">FIRING EFFECT</div>
+            <div class="screenshot" style="background-image: url('#'); background-size: cover;">IMPACT MARKS</div>
+            <div class="screenshot" style="background-image: url('#'); background-size: cover;">EXPLOSION</div>
+        </div>
+
+        <div class="features">
+            <h2>SYSTEM CAPABILITIES</h2>
+            <ul>
+                <li>Real-time audio feedback for combat actions</li>
+                <li>Animated explosion effects with visual persistence</li>
+                <li>Delayed game-over sequence with dramatic timing</li>
+                <li>Two-layer canvas rendering for improved performance</li>
+                <li>Server-side event generation for synchronized effects</li>
+                <li>Asset preloading for seamless audio playback</li>
+                <li>Time-based animation system with easing functions</li>
+                <li>Cross-browser compatible HTML5 Audio implementation</li>
+            </ul>
+        </div>
+
+        <div class="action-container">
+            <a href="https://robotwars-c198.onrender.com" class="btn btn-lakeman">EXPERIENCE IMMERSIVE COMBAT</a>
+            <a href="https://github.com/bneidlinger/RobotWars" class="btn btn-play" style="margin-left: 15px;">VIEW SOURCE CODE</a>
+        </div>
+
+        <div class="signature">
+            <p>- Lakeman</p>
+            <p>"The difference between chaos and victory is sensory feedback."</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>ROBOT WARS Combat System | <a href="https://github.com/bneidlinger/RobotWars" style="color: #888;">GitHub Repository</a> | &copy; 2025</p>
+    </footer>
+</body>
+</html>
