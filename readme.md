@@ -4,7 +4,7 @@ A modern, web-based reincarnation of the classic CROBOTS game where you battle w
 
 **[🔥 PLAY NOW ON GITHUB PAGES 🔥](https://bneidlinger.github.io/RobotWars)**
 
-![Robot Wars Game Screenshot](assets/images/screenshot.jpg)
+![Robot Wars Game Screenshot](client/assets/images/screenshot.jpg)
 
 ## Overview
 
