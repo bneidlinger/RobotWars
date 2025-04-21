@@ -10,6 +10,14 @@ A modern, web-based reincarnation of the classic CROBOTS game where you battle w
 
 Robot Wars is a programming game where players write JavaScript code to control robot avatars in a virtual arena. Your code controls your robot's movement, scanning, and weapons as it battles other player-controlled robots in real-time.
 
+## Robot Wars Programming Guide
+
+Learn how to program your combat robot with our comprehensive guide! From basic movement to advanced tactical strategies, this resource will help you dominate in the arena.
+
+[![Access Programming Guide](https://img.shields.io/badge/Access%20Programming%20Guide-Click%20Here-brightgreen)](https://bneidlinger.github.io/RobotWars/BotProgrammingGuide.html)
+[![Play on Render](https://img.shields.io/badge/Play%20on%20Render-Robot%20Wars-blue)](https://robotwars-c198.onrender.com)
+[![View on GitHub](https://img.shields.io/badge/View%20on%20GitHub-Repository-lightgrey)](https://github.com/bneidlinger/RobotWars)
+
 ## Features
 
 - 🎮 In-browser JavaScript coding environment with code save/load functionality

@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROBOT WARS - Programming Guide</title>
+    <style>
+        :root {
+            --dark-metal: #1a1a1a;
+            --gun-metal: #2d3142;
+            --steel-blue: #4f5d75;
+            --battle-red: #b80c09;
+            --american-blue: #0a2463;
+            --industrial-yellow: #f9a03f;
+            --neon-green: #39ff14;
+            --code-green: #00FF41;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background-color: var(--dark-metal);
+            color: #f0f0f0;
+            background-image:
+                linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%),
+                linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%);
+            background-size: 10px 10px;
+            background-position: 0 0, 5px 5px;
+            line-height: 1.6;
+        }
+
+        .retro-terminal {
+            position: relative;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #000;
+            border: 3px solid var(--industrial-yellow);
+            box-shadow: 0 0 15px rgba(249, 160, 63, 0.7),
+                        0 0 30px rgba(249, 160, 63, 0.5),
+                        0 0 45px rgba(249, 160, 63, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .retro-terminal::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(to bottom,
+                        rgba(249, 160, 63, 0.1) 0%,
+                        transparent 100%);
+        }
+
+        .terminal-header {
+            border-bottom: 2px solid var(--industrial-yellow);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .blink {
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        h1 {
+            font-size: 42px;
+            color: var(--industrial-yellow);
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px var(--industrial-yellow);
+        }
+
+        h2 {
+            color: var(--battle-red);
+            margin: 25px 0 10px;
+            text-shadow: 0 0 3px var(--battle-red);
+        }
+
+        h3 {
+            color: var(--industrial-yellow);
+            margin: 20px 0 10px;
+        }
+
+        .message {
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 3px solid var(--steel-blue);
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .note {
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 3px solid var(--neon-green);
+            background-color: rgba(57, 255, 20, 0.1);
+        }
+
+        .warning {
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 3px solid var(--battle-red);
+            background-color: rgba(184, 12, 9, 0.1);
+        }
+
+        .signature {
+            margin-top: 30px;
+            text-align: right;
+            font-style: italic;
+            color: var(--industrial-yellow);
+        }
+
+        code {
+            display: block;
+            background-color: rgba(0,0,0,0.3);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            color: var(--code-green);
+            border-left: 3px solid var(--industrial-yellow);
+            overflow-x: auto;
+        }
+
+        .code-comment {
+            color: #888;
+        }
+
+        .inline-code {
+            font-family: 'Courier New', monospace;
+            color: var(--code-green);
+            background-color: rgba(0,0,0,0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .features {
+            margin: 30px 0;
+        }
+
+        .features ul, .regular-list ul {
+            list-style-type: none;
+            margin-left: 20px;
+        }
+
+        .features li, .regular-list li {
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+
+        .features li::before, .regular-list li::before {
+            content: "→ ";
+            color: var(--industrial-yellow);
+        }
+
+        .console-example {
+            background-color: #000;
+            color: #00FF41;
+            border: 1px solid #004d00;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 5px;
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+            font-family: 'Courier New', monospace;
+        }
+
+        .skill-level {
+            display: inline-block;
+            color: #fff;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            margin-left: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .beginner {
+            background-color: #4CAF50;
+        }
+
+        .intermediate {
+            background-color: #2196F3;
+        }
+
+        .advanced {
+            background-color: #9C27B0;
+        }
+
+        .strategy-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 700px) {
+            .strategy-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .strategy-card {
+            background-color: var(--gun-metal);
+            border: 1px solid var(--steel-blue);
+            border-radius: 5px;
+            padding: 15px;
+        }
+
+        .strategy-card h4 {
+            color: var(--industrial-yellow);
+            margin-bottom: 10px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid var(--gun-metal);
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: rgba(255,255,255,0.1);
+            animation: scan 5s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: rgba(0,0,0,0.2);
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid var(--steel-blue);
+        }
+
+        th {
+            background-color: var(--gun-metal);
+            color: var(--industrial-yellow);
+        }
+
+        tr:nth-child(even) {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .progression {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .progression::before {
+            content: "";
+            position: absolute;
+            top: 25px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: var(--steel-blue);
+            z-index: 1;
+        }
+
+        .progression-step {
+            background-color: var(--gun-metal);
+            border: 2px solid var(--steel-blue);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: var(--industrial-yellow);
+            position: relative;
+            z-index: 2;
+        }
+
+        .progression-label {
+            position: absolute;
+            top: 60px;
+            text-align: center;
+            width: 100px;
+            margin-left: -25px;
+        }
+
+        @media (max-width: 768px) {
+            .retro-terminal {
+                margin: 20px;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+            
+            .progression {
+                flex-direction: column;
+                align-items: flex-start;
+                height: 260px;
+                margin-left: 25px;
+            }
+            
+            .progression::before {
+                top: 0;
+                bottom: 0;
+                left: 25px;
+                right: auto;
+                width: 3px;
+                height: auto;
+            }
+            
+            .progression-step {
+                margin: 15px 0;
+            }
+            
+            .progression-label {
+                top: 10px;
+                left: 60px;
+                width: auto;
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="retro-terminal">
+        <div class="scan-line"></div>
+        <div class="terminal-header">
+            <h1>ROBOT WARS <span class="blink">_</span></h1>
+            <p>PROGRAMMER'S COMBAT MANUAL v1.0</p>
+        </div>
+
+        <div class="message">
+            <h2>[ SECURE TRANSMISSION ]</h2>
+            <p>Hey there,</p>
+            <p>Leslie here. I've been running extensive simulations in the Robot Wars arena and compiled this guide to help you create your own combat-ready robots. Whether you're a beginner coder or a battle-hardened veteran, these strategies will give you an edge in the arena.</p>
+            <p>I've organized this guide by skill levels, starting with the absolute basics and progressing to more advanced techniques. The system is incredibly flexible - even simple code can be effective if deployed strategically.</p>
+            <p>Remember: in Robot Wars, clever code beats brute force every time.</p>
+            <p>Good luck in the arena!</p>
+        </div>
+
+        <h2>UNDERSTANDING THE BASICS</h2>
+        <p>Before diving into combat code, let's understand how the Robot Wars system works. Each robot runs on code that executes 30 times per second (30 ticks). Your code must make quick decisions based on the current game state.</p>
+
+        <div class="note">
+            <h3>Core Concepts</h3>
+            <p><strong>The State Object:</strong> Your robot needs memory between ticks to make decisions. The <span class="inline-code">state</span> object persists between executions, allowing your robot to remember previous actions and plan ahead.</p>
+            <p><strong>Robot API:</strong> You control your robot through the <span class="inline-code">robot</span> object, which provides methods for movement, scanning, and combat.</p>
+            <p><strong>Console Output:</strong> Use <span class="inline-code">console.log()</span> to display debugging information in the Robot Console panel.</p>
+        </div>
+
+        <h2>BEGINNER'S GUIDE <span class="skill-level beginner">Beginner</span></h2>
+        <p>Let's start with the absolute basics. If you've never programmed before, don't worry - you can build an effective combat robot with just a few simple concepts.</p>
+
+        <h3>Step 1: Initialize Your Robot</h3>
+        <p>Every robot needs initialization code that runs once when the battle starts. This sets up your robot's memory:</p>
+
+        <code>// This code runs only once when the battle starts
+if (typeof state.direction === 'undefined') {
+    state.direction = 0;        // The direction your robot will move (degrees)
+    state.lastDamage = 0;       // Remember how much damage we had before
+    console.log('Robot initialized!');
+}</code>
+
+        <div class="note">
+            <p>The <span class="inline-code">if (typeof state.direction === 'undefined')</span> check ensures this code only runs the first time. All variables stored in the <span class="inline-code">state</span> object will be remembered between ticks.</p>
+        </div>
+
+        <h3>Step 2: Basic Movement</h3>
+        <p>Let's make your robot move around the arena:</p>
+
+        <code>// Step 1: Initialize robot (only runs once)
+if (typeof state.direction === 'undefined') {
+    state.direction = 0;
+    state.lastDamage = 0;
+    console.log('Robot initialized!');
+}
+
+// Step 2: Drive in the current direction
+robot.drive(state.direction, 3);  // Parameters: direction (degrees), speed (1-5)</code>
+
+        <div class="note">
+            <p>The <span class="inline-code">drive()</span> method takes two parameters:</p>
+            <ul class="regular-list">
+                <li><strong>Direction:</strong> Angle in degrees (0-359), where 0 is east, 90 is north, 180 is west, 270 is south</li>
+                <li><strong>Speed:</strong> How fast to move (1-5), with 5 being the fastest</li>
+            </ul>
+        </div>
+
+        <h3>Step 3: Scanning for Enemies</h3>
+        <p>Your robot needs to find enemies before it can attack:</p>
+
+        <code>// Step 1: Initialize robot (only runs once)
+if (typeof state.direction === 'undefined') {
+    state.direction = 0;
+    state.lastDamage = 0;
+    console.log('Robot initialized!');
+}
+
+// Step 2: Drive in the current direction
+robot.drive(state.direction, 3);
+
+// Step 3: Scan for enemies
+let scanResult = robot.scan(state.direction, 30);
+// Parameters: direction to scan (degrees), scan width (degrees)
+
+// Step 4: Log scan results to console (for debugging)
+if (scanResult) {
+    console.log('Enemy detected! Distance: ' + scanResult.distance);
+}</code>
+
+        <div class="note">
+            <p>The <span class="inline-code">scan()</span> method returns <span class="inline-code">null</span> if no enemy is found, or an object with properties:</p>
+            <ul class="regular-list">
+                <li><strong>distance:</strong> How far away the enemy is</li>
+                <li><strong>direction:</strong> The angle to the enemy (degrees)</li>
+                <li><strong>id:</strong> The enemy's unique identifier</li>
+                <li><strong>name:</strong> The enemy's name (if available)</li>
+            </ul>
+        </div>
+
+        <h3>Step 4: Firing Weapons</h3>
+        <p>When you detect an enemy, fire your weapons:</p>
+
+        <code>// Step 1: Initialize robot (only runs once)
+if (typeof state.direction === 'undefined') {
+    state.direction = 0;
+    state.lastDamage = 0;
+    console.log('Robot initialized!');
+}
+
+// Step 2: Drive in the current direction
+robot.drive(state.direction, 3);
+
+// Step 3: Scan for enemies
+let scanResult = robot.scan(state.direction, 30);
+
+// Step 4: Fire at enemies when detected
+if (scanResult) {
+    console.log('Enemy detected! Distance: ' + scanResult.distance);
+    robot.fire(scanResult.direction, 2);  // Parameters: direction (degrees), power (1-3)
+}</code>
+
+        <div class="note">
+            <p>The <span class="inline-code">fire()</span> method takes two parameters:</p>
+            <ul class="regular-list">
+                <li><strong>Direction:</strong> Angle to fire (degrees)</li>
+                <li><strong>Power:</strong> Shot power (1-3), where higher power does more damage but has longer cooldown</li>
+            </ul>
+            <p>There's a cooldown period after firing, during which you cannot fire again.</p>
+        </div>
+
+        <h3>Step 5: Basic Defense</h3>
+        <p>Make your robot react when it takes damage:</p>
+
+        <code>// Step 1: Initialize robot (only runs once)
+if (typeof state.direction === 'undefined') {
+    state.direction = 0;
+    state.lastDamage = 0;
+    console.log('Robot initialized!');
+}
+
+// Step 2: Check if we've taken damage since last tick
+if (robot.damage() > state.lastDamage) {
+    console.log('Ouch! Taking damage. Changing direction.');
+    state.direction = (state.direction + 90) % 360;  // Turn 90 degrees
+}
+state.lastDamage = robot.damage();  // Remember current damage for next tick
+
+// Step 3: Drive in the current direction
+robot.drive(state.direction, 3);
+
+// Step 4: Scan for enemies
+let scanResult = robot.scan(state.direction, 30);
+
+// Step 5: Fire at enemies when detected
+if (scanResult) {
+    console.log('Enemy detected! Distance: ' + scanResult.distance);
+    robot.fire(scanResult.direction, 2);
+}</code>
+
+        <div class="note">
+            <p>The <span class="inline-code">robot.damage()</span> method returns your current damage level (0-100). When it reaches 100, your robot is destroyed.</p>
+            <p>By comparing it to the damage from the previous tick, you can detect when you've been hit and react accordingly.</p>
+        </div>
+
+        <h3>Beginner Robot: Complete Example</h3>
+        <p>Here's a complete beginner robot that combines all the concepts we've covered:</p>
+
+        <code>// Simple Bot with basic movement, scanning, and defense
+if (typeof state.direction === 'undefined') {
+    // Initialize variables (runs only once)
+    state.direction = 0;
+    state.lastDamage = 0;
+    state.turnCounter = 0;
+    console.log('Simple Bot initialized!');
+}
+
+// Check if we've been hit
+if (robot.damage() > state.lastDamage) {
+    console.log('Taking damage! Current damage: ' + robot.damage() + '%');
+    // Change direction when hit
+    state.direction = (state.direction + 90 + Math.floor(Math.random() * 90)) % 360;
+    console.log('Changing direction to: ' + state.direction);
+}
+// Update damage memory
+state.lastDamage = robot.damage();
+
+// Occasionally change direction to explore
+state.turnCounter++;
+if (state.turnCounter >= 30) {  // Change direction every 30 ticks (about 1 second)
+    state.direction = (state.direction + 45) % 360;
+    state.turnCounter = 0;
+    console.log('Changing direction to explore: ' + state.direction);
+}
+
+// Move
+robot.drive(state.direction, 3);
+
+// Scan for enemies with a wide angle
+let scanResult = robot.scan(state.direction, 45);
+
+// Fire if enemy detected
+if (scanResult) {
+    console.log('Enemy detected! Distance: ' + scanResult.distance);
+    console.log('Firing at direction: ' + scanResult.direction);
+    robot.fire(scanResult.direction, 2);
+}</code>
+
+        <h2>INTERMEDIATE STRATEGIES <span class="skill-level intermediate">Intermediate</span></h2>
+        <p>Once you've mastered the basics, you can create more sophisticated robots with advanced behaviors and decision-making.</p>
+
+        <h3>Using State Machines</h3>
+        <p>State machines allow your robot to switch between different behaviors based on the situation:</p>
+
+        <code>// State Machine Bot
+if (typeof state.mode === 'undefined') {
+    // Initialize variables
+    state.mode = 'patrol';  // Possible modes: 'patrol', 'attack', 'retreat'
+    state.target = null;
+    state.lastDamage = 0;
+    state.patrolDirection = 0;
+    console.log('State Machine Bot initialized in PATROL mode');
+}
+
+// Check for damage
+if (robot.damage() > state.lastDamage) {
+    console.log('Taking damage! Current damage: ' + robot.damage() + '%');
+    if (robot.damage() > 50) {
+        // If heavily damaged, switch to retreat mode
+        state.mode = 'retreat';
+        console.log('Heavily damaged! Switching to RETREAT mode');
+    }
+}
+state.lastDamage = robot.damage();
+
+// Behavior based on current mode
+if (state.mode === 'patrol') {
+    // Patrol behavior: move and scan wide area
+    robot.drive(state.patrolDirection, 2);
+    state.patrolDirection = (state.patrolDirection + 5) % 360;  // Slowly adjust direction
+    
+    // Scan with wide angle
+    let scanResult = robot.scan(state.patrolDirection, 60);
+    if (scanResult) {
+        // Enemy found, switch to attack mode
+        state.mode = 'attack';
+        state.target = scanResult;
+        console.log('Enemy spotted! Switching to ATTACK mode');
+    }
+}
+else if (state.mode === 'attack') {
+    // Attack behavior: chase and fire
+    if (state.target) {
+        // Move toward target
+        robot.drive(state.target.direction, 4);
+        
+        // Scan with narrower angle for better accuracy
+        let scanResult = robot.scan(state.target.direction, 30);
+        if (scanResult) {
+            // Update target information
+            state.target = scanResult;
+            // Fire with power based on distance
+            let power = Math.min(3, Math.max(1, Math.ceil(3 * scanResult.distance / 800)));
+            robot.fire(scanResult.direction, power);
+            console.log('Firing at enemy! Power: ' + power);
+        } else {
+            // Lost target, go back to patrol
+            console.log('Lost target! Returning to PATROL mode');
+            state.mode = 'patrol';
+            state.target = null;
+        }
+    }
+}
+else if (state.mode === 'retreat') {
+    // Retreat behavior: run away and find cover
+    if (state.target) {
+        // Move away from last known target position
+        let retreatDirection = (state.target.direction + 180) % 360;
+        robot.drive(retreatDirection, 5);  // Maximum speed
+        console.log('Retreating at direction: ' + retreatDirection);
+        
+        // Still scan to update target position
+        let scanResult = robot.scan((retreatDirection + 180) % 360, 45);
+        if (scanResult) {
+            state.target = scanResult;
+        }
+        
+        // If health improves or we're far from danger, return to patrol
+        if (robot.damage() < 40 || (state.target && state.target.distance > 500)) {
+            state.mode = 'patrol';
+            console.log('Safe now! Returning to PATROL mode');
+        }
+    } else {
+        // No target information, just move randomly to avoid
+        robot.drive((state.patrolDirection + 180) % 360, 4);
+        state.patrolDirection = (state.patrolDirection + 15) % 360;
+    }
+}</code>
+
+        <h3>Positional Awareness</h3>
+        <p>Use the robot's position to implement advanced strategies like edge avoidance and territory control:</p>
+
+        <code>// Check our position in the arena
+let x = robot.getX();
+let y = robot.getY();
+let arenaWidth = 900;  // Arena dimensions
+let arenaHeight = 900;
+
+// Detect if we're near the edge of the arena
+let edgeDistance = 100;  // How close to the edge before reacting
+let nearEdge = false;
+let edgeDirection = 0;
+
+if (x < edgeDistance) {
+    // Near left edge
+    nearEdge = true;
+    edgeDirection = 0;  // Move east (away from left edge)
+} else if (x > arenaWidth - edgeDistance) {
+    // Near right edge
+    nearEdge = true;
+    edgeDirection = 180;  // Move west (away from right edge)
+}
+
+if (y < edgeDistance) {
+    // Near top edge
+    nearEdge = true;
+    edgeDirection = 270;  // Move south (away from top edge)
+} else if (y > arenaHeight - edgeDistance) {
+    // Near bottom edge
+    nearEdge = true;
+    edgeDirection = 90;  // Move north (away from bottom edge)
+}
+
+if (nearEdge) {
+    // Move away from the edge
+    console.log('Near edge! Moving away: ' + edgeDirection);
+    robot.drive(edgeDirection, 3);
+} else {
+    // Normal behavior when not near edge
+    // ...
+}</code>
+
+        <h3>Predictive Firing</h3>
+        <p>Calculate where your enemy will be to fire ahead of their movement:</p>
+
+        <code>// Store enemy positions to calculate velocity
+if (typeof state.enemyHistory === 'undefined') {
+    state.enemyHistory = [];  // Array to store previous positions
+}
+
+// Scan for enemy
+let scanResult = robot.scan(state.direction, 30);
+
+if (scanResult) {
+    // Add current position to history (keep last 5 positions)
+    state.enemyHistory.push({
+        x: scanResult.x,  // Would need to calculate this from angle/distance
+        y: scanResult.y,  // Would need to calculate this from angle/distance
+        time: Date.now()
+    });
+    
+    // Keep history limited to recent positions
+    if (state.enemyHistory.length > 5) {
+        state.enemyHistory.shift();  // Remove oldest entry
+    }
+    
+    // Calculate average velocity if we have enough history
+    if (state.enemyHistory.length >= 2) {
+        let newest = state.enemyHistory[state.enemyHistory.length - 1];
+        let oldest = state.enemyHistory[0];
+        
+        let timeElapsed = newest.time - oldest.time;
+        let dx = newest.x - oldest.x;
+        let dy = newest.y - oldest.y;
+        
+        // Enemy's velocity components
+        let vx = dx / timeElapsed;
+        let vy = dy / timeElapsed;
+        
+        // Estimate time for missile to reach enemy
+        let distance = scanResult.distance;
+        let missileSpeed = 10;  // Example missile speed
+        let timeToImpact = distance / missileSpeed;
+        
+        // Predict future position
+        let futureX = newest.x + vx * timeToImpact;
+        let futureY = newest.y + vy * timeToImpact;
+        
+        // Calculate angle to predicted position
+        let predictedAngle = Math.atan2(futureY - robot.getY(), futureX - robot.getX()) * 180 / Math.PI;
+        
+        // Fire at predicted position
+        console.log('Firing at predicted position: ' + predictedAngle);
+        robot.fire(predictedAngle, 2);
+    } else {
+        // Not enough history, fire directly at current position
+        robot.fire(scanResult.direction, 2);
+    }
+}</code>
+
+        <div class="note">
+            <p>Note: The above code demonstrates the concept of predictive firing, but would need to be adapted to work with the actual Robot Wars API, which doesn't directly provide enemy X/Y coordinates in the scan results.</p>
+        </div>
+
+        <h2>ADVANCED TECHNIQUES <span class="skill-level advanced">Advanced</span></h2>
+        <p>For experienced programmers, these techniques can create highly sophisticated and effective combat robots.</p>
+
+        <h3>Defensive Pattern Bot</h3>
+        <p>An advanced bot that prioritizes survival while opportunistically attacking:</p>
+
+        <code>// Improved Defensive Bot with some offensive behavior
+if (typeof state.mode === 'undefined') {
+    state.mode = 'escape'; // 'escape', 'engage', or 'evade'
+    state.direction = 180; // Start by running away
+    state.lastDamage = 0;
+    state.turnCooldown = 0;
+    console.log('Improved bot online: ESCAPE MODE');
+}
+// Evasive reaction if taking damage
+if (robot.damage() > state.lastDamage) {
+    console.log('Under fire! Switching to EVADE MODE.');
+    state.mode = 'evade';
+    state.direction = (state.direction + 90 + Math.floor(Math.random() * 90)) % 360;
+    state.turnCooldown = 10; // small cooldown to prevent jerky turns
+}
+state.lastDamage = robot.damage();
+// Decrement turn cooldown
+if (state.turnCooldown > 0) {
+    state.turnCooldown--;
+}
+// Main behavior switch
+if (state.mode === 'escape') {
+    // Initial retreat
+    robot.drive(state.direction, 4);
+    let scanResult = robot.scan(state.direction, 45);
+    if (scanResult) {
+        console.log('Enemy spotted. Switching to ENGAGE MODE.');
+        state.mode = 'engage';
+        state.targetDirection = scanResult.direction;
+    }
+} else if (state.mode === 'engage') {
+    // Cautious attack while moving
+    robot.drive((state.targetDirection + 90) % 360, 3); // strafe
+    let scanResult = robot.scan(state.targetDirection, 30);
+    if (scanResult) {
+        state.targetDirection = scanResult.direction;
+        robot.fire(scanResult.direction, 2); // light shot
+    } else {
+        console.log('Lost target. Back to ESCAPE MODE.');
+        state.mode = 'escape';
+        state.direction = (state.direction + 90) % 360;
+    }
+} else if (state.mode === 'evade') {
+    // Evade mode – turn and run
+    robot.drive(state.direction, 4);
+    let scanResult = robot.scan(state.direction, 45);
+    if (state.turnCooldown <= 0) {
+        state.mode = scanResult ? 'engage' : 'escape';
+        if (scanResult) {
+            console.log('Recovered. Re-engaging.');
+            state.targetDirection = scanResult.direction;
+        } else {
+            console.log('No contact. Returning to ESCAPE MODE.');
+        }
+    }
+}</code>
+
+        <h3>Creating Patrol Patterns</h3>
+        <p>Define specific patrol routes to cover the arena methodically:</p>
+
+        <code>// Test-optimized robot with patrol patterns
+if (typeof state.mode === 'undefined') {
+    state.mode = 'patrol';
+    state.patrolPoints = [
+        {x: 150, y: 150},
+        {x: 750, y: 150},
+        {x: 750, y: 750},
+        {x: 150, y: 750}
+    ];
+    state.currentPoint = 0;
+    state.lastDamage = 0;
+    state.hits = 0;
+    state.misses = 0;
+    
+    console.log('Combat system initialized in patrol mode');
+    console.log(`Current position: (${robot.getX()}, ${robot.getY()})`);
+}
+
+// Calculate position relative to patrol point
+const targetPoint = state.patrolPoints[state.currentPoint];
+const dx = targetPoint.x - robot.getX();
+const dy = targetPoint.y - robot.getY();
+const distToPoint = Math.sqrt(dx * dx + dy * dy);
+const angleToPoint = Math.atan2(-dy, dx) * 180 / Math.PI;
+
+// Handle patrol movement
+if (distToPoint > 20) {
+    robot.drive(angleToPoint, 3);
+    if (state.mode === 'patrol') {
+        // Scan while moving
+        for (let angle = 0; angle < 360; angle += 45) {
+            const scanResult = robot.scan((angleToPoint + angle) % 360, 15);
+            if (scanResult) {
+                state.mode = 'engage';
+                state.targetDir = scanResult.direction;
+                state.targetDist = scanResult.distance;
+                console.log(`Target acquired! Distance: ${scanResult.distance.toFixed(1)}`);
+                break;
+            }
+        }
+    }
+} else {
+    // Point reached, move to next patrol point
+    state.currentPoint = (state.currentPoint + 1) % state.patrolPoints.length;
+    console.log(`Reached patrol point ${state.currentPoint}. Moving to next.`);
+}
+
+// Combat mode when target detected
+if (state.mode === 'engage') {
+    // Scan for target
+    const scanResult = robot.scan(state.targetDir, 20);
+    
+    if (scanResult) {
+        // Target still in sight, update tracking
+        state.targetDir = scanResult.direction;
+        state.targetDist = scanResult.distance;
+        
+        // Move toward target
+        robot.drive(state.targetDir, 4);
+        
+        // Fire at target with power based on distance
+        const power = Math.min(3, Math.max(1, Math.ceil(3 * (1 - scanResult.distance / 800))));
+        const success = robot.fire(state.targetDir, power);
+        
+        if (success) {
+            console.log(`Firing at target. Power: ${power}, Direction: ${state.targetDir.toFixed(1)}°`);
+        }
+    } else {
+        // Lost target, return to patrol
+        state.mode = 'patrol';
+        console.log('Target lost. Returning to patrol pattern.');
+    }
+}
+
+// Damage response system
+if (robot.damage() > state.lastDamage) {
+    console.log(`Damage sustained! Current: ${robot.damage().toFixed(1)}%`);
+    
+    // Evasive maneuvers
+    const evasionAngle = (robot.getDirection() + 120 + Math.random() * 120) % 360;
+    robot.drive(evasionAngle, 5);
+    
+    // Log position for test analysis
+    console.log(`Evasive action! Position: (${robot.getX().toFixed(0)}, ${robot.getY().toFixed(0)})`);
+}
+state.lastDamage = robot.damage();</code>
+
+        <h3>Multi-Mode Scanner</h3>
+        <p>Implement different scanning patterns for different situations:</p>
+
+        <code>// Different scanning modes based on situation
+if (typeof state.scanMode === 'undefined') {
+    state.scanMode = 'wide';  // Modes: 'wide', 'focused', 'tracking'
+    state.scanAngle = 0;
+    state.targetLockTime = 0;
+}
+
+// Scan based on current mode
+let scanResult = null;
+
+if (state.scanMode === 'wide') {
+    // Wide search pattern - rotate scan around 360 degrees
+    state.scanAngle = (state.scanAngle + 20) % 360;
+    scanResult = robot.scan(state.scanAngle, 60);  // Wide angle
+    
+    if (scanResult) {
+        // Found something, switch to focused scanning
+        state.scanMode = 'focused';
+        state.targetDirection = scanResult.direction;
+        console.log('Target detected! Switching to focused scanning.');
+    }
+}
+else if (state.scanMode === 'focused') {
+    // Focused scanning - narrow cone around suspected target area
+    // Jitter scan angle slightly to find precise location
+    let jitter = Math.random() * 20 - 10;  // Random -10 to +10 degrees
+    scanResult = robot.scan(state.targetDirection + jitter, 20);  // Narrower angle
+    
+    if (scanResult) {
+        // Got solid lock, switch to tracking
+        state.scanMode = 'tracking';
+        state.targetDirection = scanResult.direction;
+        state.targetLockTime = Date.now();
+        console.log('Solid lock acquired! Switching to tracking mode.');
+    } else {
+        // Lost target, expand search slightly
+        state.targetDirection = (state.targetDirection + 10) % 360;
+    }
+}
+else if (state.scanMode === 'tracking') {
+    // Tracking mode - very narrow scan on known target
+    scanResult = robot.scan(state.targetDirection, 10);  // Very narrow angle
+    
+    if (scanResult) {
+        // Still tracking
+        state.targetDirection = scanResult.direction;
+        state.targetLockTime = Date.now();
+    } else {
+        // Lost tracking
+        let timeSinceLock = Date.now() - state.targetLockTime;
+        if (timeSinceLock > 500) {  // If lost for more than 500ms
+            // Target lost completely, go back to wide scanning
+            state.scanMode = 'wide';
+            console.log('Target lost! Returning to wide scanning.');
+        }
+    }
+}</code>
+
+        <div class="strategy-grid">
+            <div class="strategy-card">
+                <h4>Wall-Hugging Strategy</h4>
+                <p>Stay near the arena walls to limit your exposure:</p>
+                <ul class="regular-list">
+                    <li>Patrol along the perimeter of the arena</li>
+                    <li>Only one side exposed to potential enemies</li>
+                    <li>Easier to predict enemy approach directions</li>
+                    <li>Good for defensive playstyles</li>
+                </ul>
+            </div>
+            
+            <div class="strategy-card">
+                <h4>Stealth Mode</h4>
+                <p>Minimize movement until you detect an enemy:</p>
+                <ul class="regular-list">
+                    <li>Stay still or move very slowly</li>
+                    <li>Constantly scan with narrow beam</li>
+                    <li>When enemy detected, fire first before moving</li>
+                    <li>Change position after firing to avoid return fire</li>
+                </ul>
+            </div>
+            
+            <div class="strategy-card">
+                <h4>Aggressive Hunter</h4>
+                <p>Actively hunt and pursue enemies:</p>
+                <ul class="regular-list">
+                    <li>Wide scanning pattern to detect enemies</li>
+                    <li>Fast pursuit once detected</li>
+                    <li>Use high power shots when close</li>
+                    <li>Includes prediction logic for moving targets</li>
+                </ul>
+            </div>
+            
+            <div class="strategy-card">
+                <h4>Circle Strafe</h4>
+                <p>Circle around enemies while firing:</p>
+                <ul class="regular-list">
+                    <li>Calculate perpendicular direction to enemy</li>
+                    <li>Move in circle around target while maintaining distance</li>
+                    <li>Harder for enemies to hit you while moving</li>
+                    <li>Keep firing toward center of circle</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>API REFERENCE</h2>
+        <p>Here's a complete reference for all available robot functions:</p>
+
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Parameters</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td><span class="inline-code">robot.drive(direction, speed)</span></td>
+                <td>direction (0-359), speed (1-5)</td>
+                <td>Moves your robot in the specified direction at the given speed.</td>
+            </tr>
+            <tr>
+                <td><span class="inline-code">robot.scan(direction, resolution)</span></td>
+                <td>direction (0-359), resolution (degrees)</td>
+                <td>Scans for enemies in the specified direction with the given angular width. Returns object with enemy info or null if none found.</td>
+            </tr>
+            <tr>
+                <td><span class="inline-code">robot.fire(direction, power)</span></td>
+                <td>direction (0-359), power (1-3)</td>
+                <td>Fires a missile in the specified direction with the given power level. Higher power = more damage but longer cooldown.</td>
+            </tr>
+            <tr>
+                <td><span class="inline-code">robot.damage()</span></td>
+                <td>none</td>
+                <td>Returns the current damage level of your robot (0-100). At 100, your robot is destroyed.</td>
+            </tr>
+            <tr>
+                <td><span class="inline-code">robot.getX()</span></td>
+                <td>none</td>
+                <td>Returns your robot's current X coordinate in the arena.</td>
+            </tr>
+            <tr>
+                <td><span class="inline-code">robot.getY()</span></td>
+                <td>none</td>
+                <td>Returns your robot's current Y coordinate in the arena.</td>
+            </tr>
+            <tr>
+                <td><span class="inline-code">robot.getDirection()</span></td>
+                <td>none</td>
+                <td>Returns your robot's current facing direction (0-359 degrees).</td>
+            </tr>
+            <tr>
+                <td><span class="inline-code">console.log(message)</span></td>
+                <td>message (string)</td>
+                <td>Outputs a message to the robot console for debugging.</td>
+            </tr>
+        </table>
+
+        <h2>PROGRESSION PATH</h2>
+        <p>Follow this progression path to gradually improve your robot programming skills:</p>
+
+        <div class="progression">
+            <div class="progression-step">1
+                <div class="progression-label">Basic Movement</div>
+            </div>
+            <div class="progression-step">2
+                <div class="progression-label">Enemy Detection</div>
+            </div>
+            <div class="progression-step">3
+                <div class="progression-label">Combat Logic</div>
+            </div>
+            <div class="progression-step">4
+                <div class="progression-label">State Machine</div>
+            </div>
+            <div class="progression-step">5
+                <div class="progression-label">Advanced Tactics</div>
+            </div>
+        </div>
+
+        <div class="warning">
+            <h3>Common Mistakes to Avoid</h3>
+            <ul class="regular-list">
+                <li><strong>Forgetting to Initialize State:</strong> Always check if your state variables are undefined before setting them.</li>
+                <li><strong>Infinite Loops:</strong> Your code must complete quickly (within milliseconds) each tick. Avoid complex loops.</li>
+                <li><strong>Not Updating lastDamage:</strong> Always update your damage tracker at the end of your code.</li>
+                <li><strong>Standing Still:</strong> A stationary robot is an easy target. Keep moving!</li>
+                <li><strong>Predictable Patterns:</strong> If your movement is too predictable, smart enemies will aim ahead of you.</li>
+                <li><strong>Ignoring Position:</strong> Not checking arena boundaries can trap your robot in corners.</li>
+            </ul>
+        </div>
+
+        <div class="note">
+            <h3>Testing Tips</h3>
+            <p>Use the Test Mode to refine your robot before entering real combat:</p>
+            <ul class="regular-list">
+                <li>Add lots of <span class="inline-code">console.log()</span> calls to see what your robot is thinking</li>
+                <li>Test against the AI before facing real players</li>
+                <li>Save different versions of your robot code using the loadout system</li>
+                <li>Use Self-Destruct if your robot gets stuck in a bad situation</li>
+            </ul>
+        </div>
+
+        <div class="signature">
+            <p>- Leslie</p>
+            <p>"The code is mightier than the missile."</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>ROBOT WARS Programming Guide | <a href="https://github.com/bneidlinger/RobotWars" style="color: #888;">GitHub Repository</a> | &copy; 2025</p>
+    </footer>
+</body>
+</html>
