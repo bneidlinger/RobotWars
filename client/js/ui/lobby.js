@@ -1,7 +1,8 @@
 // client/js/ui/lobby.js
 
 const MAX_LOG_MESSAGES = 50; // Keep the event log from getting too long
-const MAX_ROBOT_LOG_MESSAGES = 100; // Allow more robot messages
+const MAX_ROBOT_LOG_MESSAGES = 100; // Allow more player robot messages
+const MAX_OPPONENT_LOG_MESSAGES = 100; // Separate limit for opponent log
 
 /**
  * Updates the text content of the lobby status display.
@@ -77,56 +78,100 @@ function clearEventLog() {
 }
 
 
-// --- START: New function for Robot Console Log ---
+// --- START: Player Robot Console Log ---
 /**
- * Adds a message to the robot's console log display. Handles scrolling.
- * @param {string} message - The message text from the robot's console.log.
+ * Adds a message to the player's console log display. Handles scrolling.
+ * @param {string} message - The message text from the player's robot console.log.
  */
 function addRobotLogMessage(message) {
-    const logElement = document.getElementById('robot-log-messages'); // Target new element
+    const logElement = document.getElementById('robot-log-messages'); // Target player element
     if (!logElement) {
         console.warn("Robot log messages element '#robot-log-messages' not found.");
         return;
     }
-
+    // Scroll check
     const wasScrolledToBottom = logElement.scrollHeight - logElement.clientHeight <= logElement.scrollTop + 1;
 
+    // Create and style message div
     const messageDiv = document.createElement('div');
-    messageDiv.textContent = message; // Use textContent for security
-    messageDiv.style.marginBottom = '2px'; // Tighter spacing than event log maybe
-    // Style is mostly inherited from .log-box, color set in CSS
+    messageDiv.textContent = message;
+    messageDiv.style.marginBottom = '2px'; // Tighter spacing
 
     logElement.appendChild(messageDiv);
 
-    // Remove old messages if log is too long
+    // Remove old messages
     while (logElement.childNodes.length > MAX_ROBOT_LOG_MESSAGES) {
         logElement.removeChild(logElement.firstChild);
     }
-
-    // Auto-scroll to bottom if already scrolled to bottom
+    // Auto-scroll
     if (wasScrolledToBottom) {
         logElement.scrollTop = logElement.scrollHeight;
     }
 }
 
-/** Clears the robot console log */
+/** Clears the player's robot console log */
 function clearRobotLog() {
      const logElement = document.getElementById('robot-log-messages');
      if (logElement) {
          logElement.innerHTML = '';
-         // Optionally add a cleared message
-         addRobotLogMessage("-- Robot Log Cleared --");
+         // Add thematic cleared message
+         addRobotLogMessage("--- R.O.S. V1.3 REINITIALIZED ---");
      }
 }
-// --- END: New function for Robot Console Log ---
+// --- END: Player Robot Console Log ---
+
+
+// --- START: Opponent Robot Console Log ---
+/**
+ * Adds a message to the opponent's console log display. Handles scrolling.
+ * @param {string} message - The message text from the opponent's robot console.log.
+ */
+function addOpponentLogMessage(message) {
+    const logElement = document.getElementById('opponent-log-messages'); // Target opponent element
+    if (!logElement) {
+        console.warn("Opponent log messages element '#opponent-log-messages' not found.");
+        return;
+    }
+    // Scroll check
+    const wasScrolledToBottom = logElement.scrollHeight - logElement.clientHeight <= logElement.scrollTop + 1;
+
+    // Create and style message div
+    const messageDiv = document.createElement('div');
+    messageDiv.textContent = message;
+    messageDiv.style.marginBottom = '2px'; // Match player log spacing
+
+    logElement.appendChild(messageDiv);
+
+    // Remove old messages
+    while (logElement.childNodes.length > MAX_OPPONENT_LOG_MESSAGES) { // Use separate limit
+        logElement.removeChild(logElement.firstChild);
+    }
+    // Auto-scroll
+    if (wasScrolledToBottom) {
+        logElement.scrollTop = logElement.scrollHeight;
+    }
+}
+
+/** Clears the opponent's robot console log */
+function clearOpponentLog() {
+     const logElement = document.getElementById('opponent-log-messages');
+     if (logElement) {
+         logElement.innerHTML = '';
+         // Add thematic cleared message
+         addOpponentLogMessage("--- OPPONENT SIGNAL LOST ---");
+     }
+}
+// --- END: Opponent Robot Console Log ---
 
 
 // --- Make functions globally accessible ---
 window.updateLobbyStatus = updateLobbyStatus;
 window.addEventLogMessage = addEventLogMessage;
 window.clearEventLog = clearEventLog;
-window.addRobotLogMessage = addRobotLogMessage; // Add new function to window
-window.clearRobotLog = clearRobotLog; // Optional clear function
+window.addRobotLogMessage = addRobotLogMessage; // Player log
+window.clearRobotLog = clearRobotLog;           // Player log clear
+window.addOpponentLogMessage = addOpponentLogMessage; // Opponent log ADDED
+window.clearOpponentLog = clearOpponentLog;           // Opponent log clear ADDED
 
 
 // --- Initialize Chat Input/Button Listeners & Clear Placeholders ---
@@ -161,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- Clear placeholder text on initial load for BOTH logs ---
+    // --- Clear placeholder text on initial load for ALL logs ---
     const eventLogElement = document.getElementById('event-log');
     // Check for the specific placeholder text before clearing
     if(eventLogElement && eventLogElement.textContent.trim() === 'Event Log Loading...') {
@@ -180,7 +225,17 @@ document.addEventListener('DOMContentLoaded', () => {
         addRobotLogMessage("> R.O.S. V1.3 INITIALIZING...");
         // --- END: Add Thematic Message ---
     }
+
+    // ADDED: Clear opponent log placeholder
+    const opponentLogElement = document.getElementById('opponent-log-messages');
+    if (opponentLogElement && opponentLogElement.textContent.trim() === 'Waiting for opponent messages...') {
+        opponentLogElement.innerHTML = ''; // Clear placeholder
+        addOpponentLogMessage("SCANNING FOR HOSTILE TRANSMISSIONS...");
+        addOpponentLogMessage("...");
+        addOpponentLogMessage("...");
+        addOpponentLogMessage("> STANDING BY");
+    }
     // --- End Placeholder Clearing ---
 });
 
-console.log("Lobby UI functions initialized (lobby.js). Includes Robot Log handler.");
+console.log("Lobby UI functions initialized (lobby.js). Includes Player AND Opponent Log handlers.");

@@ -23,17 +23,13 @@
 <body>
     <div class="container">
         <header>
-            <!-- ****** MODIFIED H1 TO INCLUDE LOGO ****** -->
+            <!-- Header content remains the same -->
             <h1>
-                <img src="/assets/images/RobotwarsLogo.png" alt="Robot Wars Logo" class="header-logo"> <!-- Added logo image -->
+                <img src="/assets/images/RobotwarsLogo.png" alt="Robot Wars Logo" class="header-logo">
                 Robot Wars
             </h1>
-            <!-- *************************************** -->
             <nav>
-                <!-- Player Name Input Field -->
-                <input type="text" id="playerName" placeholder="Enter Name" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: #e0e0e0; margin-right: 5px;" maxlength="24">
-                <!-- End Player Name Input -->
-
+                <input type="text" id="playerName" placeholder="Enter Name" maxlength="24">
                 <select id="robot-appearance-select" title="Choose Robot Appearance">
                     <option value="default">Default Bot</option>
                     <option value="tank">Tank Bot</option>
@@ -53,30 +49,12 @@
             </nav>
         </header>
 
-        <main>
-            <div class="game-container">
-                <!-- Canvas -->
-                <canvas id="arena" width="900" height="900"></canvas>
+        <!-- Main Content Grid Wrapper -->
+        <div class="main-content-grid">
 
-                <div class="stats-panel">
-                    <h3>Robot Stats</h3>
-                    <div id="robot-stats">
-                        <!-- Dashboard elements -->
-                    </div>
-                </div>
-
-                <!-- Robot Console Log -->
-                <div id="robot-console-log" class="console-panel">
-                    <h3>Robot Console Output</h3>
-                    <div id="robot-log-messages" class="log-box">
-                        <div>Waiting for robot messages...</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="editor-container">
-                <h3>Robot Code Editor</h3>
-                <!-- API Help -->
+            <!-- Column 1: API, Arena, Consoles -->
+            <div class="arena-column">
+                 <!-- API Help (MOVED HERE - Above Arena) -->
                 <div class="api-help">
                     <h4>API Reference</h4>
                     <ul>
@@ -90,46 +68,86 @@
                     </ul>
                 </div>
 
-                <textarea id="code-editor"></textarea>
+                <!-- Canvas -->
+                <canvas id="arena" width="900" height="900"></canvas>
 
-                <!-- Editor Controls -->
-                <div class="editor-controls" style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
-                    <button id="btn-save-code">Save Code</button>
-                    <select id="loadout-select">
-                        <option value="" selected>Load Code...</option>
-                    </select>
-                    <button id="btn-delete-loadout" disabled title="Delete selected loadout">✖</button>
+                <!-- NEW: Row wrapper for consoles -->
+                <div class="consoles-row">
+                    <!-- Player Robot Console Log (MOVED HERE - Below Arena) -->
+                    <div id="robot-console-log" class="console-panel">
+                        <h3>Robot Console Output</h3>
+                        <div id="robot-log-messages" class="log-box">
+                            <div>Waiting for robot messages...</div>
+                        </div>
+                    </div>
+
+                    <!-- Opponent Robot Console Log (MOVED HERE - Below Arena) -->
+                    <div id="opponent-console-log" class="console-panel">
+                         <h3>Opponent Console Output</h3>
+                         <div id="opponent-log-messages" class="log-box">
+                             <div>Waiting for opponent messages...</div>
+                         </div>
+                    </div>
+                </div> <!-- End .consoles-row -->
+            </div> <!-- End .arena-column -->
+
+
+            <!-- Column 2: Dev Tools (Editor Only Now) -->
+            <div class="devtools-column">
+                <!-- Editor Section -->
+                <div class="editor-section">
+                    <h3>Robot Code Editor</h3>
+                    <div class="code-editor-wrapper">
+                        <textarea id="code-editor"></textarea>
+                    </div>
+                    <!-- Editor Controls -->
+                    <div class="editor-controls">
+                        <button id="btn-save-code">Save Code</button>
+                        <select id="loadout-select">
+                            <option value="" selected>Load Code...</option>
+                        </select>
+                        <button id="btn-delete-loadout" disabled title="Delete selected loadout">✖</button>
+                    </div>
+                    <div id="loadout-status"></div>
                 </div>
-                <div id="loadout-status" style="font-size: 14px; margin-top: 5px; min-height: 1.2em; color: #aaa;"></div>
-            </div>
-        </main>
+            </div> <!-- End .devtools-column -->
 
-        <!-- Lobby Area -->
-        <div id="lobby-area">
-             <div> <!-- Column 1 -->
-                 <h3 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Lobby Status</h3>
-                 <div id="lobby-status" style="margin-bottom: 10px;">Connecting...</div>
-                 <div id="event-log" class="log-box" style="height: 150px; margin-bottom: 10px;">Event Log Loading...</div>
-                 <div id="chat-area" style="display: flex; gap: 5px;">
-                     <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;" maxlength="100">
-                     <button id="send-chat" style="background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'VT323', monospace; font-size: 15px;">Send</button>
-                 </div>
-             </div>
-             <div> <!-- Column 2 -->
+
+            <!-- Column 3: Info & Lobby -->
+            <div class="info-lobby-column">
+                 <!-- Robot Stats Panel -->
+                <div class="stats-panel">
+                     <!-- Dashboard.js adds content here -->
+                     <div id="robot-stats"></div>
+                </div>
+
+                <!-- Lobby Area -->
+                <div id="lobby-area">
+                     <div>
+                         <h3>Lobby Status</h3>
+                         <div id="lobby-status">Connecting...</div>
+                         <div id="event-log" class="log-box">Event Log Loading...</div>
+                         <div id="chat-area">
+                             <input type="text" id="chat-input" placeholder="Enter chat message..." maxlength="100">
+                             <button id="send-chat">Send</button>
+                         </div>
+                     </div>
+                </div>
+
+                <!-- Game History Log -->
                  <div id="game-history-log">
-                     <h4 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Recent Game Results</h4>
-                     <div id="game-history-list" class="log-box" style="height: 195px;">
+                     <h4>Recent Game Results</h4>
+                     <div id="game-history-list" class="log-box">
                          <div>No games finished yet.</div>
                      </div>
                  </div>
-             </div>
-        </div> <!-- End Lobby Area -->
+            </div> <!-- End .info-lobby-column -->
 
-        <!-- No footer logo div -->
+        </div> <!-- End .main-content-grid -->
 
     </div> <!-- End .container -->
 
-    <!-- Scripts -->
+    <!-- Scripts (Keep all script tags the same) -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>

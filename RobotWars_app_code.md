@@ -68,6 +68,17 @@ header {
     flex-shrink: 0; /* Prevent header shrinking */
 }
 
+/* --- START: Header Image Styling (Added from previous attempt, assuming it was desired) --- */
+/* If you didn't add an image, you can remove this block */
+header img#header-logo {
+    max-height: 40px; /* Small height */
+    width: auto;
+    vertical-align: middle;
+    margin-right: 15px;
+}
+/* --- END: Header Image Styling --- */
+
+
 header h1 {
     /* --- 80s Retro Font --- */
     font-family: 'Press Start 2P', cursive;
@@ -75,6 +86,10 @@ header h1 {
     /* --- End Retro Font --- */
     color: #4CAF50;
     margin: 0 10px 0 0; /* Add some right margin */
+    /* Added from previous attempt for image alignment */
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
 }
 
 nav {
@@ -82,8 +97,8 @@ nav {
     gap: 10px;
     align-items: center;
     flex-wrap: wrap; /* Allow nav items to wrap on smaller screens */
-    flex-grow: 1; /* Allow nav to take remaining space */
-    justify-content: flex-end; /* Align nav items to the right */
+    /* flex-grow: 1; Removed - let header space-between handle it */
+    /* justify-content: flex-end; Removed */
 }
 
 /* Keep modern button and select styling */
@@ -165,20 +180,21 @@ input#playerName:disabled {
 }
 
 
-/* Grid for main content (Arena/Editor) */
+/* Grid for main content (Arena/Editor) - Original Ratio */
 main {
     display: grid;
-    grid-template-columns: 1.6fr 1fr; /* Give more space to game area */
+    grid-template-columns: 1.6fr 1fr; /* Original space for game area */
     gap: 20px;
     flex-grow: 1; /* Allow main grid to grow vertically */
     min-height: 0; /* Important for flex context */
     width: 100%; /* Take full width of container */
 }
 
+/* Original structure for columns */
 .game-container {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 20px; /* Original gap */
     min-height: 0; /* Prevent flex items from overflowing grid cell */
 }
 
@@ -211,7 +227,7 @@ main {
 /* --- END: Shared styles for log panels --- */
 
 
-/* Constrain Stats Panel Height MORE */
+/* Constrain Stats Panel Height MORE - Original values */
 .stats-panel {
     /* Apply console-panel base styles */
     background-color: #333;
@@ -219,8 +235,8 @@ main {
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
-    /* REDUCED Max height */
-    max-height: 180px; /* ADJUST THIS VALUE */
+    /* Original Max height */
+    max-height: 180px;
     overflow-y: auto; /* Add scrollbar if content exceeds max-height */
 }
 
@@ -236,18 +252,19 @@ main {
      flex-shrink: 0; /* Prevent titles from shrinking */
 }
 
+/* Original Editor Container structure */
 .editor-container {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 15px; /* Original gap */
     min-height: 0; /* Prevent flex items from overflowing grid cell */
 }
 
-/* CodeMirror Styling - INCREASED min-height */
+/* CodeMirror Styling - Original Min-Height */
 .CodeMirror {
     flex-grow: 1; /* Allow editor to grow vertically */
-    /* INCREASED Minimum height */
-    min-height: 500px; /* ADJUST THIS VALUE - Should be enough for ~25+ lines */
+    /* Original Minimum height */
+    min-height: 500px;
     border-radius: 8px;
     border: 1px solid #444;
 
@@ -266,7 +283,7 @@ main {
     background-color: #2a2a2a !important; /* Slightly different background when read-only */
 }
 
-/* Constrain API Help Height MORE */
+/* Constrain API Help Height MORE - Original values */
 .api-help {
     /* Apply console-panel base styles */
     background-color: #333;
@@ -274,8 +291,8 @@ main {
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
-    /* REDUCED Max height */
-    max-height: 150px; /* ADJUST THIS VALUE */
+    /* Original Max height */
+    max-height: 150px;
     overflow-y: auto; /* Add scrollbar if content exceeds max-height */
 }
 
@@ -303,6 +320,7 @@ main {
      display: flex;
      gap: 10px;
      align-items: center;
+     flex-shrink: 0; /* ADDED: Prevent shrinking */
 }
 #btn-delete-loadout {
     padding: 4px 8px; /* Make delete button smaller */
@@ -322,11 +340,12 @@ main {
     min-height: 1.2em; /* Prevent layout shift when empty */
     color: #aaa; /* Default color for status */
     /* Color overridden by JS for success/error */
+    flex-shrink: 0; /* ADDED: Prevent shrinking */
 }
 /* END: Styling for Editor Controls */
 
 
-/* --- START: Robot Console Log Specific Styles (FALLOUT TERMINAL) --- */
+/* --- START: Robot Console Log Specific Styles (FALLOUT TERMINAL - GREEN) --- */
 #robot-console-log {
     margin-top: 15px;
     background-color: #1a1a1a; /* Darker bg for the whole panel */
@@ -343,84 +362,80 @@ main {
 }
 
 #robot-log-messages {
-    height: 200px; /* Adjust height as needed */
+    height: 200px; /* Original height */
     background-color: #000000; /* True black background */
     color: #00FF41; /* Classic terminal green text */
-    font-size: 16px;
-    /* border: 1px inset #004d00; /* Old inset border */
-    border: 2px solid #004d00; /* New: Solid, slightly thicker border */
+    font-size: 16px; /* Original size */
+    border: 2px solid #004d00; /* Original border */
     padding: 10px;
     text-shadow: 0 0 5px rgba(0, 255, 65, 0.5); /* Text glow */
     word-wrap: break-word;
     overflow-y: scroll; /* Keep scroll */
     font-family: 'VT323', monospace; /* Explicitly set font here too */
-
-    /* Scanline/Vignette/Noise preparation: Parent MUST have relative positioning */
-    position: relative;
-    overflow: hidden; /* Crucial: Keep the ::after pseudo-element clipped */
-
-    /* Optional: Vignette effect */
-    /* box-shadow: inset 0 0 40px 10px rgba(0,0,0,0.6); */
+    position: relative; /* Keep for scanline */
+    overflow: hidden; /* Keep for scanline */
 }
 
-/* Optional: Static/Noise Effect (Commented Out By Default) */
-/* #robot-log-messages::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0.05) 1px, rgba(0,0,0,0) 2px);
-    opacity: 0.3;
-    pointer-events: none;
-    z-index: 2;
-    animation: flicker 0.15s infinite;
-} */
-
-/* Optional: Flicker Animation */
-/* @keyframes flicker {
-    0% { opacity: 0.25; }
-    50% { opacity: 0.35; }
-    100% { opacity: 0.25; }
-} */
-
-
-/* --- START: Scanline Effect (Adapted from ealertguide.html) --- */
-#robot-log-messages::after {
-    content: '';
-    position: absolute;
-    top: 0; /* Start at the top (animated) */
-    left: 0;
-    right: 0;
-    height: 2px; /* Thickness of the scanline */
-    /* Semi-transparent green background */
-    background: rgba(0, 255, 0, 0.15); /* Adjust alpha for visibility */
-    /* Optional subtle blur/glow effect */
-    box-shadow: 0 0 4px 1px rgba(0, 255, 0, 0.15);
-    z-index: 3; /* Ensure it's above noise if enabled */
-    pointer-events: none; /* Ensure it doesn't interfere with interaction */
-    /* Link to the animation */
-    animation: scanline-log 6s linear infinite; /* Use unique animation name */
+#robot-log-messages::after { /* Scanline */
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: rgba(0, 255, 0, 0.15); box-shadow: 0 0 4px 1px rgba(0, 255, 0, 0.15);
+    z-index: 3; pointer-events: none; animation: scanline-log 6s linear infinite;
 }
-
-/* --- START: Scanline Animation Keyframes (Adapted from ealertguide.html) --- */
-/* Use translateY for potentially smoother performance than changing 'top' */
-@keyframes scanline-log {
-    0% {
-        transform: translateY(0%); /* Start at the top */
-        opacity: 0.1; /* Start slightly faded */
-    }
-    50% {
-        opacity: 0.3; /* Slightly brighter mid-scan */
-    }
-    100% {
-        transform: translateY(calc(100% - 2px)); /* Move to bottom edge (minus height) */
-        opacity: 0.1; /* Fade out towards the bottom */
-    }
-}
-/* --- END: Scanline Effect --- */
 /* --- END: Robot Console Log Specific Styles --- */
 
 
-/* Lobby Area - Pushed down */
+/* === START: ADDED Opponent Console Log Styles === */
+#opponent-console-log {
+    /* margin-top is handled inline in HTML */
+    background-color: #1a1010; /* Darker REDDISH bg */
+    border: 2px solid #4d0000; /* Darker RED border */
+    padding: 8px;
+    /* Inherits .console-panel shadow, radius, flex-shrink */
+    flex-shrink: 0; /* Explicitly ensure it doesn't shrink */
+}
+
+#opponent-console-log h3 {
+    color: #ff4136; /* Bright RED title */
+    text-align: center;
+    margin-bottom: 8px;
+    text-shadow: 0 0 4px #ff4136; /* RED glow */
+}
+
+#opponent-log-messages {
+    height: 200px; /* Match original player log height */
+    background-color: #000000; /* True black background */
+    color: #FF4136; /* Classic terminal RED text */
+    font-size: 16px; /* Match original player log font size */
+    border: 2px solid #4d0000; /* Solid, slightly thicker RED border */
+    padding: 10px;
+    text-shadow: 0 0 5px rgba(255, 65, 54, 0.5); /* RED Text glow */
+    word-wrap: break-word;
+    overflow-y: scroll; /* Keep scroll */
+    font-family: 'VT323', monospace; /* Explicitly set font here too */
+    position: relative; /* Keep for scanline */
+    overflow: hidden; /* Keep for scanline */
+}
+
+#opponent-log-messages::after { /* Scanline */
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: rgba(255, 65, 54, 0.15); /* RED scanline */
+    box-shadow: 0 0 4px 1px rgba(255, 65, 54, 0.15); /* RED glow */
+    z-index: 3; pointer-events: none;
+    /* Use the SAME animation name as the player log */
+    animation: scanline-log 6s linear infinite;
+}
+/* === END: ADDED Opponent Console Log Styles === */
+
+
+/* Scanline Animation Keyframes (Defined once, used by both logs) */
+@keyframes scanline-log {
+    0% { transform: translateY(0%); opacity: 0.1; }
+    50% { opacity: 0.3; }
+    100% { transform: translateY(calc(100% - 2px)); opacity: 0.1; }
+}
+
+
+/* Lobby Area - Original */
 #lobby-area {
     margin-top: 20px; /* Add space above lobby */
     background: #333;
@@ -530,18 +545,17 @@ main {
          margin: 0 auto; /* Center arena */
      }
      .stats-panel {
-         max-height: 150px; /* Further reduce stats height when stacked */
+         max-height: 150px; /* Original stacked stats height */
      }
-    #robot-console-log {
+    #robot-console-log, #opponent-console-log { /* <<< Apply to both */
         /* Keep reasonable height when stacked */
-        margin-top: 10px;
+        margin-top: 10px; /* Ensure spacing */
     }
-    #robot-log-messages {
-        height: 150px; /* Adjust stacked height */
+    #robot-log-messages, #opponent-log-messages { /* <<< Apply to both */
+        height: 150px; /* Original stacked height */
     }
     /* Optional: Slow down or disable scanline/flicker on mobile? */
-    /* #robot-log-messages::after { animation: none; } */
-    /* #robot-log-messages::before { animation: none; display: none; } */
+    /* #robot-log-messages::after, #opponent-log-messages::after { animation: none; } */
 }
 
 @media (max-width: 768px) {
@@ -550,9 +564,16 @@ main {
         align-items: center;
         gap: 10px;
     }
+    /* Added centering for header image/title */
+    header > img#header-logo, header > h1 {
+        display: block; margin: 0 auto 5px auto; text-align: center;
+    }
+     header h1 { font-size: 1.4rem; } /* Even smaller title */
+
     nav {
         justify-content: center;
         gap: 8px;
+        width: 100%; /* Allow nav to take full width */
     }
      #lobby-area {
         grid-template-columns: 1fr;
@@ -561,18 +582,18 @@ main {
          margin-top: 20px;
     }
      .CodeMirror {
-        min-height: 350px;
+        min-height: 350px; /* Original stacked editor height */
     }
     .stats-panel, .api-help {
-        max-height: 130px; /* Even smaller on mobile */
+        max-height: 130px; /* Original smaller mobile height */
     }
-     #robot-console-log {
+     #robot-console-log, #opponent-console-log { /* <<< Apply to both */
          /* Use same max-height as stats/api on mobile */
-         max-height: 130px;
+         max-height: 130px; /* Original smaller mobile height */
      }
-     #robot-log-messages {
-        height: 100px; /* Further reduce height */
-        font-size: 14px; /* Maybe smaller font too */
+     #robot-log-messages, #opponent-log-messages { /* <<< Apply to both */
+        height: 100px; /* Original smaller mobile height */
+        font-size: 14px; /* Original smaller mobile font */
     }
 }
 ```
@@ -2477,7 +2498,8 @@ if (!state.searchMode && state.targetDirection !== null) {
 // client/js/ui/lobby.js
 
 const MAX_LOG_MESSAGES = 50; // Keep the event log from getting too long
-const MAX_ROBOT_LOG_MESSAGES = 100; // Allow more robot messages
+const MAX_ROBOT_LOG_MESSAGES = 100; // Allow more player robot messages
+const MAX_OPPONENT_LOG_MESSAGES = 100; // Separate limit for opponent log
 
 /**
  * Updates the text content of the lobby status display.
@@ -2553,56 +2575,100 @@ function clearEventLog() {
 }
 
 
-// --- START: New function for Robot Console Log ---
+// --- START: Player Robot Console Log ---
 /**
- * Adds a message to the robot's console log display. Handles scrolling.
- * @param {string} message - The message text from the robot's console.log.
+ * Adds a message to the player's console log display. Handles scrolling.
+ * @param {string} message - The message text from the player's robot console.log.
  */
 function addRobotLogMessage(message) {
-    const logElement = document.getElementById('robot-log-messages'); // Target new element
+    const logElement = document.getElementById('robot-log-messages'); // Target player element
     if (!logElement) {
         console.warn("Robot log messages element '#robot-log-messages' not found.");
         return;
     }
-
+    // Scroll check
     const wasScrolledToBottom = logElement.scrollHeight - logElement.clientHeight <= logElement.scrollTop + 1;
 
+    // Create and style message div
     const messageDiv = document.createElement('div');
-    messageDiv.textContent = message; // Use textContent for security
-    messageDiv.style.marginBottom = '2px'; // Tighter spacing than event log maybe
-    // Style is mostly inherited from .log-box, color set in CSS
+    messageDiv.textContent = message;
+    messageDiv.style.marginBottom = '2px'; // Tighter spacing
 
     logElement.appendChild(messageDiv);
 
-    // Remove old messages if log is too long
+    // Remove old messages
     while (logElement.childNodes.length > MAX_ROBOT_LOG_MESSAGES) {
         logElement.removeChild(logElement.firstChild);
     }
-
-    // Auto-scroll to bottom if already scrolled to bottom
+    // Auto-scroll
     if (wasScrolledToBottom) {
         logElement.scrollTop = logElement.scrollHeight;
     }
 }
 
-/** Clears the robot console log */
+/** Clears the player's robot console log */
 function clearRobotLog() {
      const logElement = document.getElementById('robot-log-messages');
      if (logElement) {
          logElement.innerHTML = '';
-         // Optionally add a cleared message
-         addRobotLogMessage("-- Robot Log Cleared --");
+         // Add thematic cleared message
+         addRobotLogMessage("--- R.O.S. V1.3 REINITIALIZED ---");
      }
 }
-// --- END: New function for Robot Console Log ---
+// --- END: Player Robot Console Log ---
+
+
+// --- START: Opponent Robot Console Log ---
+/**
+ * Adds a message to the opponent's console log display. Handles scrolling.
+ * @param {string} message - The message text from the opponent's robot console.log.
+ */
+function addOpponentLogMessage(message) {
+    const logElement = document.getElementById('opponent-log-messages'); // Target opponent element
+    if (!logElement) {
+        console.warn("Opponent log messages element '#opponent-log-messages' not found.");
+        return;
+    }
+    // Scroll check
+    const wasScrolledToBottom = logElement.scrollHeight - logElement.clientHeight <= logElement.scrollTop + 1;
+
+    // Create and style message div
+    const messageDiv = document.createElement('div');
+    messageDiv.textContent = message;
+    messageDiv.style.marginBottom = '2px'; // Match player log spacing
+
+    logElement.appendChild(messageDiv);
+
+    // Remove old messages
+    while (logElement.childNodes.length > MAX_OPPONENT_LOG_MESSAGES) { // Use separate limit
+        logElement.removeChild(logElement.firstChild);
+    }
+    // Auto-scroll
+    if (wasScrolledToBottom) {
+        logElement.scrollTop = logElement.scrollHeight;
+    }
+}
+
+/** Clears the opponent's robot console log */
+function clearOpponentLog() {
+     const logElement = document.getElementById('opponent-log-messages');
+     if (logElement) {
+         logElement.innerHTML = '';
+         // Add thematic cleared message
+         addOpponentLogMessage("--- OPPONENT SIGNAL LOST ---");
+     }
+}
+// --- END: Opponent Robot Console Log ---
 
 
 // --- Make functions globally accessible ---
 window.updateLobbyStatus = updateLobbyStatus;
 window.addEventLogMessage = addEventLogMessage;
 window.clearEventLog = clearEventLog;
-window.addRobotLogMessage = addRobotLogMessage; // Add new function to window
-window.clearRobotLog = clearRobotLog; // Optional clear function
+window.addRobotLogMessage = addRobotLogMessage; // Player log
+window.clearRobotLog = clearRobotLog;           // Player log clear
+window.addOpponentLogMessage = addOpponentLogMessage; // Opponent log ADDED
+window.clearOpponentLog = clearOpponentLog;           // Opponent log clear ADDED
 
 
 // --- Initialize Chat Input/Button Listeners & Clear Placeholders ---
@@ -2637,7 +2703,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- Clear placeholder text on initial load for BOTH logs ---
+    // --- Clear placeholder text on initial load for ALL logs ---
     const eventLogElement = document.getElementById('event-log');
     // Check for the specific placeholder text before clearing
     if(eventLogElement && eventLogElement.textContent.trim() === 'Event Log Loading...') {
@@ -2656,10 +2722,20 @@ document.addEventListener('DOMContentLoaded', () => {
         addRobotLogMessage("> R.O.S. V1.3 INITIALIZING...");
         // --- END: Add Thematic Message ---
     }
+
+    // ADDED: Clear opponent log placeholder
+    const opponentLogElement = document.getElementById('opponent-log-messages');
+    if (opponentLogElement && opponentLogElement.textContent.trim() === 'Waiting for opponent messages...') {
+        opponentLogElement.innerHTML = ''; // Clear placeholder
+        addOpponentLogMessage("SCANNING FOR HOSTILE TRANSMISSIONS...");
+        addOpponentLogMessage("...");
+        addOpponentLogMessage("...");
+        addOpponentLogMessage("> STANDING BY");
+    }
     // --- End Placeholder Clearing ---
 });
 
-console.log("Lobby UI functions initialized (lobby.js). Includes Robot Log handler.");
+console.log("Lobby UI functions initialized (lobby.js). Includes Player AND Opponent Log handlers.");
 ```
 
 ## client/js/main.js
@@ -2736,8 +2812,8 @@ document.addEventListener('DOMContentLoaded', () => {
  * Handles client-side network communication with the server using Socket.IO.
  * Connects to the server, sends player data (including name), readiness signals,
  * requests test games, sends self-destruct signals, receives game state updates,
- * handles spectating, processes lobby/chat events, handles robot destruction events, // <-- Updated description
- * receives game history updates, and handles robot log messages.
+ * handles spectating, processes lobby/chat events, handles robot destruction events,
+ * receives game history updates, and handles robot log messages (for both player and opponent). // <-- Updated description
  */
 class Network {
     /**
@@ -2795,9 +2871,12 @@ class Network {
                  if (typeof window.addEventLogMessage === 'function') {
                     window.addEventLogMessage("--> Connected to server.", "event");
                  }
-                 // Clear robot log on new connection
+                 // Clear BOTH robot logs on new connection
                  if (typeof window.clearRobotLog === 'function') {
                      window.clearRobotLog();
+                 }
+                 if (typeof window.clearOpponentLog === 'function') { // ADDED
+                     window.clearOpponentLog();
                  }
             });
 
@@ -2830,7 +2909,7 @@ class Network {
             // Server assigns a unique ID to this client
             this.socket.on('assignId', (id) => {
                 console.log('Server assigned Player ID:', id);
-                this.playerId = id;
+                this.playerId = id; // Store our own ID
                 if (this.game && typeof this.game.setPlayerId === 'function') {
                     this.game.setPlayerId(id);
                 }
@@ -2854,9 +2933,12 @@ class Network {
                     if (typeof window.addEventLogMessage === 'function') {
                         window.addEventLogMessage(`Started spectating game: ${this.spectatingGameName}`, 'event');
                     }
-                    // Clear robot log when starting spectate
+                    // Clear BOTH robot logs when starting spectate
                     if (typeof window.clearRobotLog === 'function') {
                          window.clearRobotLog();
+                    }
+                    if (typeof window.clearOpponentLog === 'function') { // ADDED
+                         window.clearOpponentLog();
                     }
                 } else {
                     console.error("Game object or handleSpectateStart method not available!");
@@ -2916,9 +2998,12 @@ class Network {
                  if (typeof window.addEventLogMessage === 'function') {
                      window.addEventLogMessage(`Your game '${data.gameName || data.gameId}' is starting!`, 'event');
                  }
-                 // Clear robot log at game start
+                 // Clear BOTH robot logs at game start
                  if (typeof window.clearRobotLog === 'function') {
                       window.clearRobotLog();
+                 }
+                  if (typeof window.clearOpponentLog === 'function') { // ADDED
+                      window.clearOpponentLog();
                  }
              });
 
@@ -2967,20 +3052,34 @@ class Network {
 
             // Server reports an error in the robot's code (compilation or runtime)
             this.socket.on('codeError', (data) => {
+                // Ensure data includes robotId and message
+                if (!data || !data.robotId || typeof data.message !== 'string') {
+                     console.warn("Received invalid codeError data:", data);
+                     return;
+                }
+
                 console.error(`Received Code Error for Robot ${data.robotId}:`, data.message);
-                const robotIdentifier = (data.robotId === this.playerId) ? "Your Robot" : `Robot ${data.robotId.substring(0,4)}...`;
+                const robotIdentifier = (this.playerId && data.robotId === this.playerId) ? "Your Robot" : `Opponent (${data.robotId.substring(0,4)}...)`;
+
                 // Log to general event log
                 if (typeof window.addEventLogMessage === 'function') {
                     window.addEventLogMessage(`Code Error (${robotIdentifier}): ${data.message}`, 'error');
                 }
-                // Also log to the specific robot's log if it's ours
-                if (data.robotId === this.playerId && typeof window.addRobotLogMessage === 'function') {
-                     window.addRobotLogMessage(`--- CODE ERROR ---`);
-                     window.addRobotLogMessage(data.message);
-                     window.addRobotLogMessage(`------------------`);
+
+                // Log to the appropriate console (player's or opponent's)
+                const logMessage = `--- CODE ERROR ---\n${data.message}\n------------------`;
+                if (this.playerId && data.robotId === this.playerId) {
+                    if (typeof window.addRobotLogMessage === 'function') {
+                        window.addRobotLogMessage(logMessage);
+                    }
+                } else {
+                    if (typeof window.addOpponentLogMessage === 'function') {
+                        window.addOpponentLogMessage(logMessage);
+                    }
                 }
+
                 // Display alert and reset UI only if it's our robot AND we are not spectating
-                if (data.robotId === this.playerId && !this.isSpectating) {
+                if (this.playerId && data.robotId === this.playerId && !this.isSpectating) {
                      alert(`Your Robot Code Error:\n${data.message}\n\nYou might need to reset and fix your code.`);
                      // Reset Controls UI to lobby state
                      if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
@@ -3072,17 +3171,31 @@ class Network {
             });
             // --- End Game History Listener ---
 
-            // --- Add Robot Log Listener ---
-            this.socket.on('robotLog', (data) => {
-                if (data && typeof data.message === 'string') {
-                    // Call the UI update function (defined in lobby.js)
-                    if (typeof window.addRobotLogMessage === 'function') {
-                        window.addRobotLogMessage(data.message);
-                    } else {
-                        console.warn("addRobotLogMessage function not found!");
-                    }
-                }
-            });
+            // --- Robot Log Listener (Handles Both Player and Opponent) ---
+             this.socket.on('robotLog', (data) => {
+                 // Validate incoming data structure
+                 if (data && typeof data.message === 'string' && typeof data.robotId === 'string') {
+                     // Check if the log is from the player's own robot
+                     if (this.playerId && data.robotId === this.playerId) {
+                         // Call the UI update function for the player's log
+                         if (typeof window.addRobotLogMessage === 'function') {
+                             window.addRobotLogMessage(data.message);
+                         } else {
+                             console.warn("addRobotLogMessage function not found!");
+                         }
+                     } else {
+                         // Log is from the opponent (or received before playerId is set, or during spectate)
+                         // Call the UI update function for the opponent's log
+                         if (typeof window.addOpponentLogMessage === 'function') {
+                             window.addOpponentLogMessage(data.message);
+                         } else {
+                             console.warn("addOpponentLogMessage function not found!");
+                         }
+                     }
+                 } else {
+                      console.warn("Received invalid robotLog data format:", data);
+                 }
+             });
             // --- End Robot Log Listener ---
 
 
@@ -3248,14 +3361,23 @@ class Network {
     <!-- Code Mirror for the editor -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/monokai.min.css">
+
+    <!-- Favicon Link -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Robot Wars</h1>
+            <!-- ****** MODIFIED H1 TO INCLUDE LOGO ****** -->
+            <h1>
+                <img src="/assets/images/RobotwarsLogo.png" alt="Robot Wars Logo" class="header-logo"> <!-- Added logo image -->
+                Robot Wars
+            </h1>
+            <!-- *************************************** -->
             <nav>
                 <!-- Player Name Input Field -->
-                <input type="text" id="playerName" placeholder="Enter Name" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: #e0e0e0; margin-right: 5px;" maxlength="24"> <!-- Added maxlength -->
+                <input type="text" id="playerName" placeholder="Enter Name" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: #e0e0e0; margin-right: 5px;" maxlength="24">
                 <!-- End Player Name Input -->
 
                 <select id="robot-appearance-select" title="Choose Robot Appearance">
@@ -3264,9 +3386,9 @@ class Network {
                     <option value="spike">Spike Bot</option>
                     <option value="tri">Tri Bot</option>
                 </select>
-                <button id="btn-ready">Ready Up</button> <!-- State managed by controls.js -->
-                <button id="btn-test-code">Test Code</button> <!-- Test Code Button -->
-                <button id="btn-self-destruct" style="display: none;">Self-Destruct</button> <!-- Self Destruct Button (Initially hidden) -->
+                <button id="btn-ready">Ready Up</button>
+                <button id="btn-test-code">Test Code</button>
+                <button id="btn-self-destruct" style="display: none;">Self-Destruct</button>
                 <button id="btn-reset">Reset</button>
                 <select id="sample-code">
                     <option value="">Load Sample Code...</option>
@@ -3279,31 +3401,36 @@ class Network {
 
         <main>
             <div class="game-container">
-                <!-- Canvas with updated dimensions -->
+                <!-- Canvas -->
                 <canvas id="arena" width="900" height="900"></canvas>
 
                 <div class="stats-panel">
                     <h3>Robot Stats</h3>
                     <div id="robot-stats">
-                        <!-- Dashboard elements created/managed by dashboard.js -->
+                        <!-- Dashboard elements -->
                     </div>
                 </div>
 
-                <!-- START: Added Robot Console Log -->
+                <!-- Robot Console Log -->
                 <div id="robot-console-log" class="console-panel">
                     <h3>Robot Console Output</h3>
                     <div id="robot-log-messages" class="log-box">
-                        <!-- Robot console messages will appear here -->
                         <div>Waiting for robot messages...</div>
                     </div>
                 </div>
-                <!-- END: Added Robot Console Log -->
+            </div>
 
+            <div id="opponent-console-log" class="console-panel" style="margin-top: 15px;"> <!-- Added margin top for spacing -->
+                <h3>Opponent Console Output</h3>
+                <div id="opponent-log-messages" class="log-box">
+                    <!-- Opponent console messages will appear here -->
+                    <div>Waiting for opponent messages...</div>
+                </div>
             </div>
 
             <div class="editor-container">
                 <h3>Robot Code Editor</h3>
-                <!-- API Help moved above editor -->
+                <!-- API Help -->
                 <div class="api-help">
                     <h4>API Reference</h4>
                     <ul>
@@ -3319,78 +3446,59 @@ class Network {
 
                 <textarea id="code-editor"></textarea>
 
-                <!-- START: Editor Controls (Save/Load/Delete) -->
+                <!-- Editor Controls -->
                 <div class="editor-controls" style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
                     <button id="btn-save-code">Save Code</button>
                     <select id="loadout-select">
                         <option value="" selected>Load Code...</option>
-                        <!-- Loadout options will be populated by JS -->
                     </select>
-                    <button id="btn-delete-loadout" disabled title="Delete selected loadout">
-                        <!-- Simple 'X' or Trash Icon text for now -->
-                        ✖
-                    </button>
+                    <button id="btn-delete-loadout" disabled title="Delete selected loadout">✖</button>
                 </div>
-                <div id="loadout-status" style="font-size: 14px; margin-top: 5px; min-height: 1.2em; color: #aaa;">
-                    <!-- Status messages like 'Saved.' or 'Loaded MyTank.' -->
-                </div>
-                <!-- END: Editor Controls -->
+                <div id="loadout-status" style="font-size: 14px; margin-top: 5px; min-height: 1.2em; color: #aaa;"></div>
             </div>
         </main>
 
-        <!-- Lobby Area - Using CSS Grid -->
-        <div id="lobby-area"> <!-- style is now in main.css -->
-             <div> <!-- Column 1: Status, Log, Chat -->
+        <!-- Lobby Area -->
+        <div id="lobby-area">
+             <div> <!-- Column 1 -->
                  <h3 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Lobby Status</h3>
                  <div id="lobby-status" style="margin-bottom: 10px;">Connecting...</div>
-                 <div id="event-log" class="log-box" style="height: 150px; margin-bottom: 10px;">Event Log Loading...</div> <!-- Added log-box class -->
+                 <div id="event-log" class="log-box" style="height: 150px; margin-bottom: 10px;">Event Log Loading...</div>
                  <div id="chat-area" style="display: flex; gap: 5px;">
-                     <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;" maxlength="100"> <!-- Added maxlength -->
+                     <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;" maxlength="100">
                      <button id="send-chat" style="background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'VT323', monospace; font-size: 15px;">Send</button>
                  </div>
              </div>
-
-             <div> <!-- Column 2: Game History -->
-                 <div id="game-history-log"> <!-- Outer container for styling/header -->
+             <div> <!-- Column 2 -->
+                 <div id="game-history-log">
                      <h4 style="font-family: 'VT323', monospace; font-size: 18px; color: #4CAF50; margin-bottom: 10px;">Recent Game Results</h4>
-                     <!-- The actual list element that history.js targets -->
-                     <div id="game-history-list" class="log-box" style="height: 195px;"> <!-- Added log-box class -->
-                         <!-- History will appear here -->
+                     <div id="game-history-list" class="log-box" style="height: 195px;">
                          <div>No games finished yet.</div>
                      </div>
                  </div>
              </div>
-        </div>
-        <!-- End Lobby Area -->
+        </div> <!-- End Lobby Area -->
+
+        <!-- No footer logo div -->
 
     </div> <!-- End .container -->
 
-    <!-- Socket.IO Client Library -->
+    <!-- Scripts -->
     <script src="/socket.io/socket.io.js"></script>
-    <!-- CodeMirror Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script> <!-- Added for bracket matching -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script> <!-- Added for auto-close brackets -->
-
-
-    <!-- Game Engine Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
     <script src="js/engine/arena.js"></script>
     <script src="js/engine/game.js"></script>
     <script src="js/engine/audio.js"></script>
-
-    <!-- UI Component Scripts -->
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
     <script src="js/ui/controls.js"></script>
-    <script src="js/ui/lobby.js"></script> <!-- Handles both Event Log and Robot Log now -->
-    <script src="js/ui/history.js"></script> <!-- History script added -->
-
-    <!-- Network Handler Script -->
+    <script src="js/ui/lobby.js"></script>
+    <script src="js/ui/history.js"></script>
     <script src="js/network.js"></script>
-
-    <!-- Main Application Entry Point -->
-    <script src="js/main.js"></script> <!-- This should always be the last script -->
+    <script src="js/main.js"></script>
 </body>
 </html>
 ```
@@ -4632,7 +4740,7 @@ const vm = require('vm');
 /**
  * Executes robot AI code safely within a sandboxed environment on the server.
  * Manages the execution context, provides a controlled API, and directly triggers
- * sound events (like fire) on the GameInstance via safe API methods. // <-- Updated description
+ * events (like robotLog, fire) on the GameInstance via safe API methods. // <-- Updated description
  */
 class ServerRobotInterpreter {
     constructor() {
@@ -4646,11 +4754,12 @@ class ServerRobotInterpreter {
         console.log("[Interpreter] Initializing robot interpreters...");
         robots.forEach(robot => {
             const playerData = playersDataMap.get(robot.id);
-            const playerSocket = playerData ? playerData.socket : null;
+            const playerSocket = playerData ? playerData.socket : null; // Needed for init error reporting
 
             if (!playerData || typeof playerData.code !== 'string' || playerData.code.trim() === '') {
                 console.error(`[Interpreter] No valid code for robot ${robot.id}. Disabling.`);
-                this.robotTickFunctions[robot.id] = null; this.robotContexts[robot.id] = null;
+                this.robotTickFunctions[robot.id] = null;
+                this.robotContexts[robot.id] = null;
                 return;
             }
 
@@ -4659,9 +4768,7 @@ class ServerRobotInterpreter {
                 robot: { // API available to the robot code
                     drive: (direction, speed) => this.safeDrive(robot.id, direction, speed),
                     scan: (direction, resolution) => this.safeScan(robot.id, direction, resolution),
-                    // START CHANGE: Safe fire now triggers event on game instance
                     fire: (direction, power) => this.safeFire(robot.id, direction, power),
-                    // END CHANGE
                     damage: () => this.safeDamage(robot.id),
                     getX: () => this.safeGetX(robot.id),
                     getY: () => this.safeGetY(robot.id),
@@ -4673,39 +4780,80 @@ class ServerRobotInterpreter {
                         // console.log(`[Robot ${robot.id} Log]`, ...args);
                         const messageString = args.map(arg => {
                             try {
+                                // Basic string conversion, handle objects with JSON
                                 return (typeof arg === 'object' && arg !== null) ? JSON.stringify(arg) : String(arg);
-                            } catch (e) { return '[Unloggable]'; }
+                            } catch (e) { return '[Unloggable Object]'; } // Handle circular refs etc.
                         }).join(' ');
-                        // Emit to specific client if connected
-                        if (playerSocket?.connected) {
-                            playerSocket.emit('robotLog', { message: messageString });
+
+                        // --- START OF CHANGE: Emit to game room including robotId ---
+                        // Ensure game instance context is available (should be during execution)
+                        // Note: this.currentGameInstance is set during executeTick
+                        if (this.currentGameInstance && this.currentGameInstance.io && this.currentGameInstance.gameId) {
+                            this.currentGameInstance.io.to(this.currentGameInstance.gameId).emit('robotLog', {
+                                robotId: robot.id, // Include the ID of the robot that logged
+                                message: messageString
+                            });
+                        } else {
+                            // Fallback or error if game instance isn't set (shouldn't normally happen during tick)
+                            // console.warn(`[Interpreter] Cannot emit robotLog for ${robot.id}: No currentGameInstance context during console.log.`);
+                            // If there's a socket, maybe still send to owner as fallback?
+                            if (playerSocket?.connected) {
+                                playerSocket.emit('robotLog', {
+                                    robotId: robot.id,
+                                    message: `(Context Issue) ${messageString}`
+                                });
+                             }
                         }
+                        // --- END OF CHANGE ---
                     }
                 },
-                Math: Math,
-                // Disable harmful globals
-                // setTimeout: null, setInterval: null, require: null, process: null, global: null,
+                // Limited Math object (can be expanded if needed)
+                Math: {
+                    abs: Math.abs, acos: Math.acos, asin: Math.asin, atan: Math.atan, atan2: Math.atan2,
+                    ceil: Math.ceil, cos: Math.cos, floor: Math.floor, max: Math.max, min: Math.min,
+                    pow: Math.pow, random: Math.random, round: Math.round, sin: Math.sin, sqrt: Math.sqrt,
+                    tan: Math.tan, PI: Math.PI
+                },
+                // Explicitly allow certain safe Number properties/methods if needed
+                Number: {
+                    isFinite: Number.isFinite, isNaN: Number.isNaN, parseFloat: Number.parseFloat, parseInt: Number.parseInt
+                },
+                // Disable potentially harmful globals explicitly
+                setTimeout: undefined, setInterval: undefined, setImmediate: undefined,
+                clearTimeout: undefined, clearInterval: undefined, clearImmediate: undefined,
+                require: undefined, process: undefined, global: undefined, globalThis: undefined,
+                Buffer: undefined, // etc.
             };
 
+            // Create the context using the sandboxed environment
             this.robotContexts[robot.id] = vm.createContext(sandbox);
 
             try {
-                // Wrap code in a function for execution context
-                const wrappedCode = `(function() { "use strict"; ${playerData.code} });`;
-                const script = new vm.Script(wrappedCode, { filename: `robot_${robot.id}.js`, displayErrors: true });
-                this.robotTickFunctions[robot.id] = script.runInContext(this.robotContexts[robot.id], { timeout: 500 });
+                // Wrap user code in a function for better isolation and execution control
+                const wrappedCode = `(function() { "use strict";\n${playerData.code}\n});`;
+                // Compile the script
+                const script = new vm.Script(wrappedCode, {
+                    filename: `robot_${robot.id}.js`, // Useful for error reporting
+                    displayErrors: true
+                });
 
+                // Run the script once to get the function it returns
+                // Timeout during initialization prevents infinite loops in top-level code
+                this.robotTickFunctions[robot.id] = script.runInContext(this.robotContexts[robot.id], { timeout: 500 }); // 500ms timeout for init
+
+                // Check if the result is actually a function
                 if (typeof this.robotTickFunctions[robot.id] !== 'function') {
-                     throw new Error("Compiled code did not produce a function.");
+                     throw new Error("Compiled code did not produce a function. Ensure your code is wrapped correctly or is just statements.");
                 }
                 console.log(`[Interpreter] Compiled function for robot ${robot.id}`);
 
             } catch (error) {
-                console.error(`[Interpreter] Error initializing function for robot ${robot.id}:`, error.message);
+                console.error(`[Interpreter] Error initializing/compiling function for robot ${robot.id}:`, error.message);
+                // Report initialization error back to the specific player
                 if (playerSocket?.connected) {
-                    playerSocket.emit('codeError', { robotId: robot.id, message: `Init Error: ${error.message}` });
+                    playerSocket.emit('codeError', { robotId: robot.id, message: `Initialization Error: ${error.message}` });
                 }
-                this.robotTickFunctions[robot.id] = null; // Disable on error
+                this.robotTickFunctions[robot.id] = null; // Disable this robot
                 this.robotContexts[robot.id] = null;
             }
         });
@@ -4717,120 +4865,137 @@ class ServerRobotInterpreter {
      * Safe API methods called within the robot code might trigger events on the GameInstance.
      * @param {ServerRobot[]} robots - Array of all robot instances in the game.
      * @param {GameInstance} gameInstance - Reference to the current game instance.
-     * @returns {Array} An empty array (events are triggered via side effects in safe API calls).
+     * @returns {Array} An empty array (events are now triggered via side effects in safe API calls).
      */
     executeTick(robots, gameInstance) {
         this.currentGameInstance = gameInstance; // Provide context for safe methods
-        const results = []; // Keep array for potential future use, but not for current sound events
+        const results = []; // Keep array structure, though not used for sound events currently
 
         robots.forEach(robot => {
+            // Only execute if robot is active and has a valid compiled function/context
             if (robot.state === 'active' && this.robotTickFunctions[robot.id] && this.robotContexts[robot.id]) {
-                this.currentRobotId = robot.id;
+                this.currentRobotId = robot.id; // Set context for safe API calls
                 const tickFunction = this.robotTickFunctions[robot.id];
                 const context = this.robotContexts[robot.id];
-                const playerData = gameInstance.players.get(robot.id);
+                const playerData = gameInstance.players.get(robot.id); // Find player data (including socket)
                 const playerSocket = playerData ? playerData.socket : null;
 
                 try {
                     // Execute the robot's compiled code function for this tick
-                    tickFunction.call(context); // Events triggered by safeFire inside this call
+                    // No per-tick timeout applied here to avoid complexity, relies on server stability
+                    // A more robust solution might involve worker threads or limits on computation steps.
+                    tickFunction.call(context.robot); // Pass the 'robot' API object as 'this' inside the function
+
+                    // Event generation (like 'fire' or 'log') happens *inside* the safe API calls triggered by tickFunction
 
                 } catch (error) {
-                    console.error(`[Interpreter] Runtime error for robot ${robot.id}:`, error.message);
+                    console.error(`[Interpreter] Runtime error for robot ${robot.id}:`, error.message, error.stack);
+                    // Report runtime error back to the specific player
                     if (playerSocket?.connected) {
                         playerSocket.emit('codeError', { robotId: robot.id, message: `Runtime Error: ${error.message}` });
                     }
-                    // Optional: Disable robot on error?
-                    // this.robotTickFunctions[robot.id] = null;
+                    // Optional: Disable robot on repeated/critical errors?
+                    // this.robotTickFunctions[robot.id] = null; // Consider disabling the robot
                 } finally {
-                    this.currentRobotId = null; // Clear context after execution
+                    this.currentRobotId = null; // Clear context after execution attempt
                 }
             }
         });
 
         this.currentGameInstance = null; // Clear game context after all robots run
-        return results; // Return empty array for now
+        return results; // Return empty array
     }
 
     // --- Safe API Methods ---
+    // These methods are called *from* the sandboxed robot code via the 'robot' object.
+    // They ensure the action is performed by the correct robot and interact with the GameInstance.
 
     /** Safely retrieves the ServerRobot instance for the currently executing robot. @private */
     getCurrentRobot() {
+        // Uses the temporary context variables set during executeTick
         if (!this.currentRobotId || !this.currentGameInstance) return null;
+        // Find the robot object within the game instance's list
         return this.currentGameInstance.robots.find(r => r.id === this.currentRobotId);
     }
 
-    /** Safely delegates drive command. */
+    /** Safely delegates drive command to the correct robot instance. */
     safeDrive(robotId, direction, speed) {
+        // Ensure the call is from the currently executing robot
         if (robotId !== this.currentRobotId) return;
         const robot = this.getCurrentRobot();
+        // Ensure robot exists, is active, and parameters are valid numbers
         if (robot?.state === 'active' && typeof direction === 'number' && typeof speed === 'number') {
             robot.drive(direction, speed);
         }
     }
 
-    /** Safely delegates scan command. */
+    /** Safely delegates scan command to the GameInstance. */
     safeScan(robotId, direction, resolution) {
         if (robotId !== this.currentRobotId || !this.currentGameInstance) return null;
         const robot = this.getCurrentRobot();
+        // Ensure robot exists, is active, and parameters are valid numbers
         if (robot?.state === 'active' && typeof direction === 'number') {
+            // Use default resolution if not provided or invalid
             const res = (typeof resolution === 'number' && resolution > 0) ? resolution : 10;
+            // Delegate scan logic to the GameInstance
             return this.currentGameInstance.performScan(robot, direction, res);
         }
-        return null;
+        return null; // Return null if scan cannot be performed
     }
 
     /** Safely delegates fire command AND triggers fire event on GameInstance. */
     safeFire(robotId, direction, power) {
-        if (robotId !== this.currentRobotId) return false; // Check execution context
+        // Check execution context
+        if (robotId !== this.currentRobotId) return false;
         const robot = this.getCurrentRobot();
 
-        // Also check robot state and game instance availability
+        // Also check robot state, game instance availability, and direction validity
         if (robot?.state === 'active' && this.currentGameInstance && typeof direction === 'number') {
-            // Delegate the actual firing logic to the robot
-            const fireResult = robot.fire(direction, power); // Gets { success: boolean, eventData?: object }
+            // Delegate the actual firing logic (cooldown check, missile creation) to the robot instance
+            const fireResult = robot.fire(direction, power); // Returns { success: boolean, eventData?: object }
 
-            // START CHANGE: If fire was successful, trigger event on GameInstance
+            // If the robot's fire method was successful (e.g., cooldown allowed),
+            // trigger the corresponding event on the GameInstance using the provided eventData.
             if (fireResult.success && fireResult.eventData && typeof this.currentGameInstance.addFireEvent === 'function') {
                 this.currentGameInstance.addFireEvent(fireResult.eventData);
             }
-            // END CHANGE
 
-            return fireResult.success; // Return success status to the robot code
+            // Return the success status back to the robot's code
+            return fireResult.success;
         }
-        return false; // Cannot fire
+        return false; // Cannot fire (e.g., robot destroyed, invalid params)
     }
 
 
-    /** Safely retrieves robot damage. */
+    /** Safely retrieves the current damage of the robot. */
     safeDamage(robotId) {
-        if (robotId !== this.currentRobotId) return 100;
+        if (robotId !== this.currentRobotId) return 100; // Return max damage if called incorrectly
         const robot = this.getCurrentRobot();
-        return robot ? robot.damage : 100;
+        return robot ? robot.damage : 100; // Return current damage or max if robot not found
     }
 
-    /** Safely retrieves robot X coordinate. */
+    /** Safely retrieves the robot's X coordinate. */
     safeGetX(robotId) {
         if (robotId !== this.currentRobotId) return null;
         const robot = this.getCurrentRobot();
         return robot ? robot.x : null;
     }
 
-    /** Safely retrieves robot Y coordinate. */
+    /** Safely retrieves the robot's Y coordinate. */
     safeGetY(robotId) {
         if (robotId !== this.currentRobotId) return null;
         const robot = this.getCurrentRobot();
         return robot ? robot.y : null;
     }
 
-    /** Safely retrieves robot direction. */
+    /** Safely retrieves the robot's current direction (degrees). */
     safeGetDirection(robotId) {
         if (robotId !== this.currentRobotId) return null;
         const robot = this.getCurrentRobot();
         return robot ? robot.direction : null;
     }
 
-    /** Cleans up interpreter state when the game ends. */
+    /** Cleans up interpreter state (contexts, functions) when the game ends. */
     stop() {
         console.log("[Interpreter] Stopping and cleaning up contexts/functions.");
         this.robotContexts = {};
