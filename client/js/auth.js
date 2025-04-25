@@ -253,39 +253,43 @@ class AuthHandler {
     _onLoginSuccess() {
         console.log("[AuthHandler] _onLoginSuccess Actions Triggered");
 
-        // Show Loadout Builder
-        console.log("[AuthHandler] Attempting to show Loadout Builder...");
-        if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
-            window.loadoutBuilderInstance.show();
-        } else {
-            console.error("[AuthHandler] LoadoutBuilder instance (window.loadoutBuilderInstance) not available!");
-            alert("Critical Error: Failed to load Robot Builder UI.");
-             if(this.mainContainer) this.mainContainer.style.display = 'flex';
-        }
-
-        // Update header ICON via Controls
-        // Use setTimeout to allow main.js to fully finish component instantiation if needed
+        // --- START: Introduce Delay ---
+        // Wait a fraction of a second to allow the browser to process the Set-Cookie header
+        // from the login/register response before making authenticated API calls.
         setTimeout(() => {
-            // console.log("[AuthHandler] Attempting header icon update via Controls..."); // Less verbose
+            console.log("[AuthHandler] Delay complete, proceeding with post-login UI setup...");
+
+            // Show Loadout Builder (Now inside setTimeout)
+            console.log("[AuthHandler] Attempting to show Loadout Builder...");
+            if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
+                window.loadoutBuilderInstance.show(); // This will trigger the API calls
+            } else {
+                console.error("[AuthHandler] LoadoutBuilder instance (window.loadoutBuilderInstance) not available!");
+                alert("Critical Error: Failed to load Robot Builder UI.");
+                 if(this.mainContainer) this.mainContainer.style.display = 'flex';
+            }
+
+            // Update header ICON via Controls (Now inside setTimeout)
             if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
                 controls.updatePlayerHeaderDisplay();
             } else {
                  console.warn("[AuthHandler] Controls object or updatePlayerHeaderDisplay method not available yet for icon update.");
             }
-        }, 50); // Reduced delay slightly
 
-        // Connect WebSocket
-        if (typeof network !== 'undefined' && network.connect) {
-             // console.log("[AuthHandler] Attempting WebSocket connection..."); // Less verbose
-             if (!network.socket || !network.socket.connected) {
-                network.connect();
-             } else {
-                console.log("[AuthHandler] WebSocket already connected.");
-                 if(typeof controls !== 'undefined') controls.setState('lobby');
-             }
-        } else {
-             console.warn("[AuthHandler] Network object not available to connect.");
-        }
+            // Connect WebSocket (Now inside setTimeout)
+            if (typeof network !== 'undefined' && network.connect) {
+                 if (!network.socket || !network.socket.connected) {
+                    network.connect();
+                 } else {
+                    console.log("[AuthHandler] WebSocket already connected.");
+                     if(typeof controls !== 'undefined') controls.setState('lobby');
+                 }
+            } else {
+                 console.warn("[AuthHandler] Network object not available to connect.");
+            }
+
+        }, 250); // Delay in milliseconds (e.g., 250ms = 0.25 seconds) - adjust if needed
+        // --- END: Introduce Delay ---
     }
 
     /** Actions to perform after logout */
