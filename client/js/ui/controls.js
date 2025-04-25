@@ -3,9 +3,10 @@
 /**
  * Controls handler for Robot Wars.
  * Manages UI state ('lobby', 'waiting', 'playing', 'spectating'), button interactions,
- * code loading, appearance selection, player name input, code loadout saving/loading,
- * test game requests, self-destruct requests, and sends relevant data/signals
- * to the server via the network handler. // Updated description
+ * handles code snippet saving/loading/deleting via API calls,
+ * handles test game requests, self-destruct requests, updates the static player header display (basic),
+ * handles showing the loadout builder via the Edit button, and sends relevant data/signals
+ * to the server via the network handler.
  */
 class Controls {
     /**
@@ -15,634 +16,526 @@ class Controls {
      */
     constructor(game, network) {
         this.game = game;
-        this.network = network; // Store network reference
-        // UI State Machine: 'lobby', 'waiting', 'playing', 'spectating'
-        this.uiState = 'lobby'; // Initial state
-        this.isClientReady = false; // Still track if ready *within* lobby/waiting states
-
-        // --- START: Loadout Properties ---
-        this.localStorageKey = 'robotWarsLoadouts';
-        // --- END: Loadout Properties ---
-        this.testGameActive = false; // Track if a test game is running client-side (Might be useful later)
+        this.network = network;
+        this.uiState = 'lobby'; // Initial state might be incorrect if not logged in
+        this.isClientReady = false;
+        this.testGameActive = false;
+        this.statusTimeoutId = null; // Initialize timeout ID
 
         if (!this.game || !this.network) {
              console.error("Controls initialized without valid game or network reference!");
         }
-        this.setupEventListeners();
-        this.loadPlayerName();
-        this.updateUIForState(); // Set initial UI based on 'lobby' state
 
-        // --- START: Initialize Loadouts ---
-        this.populateLoadoutUI(); // Populate dropdown on load
-        // --- END: Initialize Loadouts ---
-        console.log('Controls initialized with game and network references');
+        // --- Element References ---
+        this.saveSnippetButton = document.getElementById('btn-save-code');
+        this.loadSnippetSelect = document.getElementById('loadout-select');
+        this.deleteSnippetButton = document.getElementById('btn-delete-loadout');
+        this.editLoadoutButton = document.getElementById('btn-edit-loadout');
+        this.readyButton = document.getElementById('btn-ready');
+        this.resetButton = document.getElementById('btn-reset');
+        this.selfDestructButton = document.getElementById('btn-self-destruct');
+        this.testButton = document.getElementById('btn-test-code');
+        this.loadoutStatus = document.getElementById('loadout-status');
+        // --- End Element References ---
+
+        this.setupEventListeners(); // Setup listeners after properties are initialized
+
+        // Populate the CODE SNIPPET dropdown via API on load (will skip if not logged in)
+        this.populateCodeSnippetSelect();
+
+        console.log('Controls initialized (API Mode).');
     }
+
 
     /** Sets the internal state and updates the UI accordingly */
     setState(newState) {
-        // List of valid states
         const validStates = ['lobby', 'waiting', 'playing', 'spectating'];
         if (!validStates.includes(newState)) {
-            console.error(`Attempted to set invalid UI state: ${newState}`);
+            console.error(`[Controls.setState] Attempted to set invalid UI state: ${newState}`);
             return;
         }
+        // Log current and target state *before* any checks
+        // console.log(`[Controls.setState] >> Received request to change state from '${this.uiState}' to '${newState}'.`); // Verbose
 
         if (this.uiState === newState) {
-             // console.log(`Controls UI State already '${newState}'. No change.`); // Optional log
-             return; // No change needed
+             // console.log(`[Controls.setState] -- State is already '${newState}'. Returning early.`); // Verbose
+             return;
         }
 
-        console.log(`Controls UI State changing from '${this.uiState}' to '${newState}'`);
+        console.log(`[Controls.setState] ++ State changing from '${this.uiState}' to '${newState}'. Proceeding to update UI...`);
         this.uiState = newState;
-
-        // Reset internal ready flag when leaving waiting state or entering non-lobby states
-        if (newState !== 'waiting') {
-            this.isClientReady = false;
-        }
-
-        this.updateUIForState();
+        if (newState !== 'waiting') this.isClientReady = false;
+        this.updateUIForState(); // Update button states etc.
     }
 
     /** Updates all relevant UI elements based on the current this.uiState */
     updateUIForState() {
-        // Get elements
-        const readyButton = document.getElementById('btn-ready');
-        const appearanceSelect = document.getElementById('robot-appearance-select');
-        const playerNameInput = document.getElementById('playerName');
-        const sampleCodeSelect = document.getElementById('sample-code');
-        const resetButton = document.getElementById('btn-reset');
-        const selfDestructButton = document.getElementById('btn-self-destruct'); // Get self-destruct
-        const testButton = document.getElementById('btn-test-code'); // Get test button
-        // --- START: Get Loadout Elements ---
-        const saveButton = document.getElementById('btn-save-code');
-        const loadSelect = document.getElementById('loadout-select');
-        const deleteButton = document.getElementById('btn-delete-loadout');
-        // --- END: Get Loadout Elements ---
         const editorIsAvailable = typeof editor !== 'undefined';
-
-        // Defaults (most restrictive)
         let readyButtonText = "Loading...";
         let readyButtonColor = '#777';
         let readyButtonDisabled = true;
-        let inputsDisabled = true;
         let editorReadOnly = true;
-        let selfDestructVisible = false; // Hide self-destruct by default
-        let testButtonDisabled = true; // Disable test button by default
-        let loadoutControlsDisabled = true; // Disable save/load/delete by default
+        let selfDestructVisible = false;
+        let testButtonDisabled = true;
+        let codeSnippetControlsDisabled = true;
+        let editLoadoutDisabled = true;
 
-        switch (this.uiState) {
-            case 'lobby': // Can interact, ready button shows "Ready Up"
-                readyButtonText = "Ready Up";
-                readyButtonColor = '#4CAF50'; // Green
-                readyButtonDisabled = false;
-                inputsDisabled = false;
-                editorReadOnly = false;
-                selfDestructVisible = false; // Hide self-destruct
-                testButtonDisabled = false; // Enable test button
-                loadoutControlsDisabled = false; // Enable loadout controls
-                break;
+        const loggedIn = window.authHandler?.isLoggedIn ?? false;
+        // Log the state being evaluated by this specific call
+        // console.log(`[Controls.updateUIForState] --> Evaluating UI based on State: '${this.uiState}', LoggedIn: ${loggedIn}`); // Verbose
 
-            case 'waiting': // Can only click "Unready"
-                readyButtonText = "Waiting... (Click to Unready)";
-                readyButtonColor = '#FFA500'; // Orange
-                readyButtonDisabled = false; // Must be enabled to unready
-                inputsDisabled = true; // Other inputs locked
-                editorReadOnly = true;
-                selfDestructVisible = false; // Hide self-destruct
-                testButtonDisabled = true;
-                loadoutControlsDisabled = true;
-                break;
-
-            case 'playing': // All interaction disabled (includes test games)
-                readyButtonText = "Game in Progress...";
-                readyButtonColor = '#777'; // Grey
-                readyButtonDisabled = true;
-                inputsDisabled = true;
-                editorReadOnly = true;
-                selfDestructVisible = true; // SHOW self-destruct during play
-                testButtonDisabled = true;
-                loadoutControlsDisabled = true;
-                break;
-
-            case 'spectating': // All interaction disabled
-                readyButtonText = "Spectating...";
-                readyButtonColor = '#4682B4'; // Steel Blue
-                readyButtonDisabled = true;
-                inputsDisabled = true;
-                editorReadOnly = true;
-                selfDestructVisible = false; // Hide self-destruct
-                testButtonDisabled = true;
-                loadoutControlsDisabled = true;
-                break;
-
-            default:
-                 console.error("Invalid uiState during UI update:", this.uiState);
-                 // Keep defaults (disabled) in case of error
-                 readyButtonText = "Error";
-                 break;
+        if (loggedIn) {
+             switch (this.uiState) {
+                 case 'lobby':
+                     // console.log('[Controls.updateUIForState] --> Applying ENABLED state for lobby.'); // Verbose
+                     readyButtonText = "Ready Up"; readyButtonColor = '#4CAF50'; readyButtonDisabled = false;
+                     editorReadOnly = false; selfDestructVisible = false; testButtonDisabled = false;
+                     codeSnippetControlsDisabled = false; editLoadoutDisabled = false;
+                     break;
+                 case 'waiting':
+                     // console.log('[Controls.updateUIForState] --> Applying WAITING state.'); // Verbose
+                     readyButtonText = "Waiting... (Click to Unready)"; readyButtonColor = '#FFA500'; readyButtonDisabled = false;
+                     editorReadOnly = true; selfDestructVisible = false; testButtonDisabled = true;
+                     codeSnippetControlsDisabled = true; editLoadoutDisabled = true;
+                     break;
+                 case 'playing': case 'spectating':
+                     // console.log(`[Controls.updateUIForState] --> Applying ${this.uiState.toUpperCase()} state.`); // Verbose
+                     readyButtonText = this.uiState === 'playing' ? "Game in Progress..." : "Spectating...";
+                     readyButtonColor = this.uiState === 'playing' ? '#777' : '#4682B4'; readyButtonDisabled = true;
+                     editorReadOnly = true; selfDestructVisible = (this.uiState === 'playing'); testButtonDisabled = true;
+                     codeSnippetControlsDisabled = true; editLoadoutDisabled = true;
+                     break;
+                 default:
+                     console.warn(`[Controls.updateUIForState] --> Applying DISABLED state (default/unknown UI state: ${this.uiState}).`);
+                     break;
+             }
+        } else {
+             // console.log('[Controls.updateUIForState] --> Applying DISABLED state (loggedIn check failed).'); // Verbose
+             readyButtonText = "Please Log In"; readyButtonDisabled = true; editorReadOnly = true;
+             selfDestructVisible = false; testButtonDisabled = true; codeSnippetControlsDisabled = true;
+             editLoadoutDisabled = true;
         }
 
         // Apply UI changes
-        if (readyButton) {
-            readyButton.textContent = readyButtonText;
-            readyButton.style.backgroundColor = readyButtonColor;
-            readyButton.disabled = readyButtonDisabled;
-        } else { console.warn("Ready button not found during UI update."); }
+        if (this.readyButton) { this.readyButton.textContent = readyButtonText; this.readyButton.style.backgroundColor = readyButtonColor; this.readyButton.disabled = readyButtonDisabled; }
+        if (this.resetButton) { this.resetButton.disabled = (this.uiState !== 'lobby' || !loggedIn); }
+        if (this.selfDestructButton) { this.selfDestructButton.style.display = selfDestructVisible ? 'inline-block' : 'none'; this.selfDestructButton.disabled = !selfDestructVisible; }
+        if (this.testButton) { this.testButton.disabled = testButtonDisabled; }
+        if (this.saveSnippetButton) { this.saveSnippetButton.disabled = codeSnippetControlsDisabled; }
+        if (this.loadSnippetSelect) { this.loadSnippetSelect.disabled = codeSnippetControlsDisabled; }
+        if (this.deleteSnippetButton) { this.deleteSnippetButton.disabled = codeSnippetControlsDisabled || (this.loadSnippetSelect && !this.loadSnippetSelect.value); }
+        if (this.editLoadoutButton) { this.editLoadoutButton.disabled = editLoadoutDisabled; }
+        try { if (editorIsAvailable && editor.setOption) editor.setOption("readOnly", editorReadOnly); }
+        catch (e) { console.error("Error setting CodeMirror readOnly option:", e); }
 
-        if (appearanceSelect) { appearanceSelect.disabled = inputsDisabled; }
-         else { console.warn("Appearance select not found during UI update."); }
-
-        if (playerNameInput) { playerNameInput.disabled = inputsDisabled; }
-         else { console.warn("Player name input not found during UI update."); }
-
-        if (sampleCodeSelect) { sampleCodeSelect.disabled = inputsDisabled; }
-         else { console.warn("Sample code select not found during UI update."); }
-
-        if (resetButton) { resetButton.disabled = inputsDisabled; } // Reset follows other inputs now
-         else { console.warn("Reset button not found during UI update."); }
-
-        if (selfDestructButton) { // Show/hide and enable/disable self-destruct
-             selfDestructButton.style.display = selfDestructVisible ? 'inline-block' : 'none';
-             selfDestructButton.disabled = !selfDestructVisible; // Disable if not visible (i.e., not playing)
-        } else { console.warn("Self Destruct button not found during UI update."); }
-
-        if (testButton) { testButton.disabled = testButtonDisabled; } // Update test button state
-         else { console.warn("Test Code button not found during UI update."); }
-
-
-        // --- START: Update Loadout Control State ---
-        if (saveButton) { saveButton.disabled = loadoutControlsDisabled; }
-         else { console.warn("Save Code button not found during UI update."); }
-        if (loadSelect) { loadSelect.disabled = loadoutControlsDisabled; }
-         else { console.warn("Load Code select not found during UI update."); }
-        // Delete button is also disabled if no loadout is selected (handled in its listener/populate)
-        if (deleteButton) { deleteButton.disabled = loadoutControlsDisabled || (loadSelect && !loadSelect.value); }
-         else { console.warn("Delete Loadout button not found during UI update."); }
-        // --- END: Update Loadout Control State ---
-
-        try {
-            if (editorIsAvailable) {
-                editor.setOption("readOnly", editorReadOnly);
-            } else if (this.uiState !== 'lobby') { // Only warn if editor should be RO but isn't available
-                 // console.warn("CodeMirror editor not available for readOnly update."); // Can be noisy
-            }
-        } catch (e) {
-             console.error("Error setting CodeMirror readOnly option:", e);
-        }
-
-
-        // console.log(`UI Updated for state: ${this.uiState}. Inputs Disabled: ${inputsDisabled}, Ready Button Disabled: ${readyButtonDisabled}`); // Debug log
+        // console.log(`[Controls.updateUIForState] << UI Update Applied. ReadyBtn Disabled: ${readyButtonDisabled}, TestBtn Disabled: ${testButtonDisabled}, Editor Controls Disabled: ${codeSnippetControlsDisabled}, EditLoadout Disabled: ${editLoadoutDisabled}`); // Verbose
     }
 
 
-    /**
-     * Sets up event listeners for UI elements like buttons and selects.
-     */
+    /** Sets up event listeners for UI elements */
     setupEventListeners() {
-        // Get references to the DOM elements
-        const readyButton = document.getElementById('btn-ready');
-        const resetButton = document.getElementById('btn-reset');
-        const sampleCodeSelect = document.getElementById('sample-code');
-        const appearanceSelect = document.getElementById('robot-appearance-select');
-        const playerNameInput = document.getElementById('playerName');
-        const selfDestructButton = document.getElementById('btn-self-destruct'); // Get self-destruct
-        const testButton = document.getElementById('btn-test-code'); // Get test button
-        // --- START: Get Loadout Elements ---
-        const saveButton = document.getElementById('btn-save-code');
-        const loadSelect = document.getElementById('loadout-select');
-        const deleteButton = document.getElementById('btn-delete-loadout');
-        // --- END: Get Loadout Elements ---
+        // Add listeners only if elements exist
+        if (this.editLoadoutButton) {
+            this.editLoadoutButton.addEventListener('click', () => {
+                 if (!window.authHandler?.isLoggedIn) return;
+                 if (this.uiState !== 'lobby') return;
+                 if (typeof window.loadoutBuilderInstance?.show === 'function') {
+                     console.log("[Controls] Edit Loadout button clicked, showing builder.");
+                     window.loadoutBuilderInstance.show();
+                 } else { console.error("LoadoutBuilder instance not found!"); alert("Error: Cannot open the loadout builder."); }
+             });
+        } else { console.warn("Edit Loadout Button not found for listener."); }
+
+        if (this.readyButton) {
+             this.readyButton.addEventListener('click', async () => { // Make async
+                if (!this.network?.socket?.connected) { alert("Not connected to server."); return; }
+                if (!window.authHandler?.isLoggedIn) { alert("Please log in first."); return; }
+
+                if (this.uiState === 'lobby') {
+                    console.log('Ready Up button clicked (State: lobby)');
+                    this.updateLoadoutStatus("Preparing loadout...");
+
+                    // --- START: Prepare Loadout ---
+                    const { loadoutData, error } = await this._prepareLoadoutData("Ready Up");
+                    if (error) {
+                         alert(error);
+                         this.updateLoadoutStatus(`Ready Up failed: ${error}`, true);
+                         return;
+                    }
+                    if (!loadoutData) {
+                         alert("Internal Error: Failed to prepare loadout data.");
+                         this.updateLoadoutStatus("Ready Up failed: Could not prepare data.", true);
+                         return;
+                    }
+                    // --- END: Prepare Loadout ---
+
+                    // --- START: Send Data & Update State ---
+                    this.network.sendLoadoutData(loadoutData); // Use new name/structure
+                    this.isClientReady = true;
+                    this.setState('waiting');
+                    this.updatePlayerHeaderDisplay(); // Update header icon
+                    this.updateLoadoutStatus("Waiting for opponent...");
+                    // --- END: Send Data & Update State ---
+
+                } else if (this.uiState === 'waiting') {
+                    console.log('Unready button clicked (State: waiting)');
+                    this.network.sendUnreadySignal();
+                    this.isClientReady = false;
+                    this.setState('lobby');
+                } else { console.warn(`Ready button clicked in unexpected state: ${this.uiState}. Ignoring.`); }
+            });
+        } else { console.warn("Ready Button not found for listener."); }
 
 
-        // Check if elements exist to prevent errors
-        if (!readyButton || !resetButton || !sampleCodeSelect || !appearanceSelect || !playerNameInput ||
-            // --- START: Check Loadout Elements ---
-            !saveButton || !loadSelect || !deleteButton ||
-            // --- END: Check Loadout Elements ---
-            !testButton || !selfDestructButton) { // Check test and self-destruct buttons
-            console.error("One or more control elements (button#btn-ready, test, self-destruct, reset, select, player name input, save/load/delete) not found in the DOM!");
-            return; // Stop setup if elements are missing
-        }
+        if (this.resetButton) {
+             this.resetButton.addEventListener('click', () => {
+                if (this.uiState !== 'lobby' || !window.authHandler?.isLoggedIn) return;
+                console.log('Reset button clicked');
+                if (this.game?.renderer?.redrawArenaBackground) this.game.renderer.redrawArenaBackground();
+                if (window.dashboard?.updateStats) window.dashboard.updateStats([], {});
+                if (window.addEventLogMessage) window.addEventLogMessage('UI reset.', 'info');
+            });
+        } else { console.warn("Reset Button not found for listener."); }
 
-        // --- Ready/Unready Button Listener ---
-        readyButton.addEventListener('click', () => {
-            // Check network connection first
-            if (!this.network || !this.network.socket || !this.network.socket.connected) {
-                 console.error("Network handler not available or not connected in Controls.");
-                 alert("Not connected to server. Please check connection and refresh.");
-                 return;
-            }
+        // --- Snippet Controls ---
+         if (this.saveSnippetButton) {
+            this.saveSnippetButton.addEventListener('click', () => {
+                 if (this.uiState !== 'lobby' || typeof editor === 'undefined') return;
+                 const currentCode = editor.getValue();
+                 if (!currentCode.trim()) { alert("Code editor is empty."); this.updateLoadoutStatus("Save snippet failed: Editor empty.", true); return; }
+                 const snippetName = prompt("Enter a name for this code snippet:", "");
+                 if (snippetName === null) return; // User cancelled
+                 const trimmedName = snippetName.trim();
+                 if (!trimmedName || trimmedName.length > 50) { alert("Snippet name must be 1-50 characters."); this.updateLoadoutStatus("Save snippet failed: Invalid name.", true); return; }
+                 this.saveCodeSnippet(trimmedName, currentCode); // Uses API now
+             });
+         } else { console.warn("Save Snippet Button not found for listener."); }
 
-            // Action depends on current state
-            if (this.uiState === 'lobby') {
-                // --- Action: Ready Up ---
-                console.log('Ready Up button clicked (State: lobby)');
-                const playerCode = (typeof editor !== 'undefined') ? editor.getValue() : '';
-                const nameValue = playerNameInput.value.trim();
-                const chosenAppearance = appearanceSelect.value || 'default';
-
-                // Validate inputs before sending
-                if (!playerCode) { alert("Code editor is empty!"); return; }
-                if (!nameValue) { alert("Please enter a player name."); return; }
-
-                // Basic name sanitization (redundant with server but good practice)
-                const finalPlayerName = nameValue.substring(0, 24).replace(/<[^>]*>/g, "");
-                 if (!finalPlayerName) { alert("Invalid player name."); return; }
-                 playerNameInput.value = finalPlayerName; // Update input field with sanitized name
-
-                this.savePlayerName(finalPlayerName);
-                this.network.sendCodeAndAppearance(playerCode, chosenAppearance, finalPlayerName);
-                this.isClientReady = true; // Set internal ready flag
-                this.setState('waiting'); // Transition UI to waiting state
-
-            } else if (this.uiState === 'waiting') {
-                // --- Action: Unready ---
-                console.log('Unready button clicked (State: waiting)');
-                this.network.sendUnreadySignal();
-                this.isClientReady = false; // Clear internal ready flag
-                this.setState('lobby'); // Transition UI back to lobby state
-            } else {
-                 // Button should be disabled in playing/spectating states, but log if clicked somehow
-                 console.warn(`Ready button clicked in unexpected/disabled state: ${this.uiState}. Ignoring.`);
-            }
-        });
-
-        // --- Reset Button Listener ---
-        resetButton.addEventListener('click', () => {
-            // Only allow reset in lobby state
-            if (this.uiState !== 'lobby') {
-                 console.warn(`Reset clicked in non-lobby state: ${this.uiState}. Ignoring.`);
-                 return;
-            }
-            console.log('Reset button clicked (State: lobby)');
-            // No need to send unready signal to server if already in lobby state
-
-            // Clear the local canvas presentation
-            if (this.game && this.game.arena && typeof this.game.arena.clear === 'function') {
-                this.game.arena.clear(); // Clears and draws background/grid
-            }
-
-            // Reset robot stats display locally
-            if (window.dashboard && typeof window.dashboard.updateStats === 'function') {
-                 window.dashboard.updateStats([], {}); // Clear stats panel with empty context
-            }
-
-             // Notify user in log
-             if (typeof window.addEventLogMessage === 'function') {
-                 window.addEventLogMessage('UI reset.', 'info');
-             }
-             // Optionally clear code editor or reset to default?
-             // if (typeof editor !== 'undefined') editor.setValue('// Reset Code...');
-        });
-
-        // --- Sample Code Loader Listener ---
-        sampleCodeSelect.addEventListener('change', function() { // Using function for 'this' context
-            // Only allow loading in lobby state
-            if (this.uiState !== 'lobby') {
-                 console.warn(`Sample code change attempt in non-lobby state: ${this.uiState}. Ignoring.`);
-                 this.value = ''; // Reset dropdown to default option
-                 return;
-            }
-
-            const sample = this.value;
-            // Check if the loadSampleCode function exists (defined in editor.js)
-            if (sample && typeof loadSampleCode === 'function') {
-                loadSampleCode(sample);
-                // Log that sample was loaded
-                 if (typeof window.addEventLogMessage === 'function') {
-                     window.addEventLogMessage(`Loaded sample code: ${sample}`, 'info');
+         if (this.loadSnippetSelect) {
+             this.loadSnippetSelect.addEventListener('change', () => {
+                 if (this.uiState !== 'lobby' || typeof editor === 'undefined') return;
+                 const selectedName = this.loadSnippetSelect.value;
+                 if (selectedName) {
+                     this.loadCodeSnippet(selectedName); // Uses API now
                  }
-                 // Reset dropdown back to default after loading to avoid confusion
-                 // this.value = ''; // Optional: reset select after loading
-            } else if (!sample) {
-                // User selected the "Load Sample Code..." option, do nothing.
-            } else {
-                 console.error("loadSampleCode function not found!");
-            }
-        }.bind(this)); // Bind 'this' to access Controls instance state
-
-        // --- Player Name Persistence Listener ---
-        // Save name when the input loses focus
-        playerNameInput.addEventListener('blur', () => {
-            // Only allow editing/saving in lobby state
-            if (this.uiState === 'lobby') {
-                const nameValue = playerNameInput.value.trim();
-                // Sanitize again on blur
-                const finalPlayerName = nameValue.substring(0, 24).replace(/<[^>]*>/g, "");
-                playerNameInput.value = finalPlayerName; // Update field with sanitized version
-                this.savePlayerName(finalPlayerName);
-            }
-        });
-
-        // Also save on Enter press in name field
-         playerNameInput.addEventListener('keypress', (event) => {
-             if (event.key === 'Enter') {
-                  // Only process if in lobby state
-                 if (this.uiState === 'lobby') {
-                     event.preventDefault(); // Prevent potential form submission
-                     playerNameInput.blur(); // Trigger the blur event to save
+                 if (this.deleteSnippetButton) {
+                     this.deleteSnippetButton.disabled = !selectedName || this.uiState !== 'lobby';
                  }
-             }
-         });
+             });
+         } else { console.warn("Load Snippet Select not found for listener."); }
 
-        // --- START: Loadout Event Listeners ---
+         if (this.deleteSnippetButton) {
+             this.deleteSnippetButton.addEventListener('click', () => {
+                 if (this.uiState !== 'lobby') return;
+                 const selectedName = this.loadSnippetSelect ? this.loadSnippetSelect.value : null;
+                 if (!selectedName) return;
+                 if (confirm(`Are you sure you want to delete the code snippet "${selectedName}"?\n\nThis cannot be undone and might break Loadout Configurations using it.`)) {
+                     this.deleteCodeSnippet(selectedName); // Uses API now
+                 }
+             });
+         } else { console.warn("Delete Snippet Button not found for listener."); }
+        // --- End Snippet Controls ---
 
-        // Save Button Listener
-        saveButton.addEventListener('click', () => {
-            if (this.uiState !== 'lobby') return; // Only allow in lobby
 
-            const currentCode = (typeof editor !== 'undefined') ? editor.getValue() : '';
-            if (!currentCode.trim()) {
-                alert("Code editor is empty. Cannot save.");
-                this.updateLoadoutStatus("Save failed: Editor empty.", true);
-                return;
-            }
+         if (this.testButton) {
+             this.testButton.addEventListener('click', async () => { // Make async
+                if (this.uiState !== 'lobby') return;
+                if (!this.network?.socket?.connected) { alert("Not connected to server."); return; }
+                if (!window.authHandler?.isLoggedIn) { alert("Please log in first."); return; }
 
-            const loadoutName = prompt("Enter a name for this code loadout:", "");
-            if (loadoutName === null) return; // User cancelled prompt
+                this.updateLoadoutStatus("Preparing test game...");
 
-            const trimmedName = loadoutName.trim();
-            if (!trimmedName) {
-                alert("Loadout name cannot be empty.");
-                 this.updateLoadoutStatus("Save failed: Invalid name.", true);
-                return;
-            }
+                // --- START: Prepare Loadout ---
+                 const { loadoutData, error } = await this._prepareLoadoutData("Test Code");
+                 if (error) {
+                      alert(error);
+                      this.updateLoadoutStatus(`Test failed: ${error}`, true);
+                      return;
+                 }
+                 if (!loadoutData) {
+                      alert("Internal Error: Failed to prepare loadout data for test.");
+                      this.updateLoadoutStatus("Test failed: Could not prepare data.", true);
+                      return;
+                 }
+                 // --- END: Prepare Loadout ---
 
-            // Optional: Confirm overwrite? For simplicity, we'll just overwrite now.
-            this.saveLoadout(trimmedName, currentCode);
-        });
+                 // --- START: Send Request ---
+                 this.network.requestTestGame(loadoutData); // Use new name/structure
+                 if (window.updateLobbyStatus) window.updateLobbyStatus('Requesting Test Game...');
+                 this.updatePlayerHeaderDisplay(); // Reflect potentially changed name/visuals?
+                 this.updateLoadoutStatus("Test game requested...");
+                 // Note: State change to 'playing' happens via 'gameStart' event from server
+                 // --- END: Send Request ---
+            });
+        } else { console.warn("Test Code Button not found for listener."); }
 
-        // Load Dropdown Listener
-        loadSelect.addEventListener('change', () => {
-            if (this.uiState !== 'lobby') return; // Only allow in lobby
-
-            const selectedName = loadSelect.value;
-            if (selectedName) { // Check if it's not the default "" value
-                this.loadLoadout(selectedName);
-            }
-            // Update delete button state based on selection
-            deleteButton.disabled = !selectedName || this.uiState !== 'lobby';
-        });
-
-        // Delete Button Listener
-        deleteButton.addEventListener('click', () => {
-            if (this.uiState !== 'lobby') return; // Only allow in lobby
-
-            const selectedName = loadSelect.value;
-            if (!selectedName) return; // No loadout selected
-
-            if (confirm(`Are you sure you want to delete the loadout "${selectedName}"?`)) {
-                this.deleteLoadout(selectedName);
-            }
-        });
-
-        // --- END: Loadout Event Listeners ---
-
-        // --- START: Test Code Button Listener ---
-        testButton.addEventListener('click', () => {
-            if (this.uiState !== 'lobby') {
-                console.warn(`Test Code button clicked in non-lobby state: ${this.uiState}. Ignoring.`);
-                return;
-            }
-            if (!this.network || !this.network.socket || !this.network.socket.connected) {
-                 console.error("Network handler not available or not connected in Controls for Test Code.");
-                 alert("Not connected to server. Please check connection and refresh.");
-                 return;
-            }
-
-            console.log('Test Code button clicked (State: lobby)');
-            const playerCode = (typeof editor !== 'undefined') ? editor.getValue() : '';
-            const nameValue = playerNameInput.value.trim();
-            const chosenAppearance = appearanceSelect.value || 'default';
-
-            // Validate inputs before sending
-            if (!playerCode) { alert("Code editor is empty!"); return; }
-            if (!nameValue) { alert("Please enter a player name."); return; }
-
-            // Sanitize name
-            const finalPlayerName = nameValue.substring(0, 24).replace(/<[^>]*>/g, "");
-            if (!finalPlayerName) { alert("Invalid player name."); return; }
-            playerNameInput.value = finalPlayerName; // Update input field with sanitized name
-
-            this.savePlayerName(finalPlayerName); // Save name locally too
-
-            // Emit the request to the server via network handler
-            this.network.requestTestGame(playerCode, chosenAppearance, finalPlayerName);
-            // Server response ('gameStart') will trigger state change
-        });
-        // --- END: Test Code Button Listener ---
-
-        // --- START: Self Destruct Button Listener ---
-        selfDestructButton.addEventListener('click', () => {
-            // Should only be clickable when uiState is 'playing' due to updateUIForState logic,
-            // but double-check state and network connection
-            if (this.uiState !== 'playing') {
-                 console.warn("Self Destruct button clicked when not playing. Ignoring.");
-                 return; // Ignore click if not playing
-            }
-            if (!this.network || !this.network.socket || !this.network.socket.connected) {
-                console.error("Network not available for Self Destruct.");
-                alert("Not connected to server.");
-                return;
-            }
-            if (confirm("Are you sure you want to self-destruct your robot?")) {
-                console.log("Sending self-destruct signal...");
-                this.network.sendSelfDestructSignal();
-            }
-        });
-        // --- END: Self Destruct Button Listener ---
-
+        if (this.selfDestructButton) {
+             this.selfDestructButton.addEventListener('click', () => {
+                if (this.uiState !== 'playing' || !this.network?.socket?.connected) return;
+                if (confirm("Are you sure you want to self-destruct?")) {
+                    console.log("Sending self-destruct signal...");
+                    this.network.sendSelfDestructSignal();
+                }
+            });
+        } else { console.warn("Self Destruct Button not found for listener."); }
 
     } // End setupEventListeners
 
 
-    // --- The methods setReadyState, setPlayingState, setSpectatingState ---
-    // --- have been REMOVED. Use controls.setState('lobby' | 'waiting' | 'playing' | 'spectating') ---
-    // --- from game.js or other relevant places. ---
+    /**
+     * Helper function to prepare loadout data for Ready Up or Test Code.
+     * Fetches the code for the currently selected snippet via API.
+     * Uses the robot name and visuals currently set in the LoadoutBuilder instance.
+     * @private
+     * @async
+     * @param {string} context - 'Ready Up' or 'Test Code' for logging/errors.
+     * @returns {Promise<{loadoutData: object|null, error: string|null}>}
+     */
+    async _prepareLoadoutData(context) {
+        console.log(`[Controls._prepareLoadoutData] Preparing for context: ${context}`);
 
-    // --- START: Loadout Management Methods ---
-
-    /** Safely gets loadouts from localStorage, handling errors. */
-    _getLoadouts() {
-        try {
-            const storedData = localStorage.getItem(this.localStorageKey);
-            if (storedData) {
-                return JSON.parse(storedData);
-            }
-        } catch (error) {
-            console.error("Error reading or parsing loadouts from localStorage:", error);
-            // Optionally clear corrupted data: localStorage.removeItem(this.localStorageKey);
+        // Get current selections from LoadoutBuilder instance
+        const builderState = window.loadoutBuilderInstance?.currentLoadout;
+        if (!builderState) {
+             console.error(`[Controls._prepareLoadoutData] LoadoutBuilder instance or currentLoadout not found!`);
+             return { loadoutData: null, error: `(${context}) Internal Error: Loadout builder state unavailable.` };
         }
-        return {}; // Return empty object if nothing stored or error occurred
+
+        const { robotName, visuals, codeLoadoutName } = builderState;
+
+        // --- Validation ---
+        if (!robotName || typeof robotName !== 'string' || robotName.trim().length === 0) {
+             return { loadoutData: null, error: `(${context}) Please set a Robot Name in the Loadout Builder.` };
+        }
+        if (!visuals || typeof visuals !== 'object') { // Add basic visuals check
+            return { loadoutData: null, error: `(${context}) Visual configuration is missing. Open the builder.` };
+        }
+        if (!codeLoadoutName || typeof codeLoadoutName !== 'string' || codeLoadoutName.trim().length === 0) {
+             return { loadoutData: null, error: `(${context}) Please select a Code Snippet in the Loadout Builder.` };
+        }
+        // --- End Validation ---
+
+        this.updateLoadoutStatus(`(${context}) Fetching code for "${codeLoadoutName}"...`);
+        try {
+             // --- Fetch the selected snippet's code ---
+             const encodedName = encodeURIComponent(codeLoadoutName);
+             const snippet = await apiCall(`/api/snippets/${encodedName}`, 'GET');
+
+             if (!snippet || typeof snippet.code !== 'string') {
+                  throw new Error(`API did not return valid code for snippet "${codeLoadoutName}".`);
+             }
+
+             // --- Construct the final loadout data object ---
+             const loadoutData = {
+                 name: robotName.trim(), // Use the robot name from builder
+                 visuals: visuals,       // Use the visuals object from builder
+                 code: snippet.code      // Use the fetched code
+             };
+
+             console.log(`[Controls._prepareLoadoutData] Successfully prepared data for ${context}:`, { name: loadoutData.name, visuals: '...', code: '...' });
+             this.updateLoadoutStatus(`(${context}) Loadout ready.`);
+             return { loadoutData: loadoutData, error: null };
+
+        } catch (error) {
+             console.error(`[Controls._prepareLoadoutData] Error preparing loadout data for ${context}:`, error);
+             let userMessage = error.message || 'Unknown error.';
+             if (error.status === 404) {
+                 userMessage = `Selected code snippet "${codeLoadoutName}" not found. It might have been deleted. Check Loadout Builder.`;
+             } else if (error.status === 401) {
+                  userMessage = `Authentication error fetching code. Please log in again.`;
+             } else {
+                 userMessage = `Failed to fetch code for "${codeLoadoutName}": ${userMessage}`;
+             }
+             return { loadoutData: null, error: `(${context}) ${userMessage}` };
+        }
     }
 
-    /** Safely saves loadouts to localStorage, handling errors. */
-    _setLoadouts(loadouts) {
+
+    // --- Code SNIPPET Management Methods (Using API) ---
+    // ... (No changes to saveCodeSnippet, loadCodeSnippet, deleteCodeSnippet, populateCodeSnippetSelect) ...
+    /** Saves or updates a code snippet via API */
+    async saveCodeSnippet(name, code) {
+        this.updateLoadoutStatus(`Saving snippet "${name}"...`);
         try {
-            localStorage.setItem(this.localStorageKey, JSON.stringify(loadouts));
-            return true; // Indicate success
+            const result = await apiCall('/api/snippets', 'POST', { name, code });
+            this.updateLoadoutStatus(result.message || `Snippet "${name}" saved.`);
+            this.populateCodeSnippetSelect(name); // Refresh dropdown and select the saved one
+            window.dispatchEvent(new CustomEvent('snippetListUpdated'));
+            console.log("[Controls] Dispatched 'snippetListUpdated' event after saving snippet via API.");
         } catch (error) {
-            console.error("Error saving loadouts to localStorage:", error);
-            if (error.name === 'QuotaExceededError') {
-                alert("Could not save loadout: Browser storage quota exceeded. You may need to delete old loadouts.");
-            } else {
-                alert("An error occurred while trying to save the loadout.");
-            }
-            return false; // Indicate failure
+            console.error(`[Controls] API Error saving snippet "${name}":`, error);
+            this.updateLoadoutStatus(`Error saving snippet: ${error.message}`, true);
+            alert(`Failed to save snippet "${name}":\n${error.message}`);
         }
     }
 
-    /** Saves a named code loadout to localStorage. */
-    saveLoadout(name, code) {
-        if (typeof localStorage === 'undefined') {
-             alert("localStorage is not available in this browser. Cannot save loadouts.");
-             this.updateLoadoutStatus("Save failed: localStorage unavailable.", true);
+    /** Loads code for a specific snippet via API into the editor */
+    async loadCodeSnippet(name) {
+         if (!name || typeof editor === 'undefined') return;
+         this.updateLoadoutStatus(`Loading snippet "${name}"...`);
+         try {
+             const encodedName = encodeURIComponent(name);
+             const snippet = await apiCall(`/api/snippets/${encodedName}`, 'GET');
+
+             if (typeof editor?.setValue === 'function') {
+                 editor.setValue(snippet.code || '');
+                 this.updateLoadoutStatus(`Loaded snippet: ${name}`);
+                 if(this.loadSnippetSelect) this.loadSnippetSelect.value = name;
+                 if(this.deleteSnippetButton) this.deleteSnippetButton.disabled = (this.uiState !== 'lobby');
+             } else {
+                  console.error("[Controls] CodeMirror editor (setValue) not available.");
+                  this.updateLoadoutStatus("Editor not ready.", true);
+             }
+         } catch (error) {
+             console.error(`[Controls] API Error loading snippet "${name}":`, error);
+             this.updateLoadoutStatus(`Error loading snippet: ${error.message}`, true);
+             if (error.status === 404) {
+                  alert(`Snippet "${name}" was not found on the server. It might have been deleted.`);
+                  this.populateCodeSnippetSelect(); // Refresh dropdown if snippet is gone
+             } else {
+                  alert(`Failed to load snippet "${name}":\n${error.message}`);
+             }
+         }
+    }
+
+    /** Deletes a code snippet via API */
+    async deleteCodeSnippet(name) {
+         if (!name) return;
+         this.updateLoadoutStatus(`Deleting snippet "${name}"...`);
+         try {
+             const encodedName = encodeURIComponent(name);
+             const result = await apiCall(`/api/snippets/${encodedName}`, 'DELETE');
+             this.updateLoadoutStatus(result.message || `Snippet "${name}" deleted.`);
+             this.populateCodeSnippetSelect(); // Refresh dropdown
+             window.dispatchEvent(new CustomEvent('snippetListUpdated'));
+             console.log("[Controls] Dispatched 'snippetListUpdated' event after deleting snippet via API.");
+         } catch (error) {
+             console.error(`[Controls] API Error deleting snippet "${name}":`, error);
+             this.updateLoadoutStatus(`Error deleting snippet: ${error.message}`, true);
+             if (error.status === 409) {
+                 alert(`Cannot delete snippet "${name}":\n${error.message}`);
+             } else {
+                 alert(`Failed to delete snippet "${name}":\n${error.message}`);
+             }
+         }
+    }
+
+    /** Populates the snippet dropdown from the API */
+    async populateCodeSnippetSelect(selectName = null) {
+         if (!this.loadSnippetSelect) { console.error("Snippet select element not found."); return; }
+
+         const loggedIn = window.authHandler?.isLoggedIn ?? false;
+         if (!loggedIn) {
+             while (this.loadSnippetSelect.options.length > 1) { this.loadSnippetSelect.remove(1); }
+             this.loadSnippetSelect.value = "";
+             this.loadSnippetSelect.disabled = true;
+             if (this.deleteSnippetButton) this.deleteSnippetButton.disabled = true;
              return;
-        }
-        if (!name) {
-            console.warn("Attempted to save loadout with empty name.");
-             this.updateLoadoutStatus("Save failed: Name cannot be empty.", true);
-            return;
-        }
+         }
 
-        const loadouts = this._getLoadouts();
-        loadouts[name] = code;
+         const originallyDisabled = {
+             select: this.loadSnippetSelect.disabled,
+             deleteBtn: this.deleteSnippetButton ? this.deleteSnippetButton.disabled : true
+         };
+         this.loadSnippetSelect.disabled = true;
+         if (this.deleteSnippetButton) this.deleteSnippetButton.disabled = true;
 
-        if (this._setLoadouts(loadouts)) {
-             console.log(`Loadout "${name}" saved.`);
-             this.populateLoadoutUI(name); // Repopulate and select the saved item
-             this.updateLoadoutStatus(`Loadout "${name}" saved successfully.`);
-        } else {
-             this.updateLoadoutStatus(`Failed to save loadout "${name}".`, true);
-        }
+         while (this.loadSnippetSelect.options.length > 1) { this.loadSnippetSelect.remove(1); }
+
+         try {
+             const snippets = await apiCall('/api/snippets', 'GET');
+
+             if (Array.isArray(snippets)) {
+                 snippets.sort((a, b) => a.name.localeCompare(b.name));
+                 snippets.forEach(snippet => {
+                     const option = document.createElement('option');
+                     option.value = snippet.name;
+                     option.textContent = snippet.name;
+                     this.loadSnippetSelect.appendChild(option);
+                 });
+
+                 if (selectName && snippets.some(s => s.name === selectName)) {
+                     this.loadSnippetSelect.value = selectName;
+                 } else {
+                     this.loadSnippetSelect.value = "";
+                 }
+             } else {
+                  console.error("[Controls] API response for snippets was not an array:", snippets);
+                  this.updateLoadoutStatus("Failed to parse snippet list.", true);
+             }
+
+         } catch (error) {
+              if (error.status === 401) {
+                 console.warn("[Controls] API Error populating snippet select: 401 Unauthorized.");
+              } else {
+                 console.error("[Controls] API Error populating snippet select:", error);
+                 this.updateLoadoutStatus(`Error fetching snippets: ${error.message}`, true);
+              }
+         } finally {
+              const isLoggedInNow = window.authHandler?.isLoggedIn ?? false;
+              const codeSnippetControlsDisabled = !(isLoggedInNow && this.uiState === 'lobby');
+              this.loadSnippetSelect.disabled = codeSnippetControlsDisabled;
+               if (this.deleteSnippetButton) {
+                  this.deleteSnippetButton.disabled = codeSnippetControlsDisabled || !this.loadSnippetSelect.value;
+               }
+         }
     }
-
-    /** Loads code from a named loadout into the editor. */
-    loadLoadout(name) {
-        if (!name || typeof editor === 'undefined') return;
-
-        const loadouts = this._getLoadouts();
-        if (loadouts.hasOwnProperty(name)) {
-            editor.setValue(loadouts[name]);
-            console.log(`Loadout "${name}" loaded into editor.`);
-            this.updateLoadoutStatus(`Loaded "${name}".`);
-        } else {
-            console.warn(`Loadout "${name}" not found.`);
-             this.updateLoadoutStatus(`Loadout "${name}" not found.`, true);
-        }
-    }
-
-    /** Deletes a named loadout from localStorage. */
-    deleteLoadout(name) {
-        if (typeof localStorage === 'undefined' || !name) return;
-
-        const loadouts = this._getLoadouts();
-        if (loadouts.hasOwnProperty(name)) {
-            delete loadouts[name];
-            if (this._setLoadouts(loadouts)) {
-                console.log(`Loadout "${name}" deleted.`);
-                this.populateLoadoutUI(); // Repopulate, will select default
-                 // Optional: Clear editor if the deleted loadout was loaded?
-                 // if (editor.getValue() === codeToDelete) { editor.setValue(''); }
-                 this.updateLoadoutStatus(`Deleted "${name}".`);
-            } else {
-                 this.updateLoadoutStatus(`Failed to delete "${name}".`, true);
-            }
-        } else {
-            console.warn(`Attempted to delete non-existent loadout "${name}".`);
-             this.updateLoadoutStatus(`Loadout "${name}" not found for deletion.`, true);
-        }
-    }
-
-    /** Populates the loadout dropdown from localStorage. */
-    populateLoadoutUI(selectName = null) {
-        const loadSelect = document.getElementById('loadout-select');
-        const deleteButton = document.getElementById('btn-delete-loadout');
-        if (!loadSelect || !deleteButton) return;
-
-        const loadouts = this._getLoadouts();
-        const names = Object.keys(loadouts).sort(); // Sort names alphabetically
-
-        // Clear existing options (keep the first placeholder)
-        while (loadSelect.options.length > 1) {
-            loadSelect.remove(1);
-        }
-
-        // Add options for each saved loadout
-        names.forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            loadSelect.appendChild(option);
-        });
-
-        // Select the specified item if provided (e.g., after saving)
-        if (selectName && loadouts.hasOwnProperty(selectName)) {
-            loadSelect.value = selectName;
-        } else {
-            loadSelect.value = ""; // Select the default "Load Code..."
-        }
-
-        // Update delete button state
-        deleteButton.disabled = !loadSelect.value || this.uiState !== 'lobby';
-    }
-
-    // --- END: Loadout Management Methods ---
+    // --- End Code SNIPPET Management Methods ---
 
 
     /**
-     * Saves the player name to localStorage.
-     * @param {string} name - The name to save.
+     * Updates ONLY the player icon in the header.
+     * The player name is handled by auth.js using the account username.
+     * TODO: Needs to fetch the *active* loadout's visuals.
      */
-    savePlayerName(name) {
-        if (typeof localStorage !== 'undefined') {
-            // Avoid saving empty string or just whitespace
-            const trimmedName = name ? name.trim() : '';
-            if (trimmedName) {
-                localStorage.setItem('robotWarsPlayerName', trimmedName);
-                 // console.log(`Saved name: ${trimmedName}`); // Debug log
-            } else {
-                // Clear if name is effectively empty
-                 localStorage.removeItem('robotWarsPlayerName');
-                 // console.log("Cleared saved name."); // Debug log
-            }
+    updatePlayerHeaderDisplay() {
+        const iconDisplay = document.getElementById('player-icon-display');
+        if (!iconDisplay) { console.warn("Player header icon display element not found."); return; }
+
+        const loggedIn = window.authHandler?.isLoggedIn ?? false;
+        let displayColor = '#888';
+        let tooltipText = 'Loadout Config: Unknown (API TODO)';
+
+        // --- TODO: Fetch user's active config visuals via API ---
+        // This should eventually:
+        // 1. GET /api/users/me/active-config (or similar)
+        // 2. Based on result, GET /api/loadouts/:configName
+        // 3. Use loadout.visuals.chassis.color (or similar) for the icon background
+        // -----------------------------------------------------
+
+        if (!loggedIn) {
+             displayColor = '#555'; tooltipText = 'Loadout Config: N/A';
+        } else {
+             // TEMPORARY: Use LoadoutBuilder's current visuals if available
+             const builderVisuals = window.loadoutBuilderInstance?.currentLoadout?.visuals;
+             if (builderVisuals?.chassis?.color) {
+                 displayColor = builderVisuals.chassis.color;
+                 tooltipText = `Active Loadout (using builder state): ${window.loadoutBuilderInstance.currentLoadout.configName || 'Unsaved'}`;
+             } else {
+                 // Fallback if builder state unavailable or incomplete
+                 displayColor = '#4CAF50'; // Generic logged-in color
+                 tooltipText = 'Account Logged In (Loadout visuals unavailable)';
+             }
         }
+
+        iconDisplay.style.backgroundColor = displayColor;
+        iconDisplay.title = tooltipText;
     }
 
-    /**
-     * Loads the player name from localStorage and populates the input field.
-     * Sanitizes the loaded name.
-     */
-    loadPlayerName() {
-        const playerNameInput = document.getElementById('playerName');
-        if (playerNameInput && typeof localStorage !== 'undefined') {
-            const savedName = localStorage.getItem('robotWarsPlayerName');
-            if (savedName) {
-                // Sanitize loaded name just in case it was manipulated
-                 const finalPlayerName = savedName.substring(0, 24).replace(/<[^>]*>/g, "");
-                playerNameInput.value = finalPlayerName;
-                console.log('Player name loaded:', finalPlayerName);
-            } else {
-                 console.log('No player name found in localStorage.');
-            }
-        }
-    }
 
     /** Updates the small status text below the editor controls */
     updateLoadoutStatus(message, isError = false) {
-        const statusElement = document.getElementById('loadout-status');
-        if (statusElement) {
-            statusElement.textContent = message;
-            statusElement.style.color = isError ? '#e74c3c' : '#4CAF50'; // Red for error, Green for success
-            // Clear the message after a few seconds
-            setTimeout(() => {
-                 if (statusElement.textContent === message) { // Only clear if message hasn't changed
-                     statusElement.textContent = '';
-                 }
-            }, 4000); // Clear after 4 seconds
+        if (this.loadoutStatus) {
+            this.loadoutStatus.textContent = message;
+            this.loadoutStatus.style.color = isError ? '#e74c3c' : '#4CAF50';
+             if (this.statusTimeoutId) clearTimeout(this.statusTimeoutId);
+             this.statusTimeoutId = setTimeout(() => {
+                  if (this.loadoutStatus && this.loadoutStatus.textContent === message) {
+                       this.loadoutStatus.textContent = '';
+                  }
+                  this.statusTimeoutId = null;
+             }, 4000);
         }
     }
 
 } // End Controls Class
-
-// The DOMContentLoaded listener for initialization is in main.js

@@ -1,241 +1,119 @@
 // server/socket-handler.js
-const GameManager = require('./game-manager');
+const GameManager = require('./game-manager'); // Assuming GameManager is updated
 
 /**
- * Initializes Socket.IO event handlers for the application.
- * Manages player connections, disconnections, data submission, readiness signals, chat,
- * test game requests, self-destruct requests, routes players to spectate if games are in progress, // <-- Added self-destruct
- * and sends initial game history.
- * Delegates game logic to the GameManager.
- * @param {SocketIO.Server} io - The Socket.IO server instance.
+ * Initializes Socket.IO event handlers.
+ * Now uses session data for user identification.
  */
-function initializeSocketHandler(io) {
-    // Create a single instance of the GameManager to manage the application state
-    const gameManager = new GameManager(io);
+function initializeSocketHandler(io, db) { // db might be needed by GameManager now
+    const gameManager = new GameManager(io, db); // Pass db if needed
 
-    // Handle new client connections
     io.on('connection', (socket) => {
-        console.log(`New client connecting: ${socket.id}`);
+        // Access session data associated with this socket
+        const session = socket.request.session;
+        let userId = session?.userId;
+        let username = session?.username;
 
-        // Assign ID immediately (needed for client state & potential spectator join)
-        socket.emit('assignId', socket.id);
-
-        // --- SPECTATOR CHECK ---
-        let wasSpectator = false; // Flag if routed to spectate initially
-        let spectateTarget = null; // Store target game if spectating
-        if (gameManager.activeGames.size > 0) {
-            // Simple logic: pick the first active game found
-            try {
-                // Use Array.from to safely get an iterator and take the first entry
-                const firstGameEntry = Array.from(gameManager.activeGames.entries())[0];
-                if (!firstGameEntry) {
-                     throw new Error("Active games map was not empty but couldn't get first entry.");
-                }
-                const [gameId, gameInstance] = firstGameEntry;
-                const gameName = gameInstance.gameName || `Game ${gameId}`;
-                const spectatorRoom = `spectator-${gameId}`;
-
-                spectateTarget = { gameId, gameName }; // Store the game being spectated
-                console.log(`[Socket ${socket.id}] Active game found ('${gameName}' - ${gameId}). Routing to spectate.`);
-
-                // 1. Join the specific spectator room for this game
-                socket.join(spectatorRoom);
-                console.log(`[Socket ${socket.id}] Joined spectator room: ${spectatorRoom}`);
-
-                // 2. Emit 'spectateStart' event to the connecting client ONLY
-                socket.emit('spectateStart', { gameId: gameId, gameName: gameName });
-
-                // 3. Notify lobby about spectator joining (optional)
-                io.emit('lobbyEvent', { message: `Player ${socket.id.substring(0, 4)}... started spectating game '${gameName}'.` });
-
-                // 4. DO NOT add to gameManager.pendingPlayers yet.
-                wasSpectator = true; // Mark as routed to spectate
-
-            } catch (error) {
-                 console.error(`[Socket ${socket.id}] Error finding/processing active game to spectate: ${error}. Adding to lobby instead.`);
-                 // Fallback to normal lobby logic
-                 gameManager.addPlayer(socket);
-                 io.emit('lobbyEvent', { message: `Player ${socket.id.substring(0, 4)}... connected.` });
-                 gameManager.broadcastLobbyStatus(); // Broadcast status after adding to lobby
-            }
-
-        } else {
-            // --- NO ACTIVE GAMES - Proceed with Normal Lobby Logic ---
-            console.log(`[Socket ${socket.id}] No active games. Adding to lobby.`);
-            gameManager.addPlayer(socket);
-            io.emit('lobbyEvent', { message: `Player ${socket.id.substring(0, 4)}... connected.` });
-            gameManager.broadcastLobbyStatus(); // Broadcast status after adding to lobby
+        // Only proceed if the user is logged in via session
+        if (!userId || !username) {
+            console.log(`[Socket ${socket.id}] Connection attempt rejected: No active session.`);
+            socket.emit('authError', { message: 'Please log in to play.' });
+            socket.disconnect(true);
+            return;
         }
-        // --- END SPECTATOR CHECK ---
+
+        console.log(`[Socket ${socket.id}] Client connected: User '${username}' (ID: ${userId})`);
+        socket.emit('assignId', socket.id); // Still useful for client-side logic
+
+        // --- START: Adapted Player Adding ---
+        // Add player to GameManager using their user info.
+        // GameManager should handle preventing duplicates or managing state if already connected.
+        gameManager.addPlayer(socket); // Pass socket, GM can get user info if needed or addPlayer is adapted
+        // --- END: Adapted Player Adding ---
+
+        // --- Send Initial Game History to just this user ---
+        gameManager.broadcastGameHistory(socket);
 
 
-        // --- Send Initial Game History ---
-        // Send *after* potential spectator routing or lobby add
-        // Convert map values to an array, sort by endTime descending (newest first)
-        const currentHistory = Array.from(gameManager.recentlyCompletedGames.values())
-                                  .sort((a, b) => b.endTime - a.endTime);
-        if (currentHistory.length > 0) {
-            console.log(`[Socket ${socket.id}] Sending initial game history (${currentHistory.length} entries).`);
-            socket.emit('gameHistoryUpdate', currentHistory); // Send only to new client
-        }
-        // --- End Initial History Send ---
-
-
-        // Handle client disconnections
         socket.on('disconnect', () => {
-            // Try to get player name *before* removing them from GameManager
-            const playerName = gameManager.getPlayerName(socket.id) || socket.id.substring(0, 4)+'...';
-            console.log(`Client disconnected: ${playerName} (${socket.id})`);
-
-            // Remove the player from GameManager (handles pending, active games, playerGameMap)
-            gameManager.removePlayer(socket.id);
-
-            // Notify remaining clients about the disconnection using the retrieved name
-            io.emit('lobbyEvent', { message: `Player ${playerName} disconnected.` });
-
-            // Update lobby status counts for all remaining clients
-            gameManager.broadcastLobbyStatus();
+            console.log(`[Socket ${socket.id}] Client disconnected: User '${username}' (ID: ${userId})`);
+            // Ensure GameManager uses socket.id to remove, but might need userId too for cross-referencing
+            gameManager.removePlayer(socket.id); // Pass socket.id for removal
         });
 
-        // Handle player submitting their code, appearance, and name (implicitly marks them as Ready)
-        socket.on('submitPlayerData', (data) => {
-            // --- Check if player is allowed to submit (must be in pendingPlayers) ---
-            if (!gameManager.pendingPlayers.has(socket.id)) {
-                const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : (spectateTarget ? `spectating ${spectateTarget.gameName}` : 'unknown state');
-                console.warn(`[Socket ${socket.id}] Attempted to submit data while ${state}. Ignoring.`);
-                socket.emit('lobbyEvent', { message: `Cannot submit data while ${state}.`, type: "error" });
-                return;
-            }
-            // --- End check ---
+        // === Event Listeners - Use userId/username from session ===
 
-            // Validate received data structure
-            if (data && typeof data.code === 'string' && typeof data.appearance === 'string' && typeof data.name === 'string') {
+        // Handles 'Ready Up' signal with full loadout data
+        socket.on('submitPlayerData', (loadoutData) => {
+             if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
 
-                // Sanitize/validate name server-side
-                const name = data.name.trim();
-                const sanitizedName = name.substring(0, 24) || `Anon_${socket.id.substring(0,4)}`;
-                const finalName = sanitizedName.replace(/<[^>]*>/g, ""); // Strip HTML tags
-
-                console.log(`[Socket ${socket.id}] Received Player Data: Name='${finalName}', Appearance='${data.appearance}'`);
-
-                // Pass validated data to GameManager to update player state and try matchmaking
-                // GameManager will broadcast lobby status after trying to start a match.
-                gameManager.handlePlayerCode(socket.id, data.code, data.appearance, finalName);
-
-            } else {
-                console.warn(`[Socket ${socket.id}] Received invalid playerData format:`, data);
-                socket.emit('submissionError', { message: 'Invalid data format received by server.' });
-            }
+             // Validate received loadoutData structure
+             if (!loadoutData || typeof loadoutData.name !== 'string' || !loadoutData.visuals || typeof loadoutData.code !== 'string') {
+                 console.error(`[Socket ${socket.id}] Received invalid loadoutData structure from user ${username}:`, loadoutData);
+                 socket.emit('lobbyEvent', { message: 'Invalid loadout data received. Please try again.', type: 'error' });
+                 return;
+             }
+             // Note: Server uses the validated loadoutData.name (robot name) directly.
+             // The username from session identifies the *account*.
+             console.log(`[Socket ${socket.id}] User ${username} submitted player data (Robot: ${loadoutData.name})`);
+             // Pass the full loadoutData received from client to GameManager
+             gameManager.handlePlayerCode(socket.id, loadoutData); // handlePlayerCode expects the full {name, visuals, code}
         });
 
-        // Handle player explicitly marking themselves as "Not Ready"
+        // Handles 'Unready' signal
         socket.on('playerUnready', () => {
-            // --- Check if player is allowed to unready (must be in pendingPlayers) ---
-             if (!gameManager.pendingPlayers.has(socket.id)) {
-                 const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : (spectateTarget ? `spectating ${spectateTarget.gameName}` : 'unknown state');
-                 console.warn(`[Socket ${socket.id}] Attempted to unready while ${state}. Ignoring.`);
-                 socket.emit('lobbyEvent', { message: `Cannot unready while ${state}.`, type: "error" });
+             if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
+             console.log(`[Socket ${socket.id}] User ${username} unreadied.`);
+             // Pass socket.id only, GameManager uses this to find the player
+             gameManager.setPlayerReadyStatus(socket.id, false);
+        });
+
+        // Handles 'Test Code' request with full loadout data
+        socket.on('requestTestGame', (loadoutData) => {
+            if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
+
+            // Validate received loadoutData structure
+            if (!loadoutData || typeof loadoutData.name !== 'string' || !loadoutData.visuals || typeof loadoutData.code !== 'string') {
+                 console.error(`[Socket ${socket.id}] Received invalid loadoutData structure for test game from user ${username}:`, loadoutData);
+                 socket.emit('lobbyEvent', { message: 'Invalid loadout data received for test game. Please try again.', type: 'error' });
                  return;
-             }
-            // --- End check ---
-
-            console.log(`[Socket ${socket.id}] Received 'playerUnready' signal.`);
-            // Update player status in GameManager (will also broadcast status update)
-            gameManager.setPlayerReadyStatus(socket.id, false);
-        });
-
-        // --- Handle Request for Single-Player Test Game ---
-        socket.on('requestTestGame', (data) => {
-            // Check if player is allowed to start a test (must be in pendingPlayers)
-            if (!gameManager.pendingPlayers.has(socket.id)) {
-                const state = gameManager.playerGameMap.has(socket.id) ? 'in game' : (spectateTarget ? `spectating ${spectateTarget.gameName}` : 'unknown state');
-                console.warn(`[Socket ${socket.id}] Attempted to start test game while ${state}. Ignoring.`);
-                socket.emit('lobbyEvent', { message: `Cannot start test while ${state}.`, type: "error" });
-                return;
             }
 
-            // Validate received data structure
-            if (data && typeof data.code === 'string' && typeof data.appearance === 'string' && typeof data.name === 'string') {
-                // Sanitize/validate name server-side
-                const name = data.name.trim();
-                const sanitizedName = name.substring(0, 24) || `Anon_${socket.id.substring(0,4)}`;
-                const finalName = sanitizedName.replace(/<[^>]*>/g, ""); // Strip HTML tags
-
-                console.log(`[Socket ${socket.id}] Received Test Game Request: Name='${finalName}', Appearance='${data.appearance}'`);
-
-                // Call the new GameManager method
-                gameManager.startTestGameForPlayer(socket, data.code, data.appearance, finalName);
-            } else {
-                console.warn(`[Socket ${socket.id}] Received invalid test game request data:`, data);
-                socket.emit('submissionError', { message: 'Invalid data format received by server for test game.' });
-            }
+            console.log(`[Socket ${socket.id}] User ${username} requested test game (Robot: ${loadoutData.name})`);
+            // --- START: Corrected Call ---
+            // Pass the socket object and the full loadoutData object received from the client
+            gameManager.startTestGameForPlayer(socket, loadoutData);
+            // --- END: Corrected Call ---
         });
-        // --- END: Test Game Request Handler ---
 
-        // Handle incoming chat messages from a client
+        // Handles Chat Messages
         socket.on('chatMessage', (data) => {
-            if (data && typeof data.text === 'string') {
-                // Get sender's current name from GameManager OR identify as spectator
-                 let senderName = gameManager.getPlayerName(socket.id);
-                 let isSpectator = false; // Flag to check if sender is likely a spectator
+             if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
+             const senderName = username; // Use session username
+             const messageText = data?.text || '';
 
-                 if (!senderName) {
-                     // Check if they might be spectating by checking rooms they are in
-                     const rooms = Array.from(socket.rooms);
-                     if (rooms.length > 1) { // Usually [socket.id, spectateRoom]
-                         const spectatingRoom = rooms.find(room => room.startsWith('spectator-'));
-                         if (spectatingRoom) {
-                            senderName = `Spectator_${socket.id.substring(0,4)}`;
-                            isSpectator = true;
-                         }
-                     }
-                     if (!senderName) { senderName = `Player_${socket.id.substring(0,4)}`; } // Fallback
-                 }
+             // Basic validation/sanitization (consider a library for robustness)
+             if (typeof messageText !== 'string' || messageText.trim().length === 0 || messageText.length > 100) {
+                 console.warn(`[Socket ${socket.id}] User ${username} sent invalid chat message.`);
+                 return; // Ignore empty or too long messages
+             }
+             const sanitizedText = messageText.trim(); // Basic trim
 
-                // Trim and limit message length
-                const messageText = data.text.trim().substring(0, 100);
-
-                if (messageText) { // Ensure message isn't empty after trimming
-                    // Basic sanitization (encode basic HTML chars)
-                    const sanitizedText = messageText.replace(/</g, "<").replace(/>/g, ">");
-
-                    console.log(`[Chat] ${senderName}: ${sanitizedText}`);
-
-                    // Broadcast the sanitized chat message to ALL connected clients
-                    io.emit('chatUpdate', {
-                        sender: senderName,
-                        text: sanitizedText,
-                        isSpectator: isSpectator
-                    });
-                }
-            } else {
-                 console.warn(`[Socket ${socket.id}] Received invalid chat message format:`, data);
-            }
+             console.log(`[Socket ${socket.id}] Chat from ${senderName}: ${sanitizedText}`);
+             io.emit('chatUpdate', { sender: senderName, text: sanitizedText });
         });
 
-        // --- Handle Self Destruct Request ---
+        // Handles Self-Destruct request
         socket.on('selfDestruct', () => {
-             console.log(`[Socket ${socket.id}] Received selfDestruct signal.`);
-             // Validate: Player must be in an active game map
-             const gameId = gameManager.playerGameMap.get(socket.id);
-             if (!gameId) {
-                 console.warn(`[Socket ${socket.id}] Sent selfDestruct but is not in playerGameMap. Ignoring.`);
-                 // Optionally send feedback? socket.emit('lobbyEvent', { message: "Cannot self-destruct: Not in game.", type: "error" });
-                 return;
-             }
-             // Delegate to game manager
+             if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
+             console.log(`[Socket ${socket.id}] User ${username} requested self-destruct.`);
+             // Pass socket.id only, GameManager uses this to find the player/game
              gameManager.handleSelfDestruct(socket.id);
         });
-        // --- END: Self Destruct Handler ---
 
-        // Listener for player actions during a game (currently unused placeholder)
-        // socket.on('robotAction', (action) => {
-        //     gameManager.handlePlayerAction(socket.id, action);
-        // });
+    });
 
-    }); // End io.on('connection')
-
-    console.log("[Socket Handler] Initialized and listening for connections.");
+    console.log("[Socket Handler] Initialized with session support.");
 }
 
 module.exports = initializeSocketHandler;

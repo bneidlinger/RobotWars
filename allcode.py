@@ -19,19 +19,27 @@ def export_project_files(project_dir, output_file):
         "client/js/ui/controls.js",
         "client/js/ui/dashboard.js",
         "client/js/ui/history.js",
+        "client/js/ui/loadoutBuilder.js",
         "client/js/ui/editor.js",
         "client/js/ui/lobby.js",
+        "client/js/utils/storage.js",
         "client/js/main.js",
+        "client/js/auth.js",
         "client/js/network.js",
         "client/index.html",
         "server/game-instance.js",
         "server/game-manager.js",
         "server/index.js",
+        "server/middleware/auth.js",
+        "server/routes/auth.js",
+        "server/routes/loadouts.js",
+        "server/routes/snippets.js",
         "server/server-collision.js",
         "server/server-interpreter.js",
         "server/server-robot.js",
         "server/socket-handler.js",
-        "server/dummy-bit-ai.js"
+        "server/db.js",
+        "server/dummy-bot-ai.js"
     ]
 
     with open(output_file, 'w', encoding='utf-8') as out:

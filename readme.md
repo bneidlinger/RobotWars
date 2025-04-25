@@ -124,13 +124,33 @@ console.log("Enemy detected at distance: " + scanResult.distance);
 - **Code Execution**: Node.js VM for sandboxed evaluation
 - **Networking**: Real-time WebSocket communication
 
+## Licensing
+
+Robot Wars is available under a dual licensing model:
+
+### Open Source License (MIT)
+
+The Robot Wars codebase is licensed under the MIT License for **personal, non-commercial, and open source use**. This allows you to:
+
+- Use and modify the code for personal projects
+- Contribute improvements back to the main repository
+- Learn from and experiment with the codebase
+
+See the [LICENSE](LICENSE) file for full details.
+
+### Commercial and Educational Licensing
+
+For **commercial use, educational institutions, coding bootcamps, or organized learning environments**, please contact us for licensing options. We offer:
+
+- Classroom licensing packages
+- Custom deployment options
+- Technical support
+
+For inquiries about commercial or educational licensing, please contact: [brandon.neidlinger@gmail.com](mailto:brandon.neidlinger@gmail.com)
+
 ## Inspirations
 
 This project is inspired by the original [CROBOTS](https://github.com/tpoindex/crobots) game, where players programmed virtual robots in a simplified C language.
-
-## License
-
-[ISC License](LICENSE)
 
 ## Links
 

@@ -21,133 +21,302 @@
 
 </head>
 <body>
-    <div class="container">
+
+    <!-- ============================================== -->
+    <!-- === START: Authentication Modals Markup === -->
+    <!-- ============================================== -->
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="auth-modal" style="display: none;">
+        <div class="auth-modal-content">
+            <span class="auth-close-btn" onclick="closeModal('login-modal')">×</span>
+            <h2>Login</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-username">Username:</label>
+                    <input type="text" id="login-username" name="username" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]+">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password:</label>
+                    <input type="password" id="login-password" name="password" required minlength="4" maxlength="10" pattern="[a-zA-Z0-9]+">
+                </div>
+                <button type="submit">Login</button>
+                <p id="login-error" class="error-message"></p>
+                <p class="switch-modal-link">Don't have an account? <a href="#" onclick="showModal('register-modal'); closeModal('login-modal'); return false;">Register here</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div id="register-modal" class="auth-modal" style="display: none;">
+        <div class="auth-modal-content">
+            <span class="auth-close-btn" onclick="closeModal('register-modal')">×</span>
+            <h2>Register</h2>
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="register-username">Username:</label>
+                    <input type="text" id="register-username" name="username" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]+" title="3-20 characters, alphanumeric or underscore">
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password:</label>
+                    <input type="password" id="register-password" name="password" required minlength="4" maxlength="10" pattern="[a-zA-Z0-9]+" title="4-10 alphanumeric characters">
+                </div>
+                <div class="form-group">
+                    <label for="register-confirm-password">Confirm Password:</label>
+                    <input type="password" id="register-confirm-password" name="confirmPassword" required>
+                </div>
+                <button type="submit">Register</button>
+                <p id="register-error" class="error-message"></p>
+                 <p class="switch-modal-link">Already have an account? <a href="#" onclick="showModal('login-modal'); closeModal('register-modal'); return false;">Login here</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- === END: Authentication Modals Markup === -->
+    <!-- ============================================ -->
+
+
+    <!-- ============================================== -->
+    <!-- === START: Loadout Builder Overlay Markup === -->
+    <!-- ============================================== -->
+    <div id="loadout-builder-overlay" style="display: none;"> <!-- Start hidden -->
+        <div id="loadout-builder-content">
+            <h2>Robot Loadout Builder</h2>
+
+            <div class="loadout-builder-main">
+                <!-- Left Column: Options -->
+                <div class="loadout-options">
+
+                    <!-- Loadout Management Section -->
+                    <div class="loadout-section">
+                        <h3>Loadout Management</h3>
+                        <!-- Robot Name Input -->
+                        <div class="loadout-controls">
+                            <label for="builder-robot-name">Robot Name:</label>
+                            <input type="text" id="builder-robot-name" placeholder="Enter Robot Name..." maxlength="24" style="flex-grow: 1;">
+                        </div>
+                        <!-- Config Name Input -->
+                        <div class="loadout-controls" style="margin-top: 10px;">
+                            <label for="config-name-input">Config Name:</label>
+                            <input type="text" id="config-name-input" placeholder="Save Config As..." maxlength="30" style="flex-grow: 1;">
+                        </div>
+                        <!-- Load Config Dropdown -->
+                        <div class="loadout-controls" style="margin-top: 10px;">
+                            <label for="builder-loadout-select">Load Config:</label>
+                            <select id="builder-loadout-select" style="flex-grow: 1;">
+                                <option value="" selected>Load Existing Config...</option>
+                                <!-- Options populated by JS -->
+                            </select>
+                            <button id="builder-delete-loadout" disabled title="Delete selected configuration">✖</button>
+                        </div>
+                        <!-- Save Button & Status -->
+                        <div class="loadout-controls" style="margin-top: 15px;">
+                            <button id="builder-save-loadout">Save Current Configuration</button>
+                             <span id="builder-loadout-status" style="font-size: 0.9rem; color: #aaa; margin-left: 10px;"></span>
+                        </div>
+                    </div>
+
+                    <!-- Appearance Presets Section -->
+                     <div class="loadout-section">
+                         <h3>Appearance Presets</h3>
+                         <div class="loadout-controls">
+                             <label for="builder-preset-select">Load Preset:</label>
+                             <select id="builder-preset-select" style="flex-grow: 1;">
+                                 <option value="" selected>-- Select a Preset --</option>
+                                 <option value="default">Default Bot</option>
+                                 <option value="tank">Tank Bot</option>
+                                 <option value="spike">Spike Bot</option>
+                                 <option value="tri">Tri Bot</option>
+                             </select>
+                         </div>
+                     </div>
+
+                    <!-- Visual Customization Section -->
+                    <div class="loadout-section">
+                        <h3>Visual Customization</h3>
+                        <div class="visual-controls">
+                            <label for="turret-type-select">Turret:</label>
+                            <select id="turret-type-select">
+                                <option value="standard">Standard</option>
+                                <option value="cannon">Cannon</option>
+                                <option value="laser">Laser</option>
+                            </select>
+                            <input type="color" id="turret-color-input" value="#ff0000">
+
+                            <label for="chassis-type-select">Chassis:</label>
+                            <select id="chassis-type-select">
+                                <option value="light">Light</option>
+                                <option value="medium">Medium</option>
+                                <option value="heavy">Heavy</option>
+                            </select>
+                            <input type="color" id="chassis-color-input" value="#cccccc">
+
+                            <label for="mobility-type-select">Mobility:</label>
+                            <select id="mobility-type-select">
+                                <option value="wheels">Wheels</option>
+                                <option value="treads">Treads</option>
+                                <option value="hover">Hover</option>
+                            </select>
+                            <span><!-- Placeholder for color if needed --></span>
+                        </div>
+                    </div>
+
+                    <!-- Code Selection Section -->
+                    <div class="loadout-section">
+                        <h3>Combat Code</h3>
+                        <div class="code-controls">
+                            <label for="builder-code-select">Use Code:</label>
+                            <select id="builder-code-select">
+                                <option value="" selected>Select Saved Code...</option>
+                                <!-- Options populated by JS from Code Snippets -->
+                            </select>
+                        </div>
+                    </div>
+
+                </div><!-- End Left Column -->
+
+                <!-- Right Column: Preview -->
+                <div class="loadout-preview-area">
+                    <h3>Preview</h3>
+                    <canvas id="loadout-preview"></canvas>
+                    <span>(Static Preview)</span>
+                </div><!-- End Right Column -->
+
+            </div><!-- End Main Grid -->
+
+            <div class="loadout-builder-actions">
+                <button id="btn-quick-start">Quick Start (Defaults)</button>
+                <button id="btn-enter-lobby">Save & Enter Lobby</button>
+            </div>
+        </div><!-- End Content -->
+    </div><!-- End Overlay -->
+    <!-- ============================================ -->
+    <!-- === END: Loadout Builder Overlay Markup === -->
+    <!-- ============================================ -->
+
+
+    <!-- Existing Main Application Container -->
+    <!-- Initially hidden by auth.js until logged in -->
+    <div class="container" style="display: none;">
         <header>
-            <!-- Header content remains the same -->
             <h1>
                 <img src="/assets/images/RobotwarsLogo.png" alt="Robot Wars Logo" class="header-logo">
                 Robot Wars
             </h1>
+
+            <!-- Player Info Area -->
+            <div class="player-info-area">
+                <span id="player-name-display">Loading...</span> <!-- Displays ACCOUNT name -->
+                <div id="player-icon-display" title="Your Robot Appearance"></div>
+                <button id="btn-edit-loadout" title="Edit Loadout Configuration">Edit</button>
+                <a href="https://bneidlinger.github.io/RobotWars/BotProgrammingGuide.html"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   id="btn-bot-manual"
+                   class="header-button"
+                   title="Open Bot Programming Guide">
+                    [Manual]
+                </a>
+                 <!-- Logout Button -->
+                 <button id="btn-logout" style="display: none;">Logout</button>
+            </div>
+
             <nav>
-                <input type="text" id="playerName" placeholder="Enter Name" maxlength="24">
-                <select id="robot-appearance-select" title="Choose Robot Appearance">
-                    <option value="default">Default Bot</option>
-                    <option value="tank">Tank Bot</option>
-                    <option value="spike">Spike Bot</option>
-                    <option value="tri">Tri Bot</option>
-                </select>
+                <!-- Functional buttons -->
                 <button id="btn-ready">Ready Up</button>
                 <button id="btn-test-code">Test Code</button>
                 <button id="btn-self-destruct" style="display: none;">Self-Destruct</button>
                 <button id="btn-reset">Reset</button>
-                <select id="sample-code">
-                    <option value="">Load Sample Code...</option>
-                    <option value="simple-tank">Simple Tank</option>
-                    <option value="scanner-bot">Scanner Bot</option>
-                    <option value="aggressive-bot">Aggressive Bot</option>
-                </select>
             </nav>
+
         </header>
 
-        <!-- Main Content Grid Wrapper -->
-        <div class="main-content-grid">
+        <!-- Main content grid structure -->
+        <main class="main-content-grid">
 
-            <!-- Column 1: API, Arena, Consoles -->
-            <div class="arena-column">
-                 <!-- API Help (MOVED HERE - Above Arena) -->
-                <div class="api-help">
-                    <h4>API Reference</h4>
-                    <ul>
-                        <li><code>drive(direction, speed)</code> - Move your robot</li>
-                        <li><code>scan(angle, resolution)</code> - Scan for enemies</li>
-                        <li><code>fire(direction, power)</code> - Fire a missile</li>
-                        <li><code>damage()</code> - Get current damage level (0-100)</li>
-                        <li><code>getX()</code> - Get current X coordinate</li>
-                        <li><code>getY()</code> - Get current Y coordinate</li>
-                        <li><code>getDirection()</code> - Get current direction (degrees)</li>
-                    </ul>
-                </div>
-
-                <!-- Canvas -->
+            <!-- Column 1: Arena Area -->
+            <section class="arena-column">
+                 <div class="api-help">
+                     <h4>API Reference</h4>
+                     <ul>
+                         <li><code>drive(direction, speed)</code> - Move</li>
+                         <li><code>scan(angle, resolution)</code> - Scan</li>
+                         <li><code>fire(direction, power)</code> - Fire</li>
+                         <li><code>damage()</code> - Get Damage %</li>
+                         <li><code>getX() / getY()</code> - Get Coords</li>
+                         <li><code>getDirection()</code> - Get Heading</li>
+                         <li><code>console.log(...)</code> - Log to console</li>
+                     </ul>
+                 </div>
                 <canvas id="arena" width="900" height="900"></canvas>
-
-                <!-- NEW: Row wrapper for consoles -->
                 <div class="consoles-row">
-                    <!-- Player Robot Console Log (MOVED HERE - Below Arena) -->
                     <div id="robot-console-log" class="console-panel">
-                        <h3>Robot Console Output</h3>
+                        <h3>Your Robot Log</h3>
                         <div id="robot-log-messages" class="log-box">
-                            <div>Waiting for robot messages...</div>
+                            <div>ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL</div>
+                            <div>> R.O.S. V1.3 INITIALIZING...</div>
                         </div>
                     </div>
-
-                    <!-- Opponent Robot Console Log (MOVED HERE - Below Arena) -->
                     <div id="opponent-console-log" class="console-panel">
-                         <h3>Opponent Console Output</h3>
-                         <div id="opponent-log-messages" class="log-box">
-                             <div>Waiting for opponent messages...</div>
-                         </div>
+                        <h3>Opponent Log</h3>
+                        <div id="opponent-log-messages" class="log-box">
+                             <div>SCANNING FOR HOSTILE TRANSMISSIONS...</div>
+                             <div>> STANDING BY</div>
+                        </div>
                     </div>
-                </div> <!-- End .consoles-row -->
-            </div> <!-- End .arena-column -->
+                </div>
+            </section>
 
-
-            <!-- Column 2: Dev Tools (Editor Only Now) -->
-            <div class="devtools-column">
-                <!-- Editor Section -->
+            <!-- Column 2: DevTools Area -->
+            <section class="devtools-column">
                 <div class="editor-section">
-                    <h3>Robot Code Editor</h3>
-                    <div class="code-editor-wrapper">
+                     <h3>Robot Code Editor</h3>
+                     <div class="code-editor-wrapper">
                         <textarea id="code-editor"></textarea>
-                    </div>
-                    <!-- Editor Controls -->
-                    <div class="editor-controls">
-                        <button id="btn-save-code">Save Code</button>
-                        <select id="loadout-select">
-                            <option value="" selected>Load Code...</option>
-                        </select>
-                        <button id="btn-delete-loadout" disabled title="Delete selected loadout">✖</button>
-                    </div>
-                    <div id="loadout-status"></div>
-                </div>
-            </div> <!-- End .devtools-column -->
-
-
-            <!-- Column 3: Info & Lobby -->
-            <div class="info-lobby-column">
-                 <!-- Robot Stats Panel -->
-                <div class="stats-panel">
-                     <!-- Dashboard.js adds content here -->
-                     <div id="robot-stats"></div>
-                </div>
-
-                <!-- Lobby Area -->
-                <div id="lobby-area">
-                     <div>
-                         <h3>Lobby Status</h3>
-                         <div id="lobby-status">Connecting...</div>
-                         <div id="event-log" class="log-box">Event Log Loading...</div>
-                         <div id="chat-area">
-                             <input type="text" id="chat-input" placeholder="Enter chat message..." maxlength="100">
-                             <button id="send-chat">Send</button>
-                         </div>
+                     </div>
+                     <div class="editor-controls">
+                         <button id="btn-save-code">Save Code Snippet</button>
+                         <select id="loadout-select"> <!-- For loading snippets into editor -->
+                             <option value="" selected>Load Code Snippet...</option>
+                             <!-- Options populated by JS -->
+                         </select>
+                         <button id="btn-delete-loadout" disabled title="Delete selected snippet">✖</button>
+                         <span id="loadout-status"></span>
                      </div>
                 </div>
+            </section>
 
-                <!-- Game History Log -->
+            <!-- Column 3: Info & Lobby Area -->
+            <section class="info-lobby-column">
+                <div class="stats-panel">
+                    <h3>Robot Stats</h3>
+                    <div id="robot-stats">
+                        <!-- Dashboard elements populated by JS -->
+                    </div>
+                </div>
+                <div id="lobby-area">
+                     <h3>Lobby</h3>
+                     <div id="lobby-status" style="margin-bottom: 10px;">Connecting...</div>
+                     <div id="event-log" class="log-box" style="height: 150px; margin-bottom: 10px;">Event Log Loading...</div>
+                     <div id="chat-area" style="display: flex; gap: 5px;">
+                         <input type="text" id="chat-input" placeholder="Enter chat message..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px;" maxlength="100">
+                         <button id="send-chat" style="background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'VT323', monospace; font-size: 15px;">Send</button>
+                     </div>
+                </div>
                  <div id="game-history-log">
                      <h4>Recent Game Results</h4>
-                     <div id="game-history-list" class="log-box">
+                     <div id="game-history-list" class="log-box" style="height: 195px;">
                          <div>No games finished yet.</div>
                      </div>
                  </div>
-            </div> <!-- End .info-lobby-column -->
+            </section>
 
-        </div> <!-- End .main-content-grid -->
+        </main> <!-- End Main Grid -->
 
     </div> <!-- End .container -->
 
-    <!-- Scripts (Keep all script tags the same) -->
+    <!-- Scripts (Corrected Order) -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
@@ -156,12 +325,17 @@
     <script src="js/engine/arena.js"></script>
     <script src="js/engine/game.js"></script>
     <script src="js/engine/audio.js"></script>
+    <script src="js/utils/storage.js"></script> <!-- Still needed temporarily for snippets -->
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
-    <script src="js/ui/controls.js"></script>
+    <script src="js/ui/loadoutBuilder.js"></script> <!-- Builder needs to define global instance -->
     <script src="js/ui/lobby.js"></script>
     <script src="js/ui/history.js"></script>
     <script src="js/network.js"></script>
-    <script src="js/main.js"></script>
+    <!-- Load Controls BEFORE Auth -->
+    <script src="js/ui/controls.js"></script> <!-- Defines global 'controls' -->
+    <script src="js/auth.js"></script> <!-- Defines global 'currentUser', uses 'controls' -->
+    <!-- Load Main LAST -->
+    <script src="js/main.js"></script> <!-- Uses globals -->
 </body>
 </html>

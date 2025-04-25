@@ -2,10 +2,10 @@
 
 /**
  * Handles client-side network communication with the server using Socket.IO.
- * Connects to the server, sends player data (including name), readiness signals,
+ * Connects to the server, sends player loadout data (visuals, name, code), readiness signals,
  * requests test games, sends self-destruct signals, receives game state updates,
  * handles spectating, processes lobby/chat events, handles robot destruction events,
- * receives game history updates, and handles robot log messages (for both player and opponent). // <-- Updated description
+ * receives game history updates, and handles robot log messages (for both player and opponent).
  */
 class Network {
     /**
@@ -13,14 +13,12 @@ class Network {
      * @param {Game} game - Reference to the main client-side game object.
      */
     constructor(game) {
-        this.socket = null; // Will hold the Socket.IO socket instance
-        this.playerId = null; // This client's unique ID assigned by the server
-        this.game = game; // Reference to the main game object to pass updates
-        // --- Spectator State ---
+        this.socket = null;
+        this.playerId = null; // This will be set by the 'assignId' event
+        this.game = game;
         this.isSpectating = false;
         this.spectatingGameId = null;
-        this.spectatingGameName = null; // Store name for display
-        // --- End Spectator State ---
+        this.spectatingGameName = null;
         if (!this.game) {
             console.error("Network handler initialized without a valid game reference!");
         }
@@ -31,409 +29,269 @@ class Network {
      */
     connect() {
         try {
-            // Connect to the Socket.io server. Assumes server is on the same host/port.
-            // Added reconnection options for robustness
+            // Prevent multiple connections if already connecting or connected
+            if (this.socket && (this.socket.connecting || this.socket.connected)) {
+                console.log("Network: Already connected or connecting. Ignoring connect() call.");
+                return;
+            }
+
+            console.log("Network: Attempting to connect...");
             this.socket = io({
-                 reconnectionAttempts: 5, // Try to reconnect 5 times
-                 reconnectionDelay: 1000, // Start with 1 second delay
-                 reconnectionDelayMax: 5000 // Max delay 5 seconds
+                 reconnectionAttempts: 5,
+                 reconnectionDelay: 1000,
+                 reconnectionDelayMax: 5000,
+                 // Optional: Add transports if experiencing connection issues on some platforms
+                 // transports: ['websocket', 'polling']
             });
 
             // --- Socket.IO Event Listeners ---
 
-            // On successful connection/reconnection
             this.socket.on('connect', () => {
                 console.log('Successfully connected/reconnected to server with Socket ID:', this.socket.id);
-                // Reset spectator state on fresh connect (server will tell us if we should spectate)
                 this.isSpectating = false;
                 this.spectatingGameId = null;
                 this.spectatingGameName = null;
-
-                // Reset Controls UI to lobby state upon successful connection
-                if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
-                    controls.setState('lobby');
-                } else {
-                    console.warn("Controls object or setState not found on connect, UI might be incorrect.");
-                }
-
-                // Notify UI about connection status - Lobby/Spectate status will be updated by subsequent events
-                 if (typeof window.updateLobbyStatus === 'function') {
-                     window.updateLobbyStatus('Connected. Waiting for server info...');
-                 }
-                 if (typeof window.addEventLogMessage === 'function') {
-                    window.addEventLogMessage("--> Connected to server.", "event");
-                 }
-                 // Clear BOTH robot logs on new connection
-                 if (typeof window.clearRobotLog === 'function') {
-                     window.clearRobotLog();
-                 }
-                 if (typeof window.clearOpponentLog === 'function') { // ADDED
-                     window.clearOpponentLog();
-                 }
+                // Reset playerId on new connection until assigned
+                this.playerId = null;
+                if (typeof controls?.setState === 'function') controls.setState('lobby');
+                if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Connected. Waiting for server info...');
+                if (typeof window.addEventLogMessage === 'function') window.addEventLogMessage("--> Connected to server.", "event");
+                if (typeof window.clearRobotLog === 'function') window.clearRobotLog();
+                if (typeof window.clearOpponentLog === 'function') window.clearOpponentLog();
             });
 
-            // On disconnection from the server
             this.socket.on('disconnect', (reason) => {
                 console.warn('Disconnected from server:', reason);
-                 // Stop rendering if game or spectating was active
-                if (this.game) {
-                    this.game.stop();
-                }
-                // Reset spectator state
+                if (this.game) this.game.stop();
                 this.isSpectating = false;
                 this.spectatingGameId = null;
                 this.spectatingGameName = null;
-
-                // Attempt to reset controls UI state (though it might be disabled on reconnect anyway)
-                 if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
-                     controls.setState('lobby'); // Attempt reset to lobby visually
-                 }
-
-                // Update UI
-                 if (typeof window.updateLobbyStatus === 'function') {
-                     window.updateLobbyStatus(`Disconnected: ${reason}. Reconnecting...`);
-                 }
-                 if (typeof window.addEventLogMessage === 'function') {
-                    window.addEventLogMessage(`Disconnected: ${reason}. Attempting to reconnect...`, "error");
-                 }
+                this.playerId = null; // Clear player ID on disconnect
+                if (typeof controls?.setState === 'function') controls.setState('lobby');
+                if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus(`Disconnected: ${reason}. Reconnecting...`);
+                if (typeof window.addEventLogMessage === 'function') window.addEventLogMessage(`Disconnected: ${reason}. Attempting to reconnect...`, "error");
             });
 
-            // Server assigns a unique ID to this client
             this.socket.on('assignId', (id) => {
                 console.log('Server assigned Player ID:', id);
-                this.playerId = id; // Store our own ID
-                if (this.game && typeof this.game.setPlayerId === 'function') {
-                    this.game.setPlayerId(id);
+                this.playerId = id; // Set the player ID for this client session
+                if (this.game?.setPlayerId) this.game.setPlayerId(id);
+                // Update status only if we are in lobby state after getting ID
+                if (!this.isSpectating && controls?.uiState === 'lobby' && typeof window.updateLobbyStatus === 'function') {
+                    window.updateLobbyStatus('Enter name & code, then Ready Up or Test Code!');
                 }
-                 // After getting ID, if not spectating, prompt for Ready Up
-                 if (!this.isSpectating && typeof window.updateLobbyStatus === 'function') {
-                      // Check if UI is currently in the lobby state
-                      if (typeof controls !== 'undefined' && controls.uiState === 'lobby') {
-                         window.updateLobbyStatus('Enter name & code, then Ready Up or Test Code!'); // Updated prompt
-                      }
-                 }
             });
 
-             // --- START Spectator Event Handlers ---
+            // --- START: Robot Log Handler ---
+            this.socket.on('robotLog', (data) => {
+                 // Validate incoming data
+                 if (data && typeof data.message === 'string' && typeof data.robotId === 'string') {
+                     // Check if this client has been assigned an ID yet
+                     if (!this.playerId) {
+                         console.warn("Received robotLog before playerId was assigned. Log may be misdirected.");
+                         // Optionally, buffer logs until playerId is known, or just log to general event log?
+                         // For now, maybe log to player console as a fallback if it's the only one available
+                         if (typeof window.addRobotLogMessage === 'function') {
+                            window.addRobotLogMessage(`(Early Log from ${data.robotId.substring(0,4)}...): ${data.message}`);
+                         }
+                         return;
+                     }
+
+                     // Route the log based on comparison with the client's own ID
+                     if (data.robotId === this.playerId) {
+                         // It's a message from the player's own robot
+                         if (typeof window.addRobotLogMessage === 'function') {
+                            window.addRobotLogMessage(data.message);
+                         } else {
+                            console.warn("addRobotLogMessage function not found!");
+                         }
+                     } else {
+                         // It's a message from the opponent's robot
+                         if (typeof window.addOpponentLogMessage === 'function') {
+                             window.addOpponentLogMessage(data.message);
+                         } else {
+                            console.warn("addOpponentLogMessage function not found!");
+                         }
+                     }
+                 } else {
+                    console.warn("Received invalid robotLog data format:", data);
+                 }
+             });
+            // --- END: Robot Log Handler ---
+
+
+            // ... other event handlers remain the same ...
+
             this.socket.on('spectateStart', (data) => {
                 console.log('Received spectateStart:', data);
-                if (this.game && typeof this.game.handleSpectateStart === 'function') {
-                    this.isSpectating = true; // Set state BEFORE calling handler
+                if (this.game?.handleSpectateStart) {
+                    this.isSpectating = true;
                     this.spectatingGameId = data.gameId;
-                    this.spectatingGameName = data.gameName || data.gameId; // Store name
-                    this.game.handleSpectateStart(data); // Pass game info to game handler
-                    if (typeof window.addEventLogMessage === 'function') {
-                        window.addEventLogMessage(`Started spectating game: ${this.spectatingGameName}`, 'event');
-                    }
-                    // Clear BOTH robot logs when starting spectate
-                    if (typeof window.clearRobotLog === 'function') {
-                         window.clearRobotLog();
-                    }
-                    if (typeof window.clearOpponentLog === 'function') { // ADDED
-                         window.clearOpponentLog();
-                    }
-                } else {
-                    console.error("Game object or handleSpectateStart method not available!");
-                }
+                    this.spectatingGameName = data.gameName || data.gameId;
+                    this.game.handleSpectateStart(data);
+                    if (typeof window.addEventLogMessage === 'function') window.addEventLogMessage(`Started spectating game: ${this.spectatingGameName}`, 'event');
+                    if (typeof window.clearRobotLog === 'function') window.clearRobotLog();
+                    if (typeof window.clearOpponentLog === 'function') window.clearOpponentLog();
+                } else { console.error("Game object or handleSpectateStart method not available!"); }
             });
 
             this.socket.on('spectateGameOver', (data) => {
                 console.log('Received spectateGameOver:', data);
-                 // Check if we are actually spectating the game that ended
                 if (this.isSpectating && this.spectatingGameId === data.gameId) {
-                     if (this.game && typeof this.game.handleSpectateEnd === 'function') {
-                         this.game.handleSpectateEnd(data); // Pass winner info etc.
-                         if (typeof window.addEventLogMessage === 'function') {
-                             const endedGameName = this.spectatingGameName || data.gameId; // Use stored name
-                             window.addEventLogMessage(`Spectated game '${endedGameName}' over! Winner: ${data.winnerName || 'None'}`, 'event');
-                         }
-                     } else {
-                         console.error("Game object or handleSpectateEnd method not available!");
-                     }
-                     // Reset spectator state AFTER calling handler
+                     if (this.game?.handleSpectateEnd) {
+                         this.game.handleSpectateEnd(data);
+                         if (typeof window.addEventLogMessage === 'function') window.addEventLogMessage(`Spectated game '${this.spectatingGameName || data.gameId}' over! Winner: ${data.winnerName || 'None'}`, 'event');
+                     } else { console.error("Game object or handleSpectateEnd method not available!"); }
                      this.isSpectating = false;
                      this.spectatingGameId = null;
                      this.spectatingGameName = null;
-                 } else {
-                    // console.log(`Received spectateGameOver for irrelevant game ${data.gameId}. Current spectate: ${this.spectatingGameId}. Ignoring.`); // Optional log
                  }
             });
-            // --- END Spectator Event Handlers ---
 
-            // Receives game state updates from the server during the match OR while spectating
             this.socket.on('gameStateUpdate', (gameState) => {
-                // Update game state whether playing or spectating
-                if (this.game && typeof this.game.updateFromServer === 'function') {
-                     // Determine the relevant game ID based on current state
+                if (this.game?.updateFromServer) {
                      const relevantGameId = this.isSpectating ? this.spectatingGameId : this.game.gameId;
-                     if (relevantGameId && relevantGameId === gameState.gameId) {
+                     // Ensure gameState and gameId exist before comparing
+                     if (relevantGameId && gameState && relevantGameId === gameState.gameId) {
                         this.game.updateFromServer(gameState);
-                     } // else: ignore updates for irrelevant games
+                     }
                 }
             });
 
-            // Server signals that the game is starting (for players - includes test games)
-            this.socket.on('gameStart', (data) => {
-                 // Ignore if spectating
-                 if (this.isSpectating) {
-                     console.log("Received gameStart while spectating, ignoring.");
-                     return;
-                 }
-                 if (this.game && typeof this.game.handleGameStart === 'function') {
-                     // State check inside handler is safer if events race
-                     this.game.handleGameStart(data); // This will update gameId and gameName
-                 }
-                 // Update lobby status - Game class handleGameStart should update button text now
-                 // Add a check for the test game flag
+             this.socket.on('gameStart', (data) => {
+                 if (this.isSpectating) { console.log("Received gameStart while spectating, ignoring."); return; }
+                 // Ensure data is valid before proceeding
+                 if (!data || !data.gameId) { console.warn("Received invalid gameStart data:", data); return; }
+                 if (this.game?.handleGameStart) this.game.handleGameStart(data);
                  const statusPrefix = data.isTestGame ? 'Testing Code vs AI:' : 'Playing Game:';
                  if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus(`${statusPrefix} ${data.gameName || data.gameId}`);
-                 if (typeof window.addEventLogMessage === 'function') {
-                     window.addEventLogMessage(`Your game '${data.gameName || data.gameId}' is starting!`, 'event');
-                 }
-                 // Clear BOTH robot logs at game start
-                 if (typeof window.clearRobotLog === 'function') {
-                      window.clearRobotLog();
-                 }
-                  if (typeof window.clearOpponentLog === 'function') { // ADDED
-                      window.clearOpponentLog();
-                 }
+                 if (typeof window.addEventLogMessage === 'function') window.addEventLogMessage(`Your game '${data.gameName || data.gameId}' is starting!`, 'event');
+                 if (typeof window.clearRobotLog === 'function') window.clearRobotLog();
+                 if (typeof window.clearOpponentLog === 'function') window.clearOpponentLog();
              });
 
-            // Server signals that the game has ended (for players - includes test games)
              this.socket.on('gameOver', (data) => {
-                 // Ignore if spectating
-                 if (this.isSpectating) {
-                     console.log("Received gameOver while spectating, ignoring (expecting spectateGameOver).");
-                     return;
-                 }
-
-                 // Check if this gameOver matches the game we *think* we are playing
+                 if (this.isSpectating) { console.log("Received gameOver while spectating, ignoring."); return; }
+                 // Ensure data is valid and matches current game
+                 if (!data || !data.gameId) { console.warn("Received invalid gameOver data:", data); return; }
                  if (this.game && this.game.gameId === data.gameId) {
-                     if (typeof this.game.handleGameOver === 'function') {
-                         // IMPORTANT: The actual UI transition happens here AFTER the delay/explosion has played out client-side
-                         this.game.handleGameOver(data); // This should reset controls UI state
-                     }
-                     // Update lobby status after game over
+                     if (typeof this.game.handleGameOver === 'function') this.game.handleGameOver(data);
                      const prompt = data.wasTestGame ? 'Test Complete. Ready Up or Test Again!' : 'Game Over. Ready Up for another match!';
                      if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus(prompt);
-                      if (typeof window.addEventLogMessage === 'function') {
-                         const endedGameName = this.game.gameName || data.gameId;
-                         window.addEventLogMessage(`Your game '${endedGameName}' finished! Winner: ${data.winnerName || 'None'}`, 'event');
-                     }
-                 } else {
-                      console.warn(`Received gameOver for game ${data.gameId}, but current game is ${this.game ? this.game.gameId : 'None'}. Ignoring.`);
-                 }
+                     if (typeof window.addEventLogMessage === 'function') window.addEventLogMessage(`Your game '${this.game.gameName || data.gameId}' finished! Winner: ${data.winnerName || 'None'}`, 'event');
+                 } else { console.warn(`Received gameOver for game ${data.gameId}, but current game is ${this.game ? this.game.gameId : 'None'}. Ignoring.`); }
              });
 
-            // --- START: Listen for Robot Destruction Event ---
             this.socket.on('robotDestroyed', (data) => {
-                // Only process if the game object exists and has the handler
-                if (this.game && typeof this.game.handleRobotDestroyed === 'function') {
-                    // Check if the event is for the current game we are playing or spectating
-                    const relevantGameId = this.isSpectating ? this.spectatingGameId : this.game.gameId;
-                    // Note: Server currently sends this to everyone in the game room/spectator room,
-                    // so we don't strictly need to check gameId here, but it's safer.
-                    // Let game handler decide what to do based on robot ID.
-                    this.game.handleRobotDestroyed(data);
-                } else {
-                     console.warn("Received robotDestroyed event, but game object or handler missing.");
-                }
+                 if (!data || !data.robotId) { console.warn("Received invalid robotDestroyed data:", data); return; }
+                if (this.game?.handleRobotDestroyed) this.game.handleRobotDestroyed(data);
+                else console.warn("Received robotDestroyed event, but game object or handler missing.");
             });
-            // --- END: Listen for Robot Destruction Event ---
 
-
-            // Server reports an error in the robot's code (compilation or runtime)
             this.socket.on('codeError', (data) => {
-                // Ensure data includes robotId and message
-                if (!data || !data.robotId || typeof data.message !== 'string') {
-                     console.warn("Received invalid codeError data:", data);
-                     return;
-                }
-
+                if (!data || !data.robotId || typeof data.message !== 'string') { console.warn("Received invalid codeError data:", data); return; }
                 console.error(`Received Code Error for Robot ${data.robotId}:`, data.message);
+                // Use playerId for comparison
                 const robotIdentifier = (this.playerId && data.robotId === this.playerId) ? "Your Robot" : `Opponent (${data.robotId.substring(0,4)}...)`;
-
-                // Log to general event log
-                if (typeof window.addEventLogMessage === 'function') {
-                    window.addEventLogMessage(`Code Error (${robotIdentifier}): ${data.message}`, 'error');
-                }
-
-                // Log to the appropriate console (player's or opponent's)
+                if (typeof window.addEventLogMessage === 'function') window.addEventLogMessage(`Code Error (${robotIdentifier}): ${data.message}`, 'error');
                 const logMessage = `--- CODE ERROR ---\n${data.message}\n------------------`;
+                // Use playerId for comparison
                 if (this.playerId && data.robotId === this.playerId) {
-                    if (typeof window.addRobotLogMessage === 'function') {
-                        window.addRobotLogMessage(logMessage);
-                    }
+                    if (typeof window.addRobotLogMessage === 'function') window.addRobotLogMessage(logMessage);
                 } else {
-                    if (typeof window.addOpponentLogMessage === 'function') {
-                        window.addOpponentLogMessage(logMessage);
-                    }
+                    if (typeof window.addOpponentLogMessage === 'function') window.addOpponentLogMessage(logMessage);
                 }
-
-                // Display alert and reset UI only if it's our robot AND we are not spectating
+                // Use playerId for comparison - Alert only if it's the player's own error
                 if (this.playerId && data.robotId === this.playerId && !this.isSpectating) {
                      alert(`Your Robot Code Error:\n${data.message}\n\nYou might need to reset and fix your code.`);
-                     // Reset Controls UI to lobby state
-                     if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
-                         controls.setState('lobby');
-                     }
+                     if (typeof controls?.setState === 'function') controls.setState('lobby');
                      if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Code error detected. Please fix and Ready Up or Test again.');
                  }
             });
 
-             // Server reports a critical game error (e.g., during tick)
              this.socket.on('gameError', (data) => {
                  console.error("Received critical game error from server:", data);
-                 alert(`A critical error occurred in the game: ${data.message}\nThe game may have ended.`);
-                 if (typeof window.addEventLogMessage === 'function') {
-                     window.addEventLogMessage(`SERVER GAME ERROR: ${data.message}`, 'error');
-                 }
-                  // Assume game is over, reset UI state if playing (spectators handle via spectateGameOver implicitly)
-                 if (!this.isSpectating && typeof controls !== 'undefined' && typeof controls.setState === 'function') {
-                     controls.setState('lobby'); // Reset to lobby state
-                 }
+                 alert(`A critical error occurred in the game: ${data.message || 'Unknown error.'}\nThe game may have ended.`);
+                 if (typeof window.addEventLogMessage === 'function') window.addEventLogMessage(`SERVER GAME ERROR: ${data.message || 'Unknown error.'}`, 'error');
+                 if (!this.isSpectating && typeof controls?.setState === 'function') controls.setState('lobby');
                  if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Game Error Occurred. Ready Up or Test again.');
-                  if (this.game) this.game.stop(); // Stop rendering
+                 if (this.game) this.game.stop();
              });
 
-
-            // Handle connection errors (e.g., server is down initially)
             this.socket.on('connect_error', (err) => {
                 console.error("Connection Error:", err.message, err);
-                 if (typeof window.updateLobbyStatus === 'function') {
-                     window.updateLobbyStatus(`Connection Failed: ${err.message}`);
-                 }
-                 if (typeof window.addEventLogMessage === 'function') {
-                    window.addEventLogMessage(`Connection Error: ${err.message}. Retrying...`, 'error');
-                 }
-                // Reset UI elements if connection fails initially
-                 if (typeof controls !== 'undefined' && typeof controls.setState === 'function') {
-                     controls.setState('lobby');
-                 }
+                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus(`Connection Failed: ${err.message}`);
+                 if (typeof window.addEventLogMessage === 'function') window.addEventLogMessage(`Connection Error: ${err.message}. Retrying...`, 'error');
+                 if (typeof controls?.setState === 'function') controls.setState('lobby');
             });
 
-            // Handle failed reconnection attempts
-             this.socket.on('reconnect_failed', () => {
+            this.socket.on('reconnect_failed', () => {
                  console.error('Reconnection failed after multiple attempts.');
-                 if (typeof window.updateLobbyStatus === 'function') {
-                     window.updateLobbyStatus('Connection Failed Permanently. Please refresh.');
-                 }
-                 if (typeof window.addEventLogMessage === 'function') {
-                     window.addEventLogMessage('Could not reconnect to the server. Please refresh the page.', 'error');
-                 }
+                 if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Connection Failed Permanently. Please refresh.');
+                 if (typeof window.addEventLogMessage === 'function') window.addEventLogMessage('Could not reconnect to the server. Please refresh the page.', 'error');
                  alert('Failed to reconnect to the server. Please refresh the page.');
              });
 
-
-            // --- Lobby/Chat/History Event Listeners ---
             this.socket.on('lobbyEvent', (data) => {
-                if (data && data.message && typeof window.addEventLogMessage === 'function') {
-                    window.addEventLogMessage(data.message, data.type || 'event');
-                }
+                if (data?.message && typeof window.addEventLogMessage === 'function') window.addEventLogMessage(data.message, data.type || 'event');
             });
 
             this.socket.on('lobbyStatusUpdate', (data) => {
-                // Do not update lobby status text if playing or spectating (those modes have different status texts)
-                 // Check controls state instead of game.running directly
                  const isIdle = typeof controls !== 'undefined' && (controls.uiState === 'lobby' || controls.uiState === 'waiting');
-
                 if (isIdle && data && typeof window.updateLobbyStatus === 'function') {
                     let statusText = `Waiting: ${data.waiting !== undefined ? data.waiting : 'N/A'}`;
-                    if (data.ready !== undefined) {
-                        statusText += ` / Ready: ${data.ready}/2`;
-                    }
+                    if (data.ready !== undefined) statusText += ` / Ready: ${data.ready}/2`;
                      window.updateLobbyStatus(statusText);
                 }
             });
 
             this.socket.on('chatUpdate', (data) => {
-                if (data && data.sender && data.text && typeof window.addEventLogMessage === 'function') {
-                    window.addEventLogMessage(`${data.sender}: ${data.text}`, 'chat');
-                }
+                if (data?.sender && data.text && typeof window.addEventLogMessage === 'function') window.addEventLogMessage(`${data.sender}: ${data.text}`, 'chat');
             });
 
-            // --- Game History Listener ---
             this.socket.on('gameHistoryUpdate', (historyData) => {
-                // console.log('Received game history update:', historyData); // Debug log
-                if (typeof window.updateGameHistory === 'function') {
-                    window.updateGameHistory(historyData);
-                } else {
-                    console.warn("updateGameHistory function not found!");
-                }
+                if (typeof window.updateGameHistory === 'function') window.updateGameHistory(historyData);
+                else console.warn("updateGameHistory function not found!");
             });
-            // --- End Game History Listener ---
-
-            // --- Robot Log Listener (Handles Both Player and Opponent) ---
-             this.socket.on('robotLog', (data) => {
-                 // Validate incoming data structure
-                 if (data && typeof data.message === 'string' && typeof data.robotId === 'string') {
-                     // Check if the log is from the player's own robot
-                     if (this.playerId && data.robotId === this.playerId) {
-                         // Call the UI update function for the player's log
-                         if (typeof window.addRobotLogMessage === 'function') {
-                             window.addRobotLogMessage(data.message);
-                         } else {
-                             console.warn("addRobotLogMessage function not found!");
-                         }
-                     } else {
-                         // Log is from the opponent (or received before playerId is set, or during spectate)
-                         // Call the UI update function for the opponent's log
-                         if (typeof window.addOpponentLogMessage === 'function') {
-                             window.addOpponentLogMessage(data.message);
-                         } else {
-                             console.warn("addOpponentLogMessage function not found!");
-                         }
-                     }
-                 } else {
-                      console.warn("Received invalid robotLog data format:", data);
-                 }
-             });
-            // --- End Robot Log Listener ---
 
 
         } catch (error) {
              console.error("Error initializing Socket.IO connection:", error);
-             if (typeof window.updateLobbyStatus === 'function') {
-                 window.updateLobbyStatus('Network Initialization Error');
-             }
+             if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Network Initialization Error');
              alert("Failed to initialize network connection. Check console for details.");
         }
     } // End connect()
 
-    /**
-     * Sends the player's robot code, chosen appearance, and name to the server.
-     * Called by the Controls class when the 'Ready Up' button is clicked.
-     * @param {string} code - The robot AI code written by the player.
-     * @param {string} appearance - The identifier for the chosen robot appearance.
-     * @param {string} name - The player's chosen name.
-     */
-    sendCodeAndAppearance(code, appearance, name) {
-        // This check relies on the controls state machine now
-        // Allow if state is 'lobby'
-        const canSend = typeof controls !== 'undefined' && controls.uiState === 'lobby';
 
+    /**
+     * Sends the player's complete loadout data (visuals, name, code) to the server.
+     * Called by the Controls class when the 'Ready Up' button is clicked.
+     * @param {object} loadoutData - The prepared loadout data object.
+     *                               Expected: { name: string, visuals: object, code: string }
+     */
+    sendLoadoutData(loadoutData) { // Renamed and updated parameter
+        const canSend = typeof controls !== 'undefined' && controls.uiState === 'lobby';
         if (!canSend) {
-             console.warn("Attempted to send player data while not in 'lobby' state. Ignoring.");
-             if(typeof window.addEventLogMessage === 'function') {
-                 window.addEventLogMessage("Cannot ready up now.", "error");
-             }
+             console.warn("Network: Attempted to send player data while not in 'lobby' state. Ignoring.");
+             if(typeof window.addEventLogMessage === 'function') window.addEventLogMessage("Cannot ready up now.", "error");
              return;
         }
-
-        // Ensure the socket exists and is connected
         if (!this.socket || !this.socket.connected) {
              console.error("Socket not available or not connected. Cannot send player data.");
              alert("Not connected to server. Please check connection and try again.");
-             // Controls state should revert via disconnect/connect_error handlers if needed
              return;
         }
 
-        console.log(`Sending player data to server: { name: '${name}', appearance: '${appearance}', code: ... }`);
-        this.socket.emit('submitPlayerData', {
-             code: code,
-             appearance: appearance,
-             name: name
-        });
+        // Validate the structure minimally before sending
+        if (!loadoutData || !loadoutData.name || !loadoutData.visuals || typeof loadoutData.code !== 'string') {
+             console.error("Network: Invalid loadoutData structure provided to sendLoadoutData:", loadoutData);
+             alert("Internal Error: Invalid loadout data prepared.");
+             return;
+        }
+
+        console.log(`Sending player loadout data to server: Name='${loadoutData.name}', Visuals=... Code=...`);
+        // Emit the 'submitPlayerData' event with the new structure
+        this.socket.emit('submitPlayerData', loadoutData); // Send the whole object
     }
 
     /**
@@ -441,84 +299,68 @@ class Network {
      * Called by the Controls class when the 'Unready' button is clicked.
      */
     sendUnreadySignal() {
-         // This check relies on the controls state machine now
-         // Allow if state is 'waiting'
          const canSend = typeof controls !== 'undefined' && controls.uiState === 'waiting';
-
          if (!canSend) {
-             console.warn("Attempted to send unready signal while not in 'waiting' state. Ignoring.");
-              if(typeof window.addEventLogMessage === 'function') {
-                 window.addEventLogMessage("Cannot unready now.", "error");
-             }
+             console.warn("Network: Attempted to send unready signal while not in 'waiting' state. Ignoring.");
+             if(typeof window.addEventLogMessage === 'function') window.addEventLogMessage("Cannot unready now.", "error");
              return;
          }
-
         if (!this.socket || !this.socket.connected) {
             console.error("Socket not connected. Cannot send unready signal.");
-            if(typeof window.addEventLogMessage === 'function') {
-                window.addEventLogMessage("Cannot unready: Not connected.", "error");
-            }
-            // Controls state should revert via disconnect/connect_error handlers if needed
+            if(typeof window.addEventLogMessage === 'function') window.addEventLogMessage("Cannot unready: Not connected.", "error");
             return;
         }
         console.log("Sending 'playerUnready' signal to server.");
         this.socket.emit('playerUnready');
     }
 
-
     /**
      * Sends a chat message to the server.
-     * Called by the chat UI logic in lobby.js.
      * @param {string} text - The chat message text.
      */
     sendChatMessage(text) {
         if (!this.socket || !this.socket.connected) {
             console.error("Socket not connected. Cannot send chat message.");
-            if(typeof window.addEventLogMessage === 'function') {
-                window.addEventLogMessage("Cannot send chat: Not connected.", "error");
-            }
+            if(typeof window.addEventLogMessage === 'function') window.addEventLogMessage("Cannot send chat: Not connected.", "error");
             return;
         }
         const trimmedText = text.trim();
-        if (trimmedText) { // Only send non-empty messages
+        if (trimmedText) {
             this.socket.emit('chatMessage', { text: trimmedText });
         }
     }
 
     /**
-     * Sends a request to the server to start a single-player test game.
+     * Sends a request to the server to start a single-player test game using the provided loadout.
      * Called by the Controls class when the 'Test Code' button is clicked.
-     * @param {string} code - The robot AI code written by the player.
-     * @param {string} appearance - The identifier for the chosen robot appearance.
-     * @param {string} name - The player's chosen name.
+     * @param {object} loadoutData - The prepared loadout data object for testing.
+     *                               Expected: { name: string, visuals: object, code: string }
      */
-    requestTestGame(code, appearance, name) {
-        // Basic check: ensure socket is connected
+    requestTestGame(loadoutData) { // Updated parameter
         if (!this.socket || !this.socket.connected) {
              console.error("Socket not available or not connected. Cannot request test game.");
              alert("Not connected to server. Please check connection and try again.");
              return;
         }
-         // Basic check: ensure player is in lobby state (client-side check)
          if (typeof controls === 'undefined' || controls.uiState !== 'lobby') {
-             console.warn("Attempted to request test game while not in lobby state. Ignored.");
+             console.warn("Network: Attempted to request test game while not in lobby state. Ignored.");
              return;
          }
 
-        console.log(`Sending test game request to server: { name: '${name}', appearance: '${appearance}', code: ... }`);
-        this.socket.emit('requestTestGame', {
-             code: code,
-             appearance: appearance,
-             name: name
-        });
-        // The server will respond with 'gameStart' if successful, which will transition the client state.
-        // Optionally, update lobby status immediately:
-        if (typeof window.updateLobbyStatus === 'function') window.updateLobbyStatus('Requesting Test Game...');
+         // Validate the structure minimally before sending
+        if (!loadoutData || !loadoutData.name || !loadoutData.visuals || typeof loadoutData.code !== 'string') {
+             console.error("Network: Invalid loadoutData structure provided to requestTestGame:", loadoutData);
+             alert("Internal Error: Invalid loadout data prepared for test game.");
+             return;
+        }
+
+        console.log(`Sending test game request to server: Name='${loadoutData.name}', Visuals=..., Code=...`);
+        // Emit the 'requestTestGame' event with the new structure
+        this.socket.emit('requestTestGame', loadoutData); // Send the whole object
     }
 
     /**
      * Sends a signal to the server for the player's robot to self-destruct.
-     * Called by the Controls class.
      */
     sendSelfDestructSignal() {
         if (!this.socket || !this.socket.connected) {
@@ -526,7 +368,7 @@ class Network {
              alert("Not connected to server.");
              return;
         }
-        console.log("Client sending selfDestruct event."); // Added log
+        console.log("Client sending selfDestruct event.");
         this.socket.emit('selfDestruct');
     }
 

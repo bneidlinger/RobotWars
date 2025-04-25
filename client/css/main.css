@@ -1,4 +1,4 @@
-/* client/css/main.css - Refined Layout (API/Arena/Consoles in Col 1) */
+/* client/css/main.css - Refined 3-Column Layout + Loadout Builder + Auth Modals */
 
 * {
     margin: 0;
@@ -8,34 +8,35 @@
 
 body {
     font-family: 'VT323', monospace;
-    font-size: 20px;
+    /* Base font size reduction */
+    font-size: 18px;
     background-color: #1e1e1e;
     color: #e0e0e0;
     line-height: 1.6;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: hidden; /* Prevent horizontal scroll on body */
 }
 
 .container {
     width: 100%;
-    padding: 15px;
+    padding: 15px; /* Padding around the main content */
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
-    min-height: 0;
+    flex-grow: 1; /* Allow container to fill vertical space */
+    min-height: 0; /* Important for flex context */
 }
 
 header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px; /* Further reduced margin */
+    margin-bottom: 10px;
     padding-bottom: 10px;
     border-bottom: 1px solid #444;
-    flex-wrap: wrap;
-    flex-shrink: 0;
+    flex-wrap: wrap; /* Allow wrapping */
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 header img.header-logo {
@@ -55,6 +56,79 @@ header h1 {
     flex-shrink: 0;
 }
 
+/* --- Header Player Info Area Styles --- */
+.player-info-area {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Space between name, icon, buttons */
+    background-color: rgba(255, 255, 255, 0.05); /* Subtle background */
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid #444;
+    margin-left: auto; /* Push towards the right before nav */
+    margin-right: 15px; /* Space before nav */
+}
+
+#player-name-display {
+    font-weight: bold;
+    color: #4CAF50; /* Match header color */
+    font-size: 1.1rem;
+    margin: 0; /* Reset default margins if any */
+}
+
+#player-icon-display {
+    width: 24px; /* Adjust size as needed */
+    height: 24px;
+    border: 1px solid #666;
+    background-color: #333; /* Placeholder background */
+    /* Style using background-image or canvas later */
+    display: inline-block; /* Or flex */
+    vertical-align: middle;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+#btn-edit-loadout {
+    background-color: #ff9800; /* Orange */
+    color: black;
+    padding: 4px 8px; /* Smaller button */
+    font-size: 0.8rem;
+    border-radius: 3px;
+    cursor: pointer;
+    border: none;
+    font-family: 'VT323', monospace;
+    transition: background-color 0.2s; /* Added transition */
+}
+#btn-edit-loadout:hover:not(:disabled) { background-color: #fb8c00; }
+#btn-edit-loadout:disabled { background-color: #555; color: #aaa; cursor: not-allowed; }
+#btn-edit-loadout:disabled:hover { background-color: #555; } /* Prevent hover effect when disabled */
+
+/* === Bot Manual Button Style === */
+#btn-bot-manual {
+    display: inline-block; /* Make it behave like a button */
+    background-color: #8D6E63; /* Muted Brown - like old paper/leather */
+    color: #FFFDE7; /* Creamy white text */
+    padding: 4px 8px; /* Match edit button padding */
+    font-size: 0.8rem; /* Match edit button font size */
+    border-radius: 3px; /* Match edit button radius */
+    text-decoration: none; /* Remove link underline */
+    font-family: 'VT323', monospace; /* Ensure correct font */
+    border: 1px solid #5D4037; /* Darker brown border */
+    line-height: 1; /* Ensure text aligns vertically */
+    transition: background-color 0.2s, border-color 0.2s; /* Smooth hover */
+    white-space: nowrap; /* Prevent wrapping */
+}
+
+#btn-bot-manual:hover,
+#btn-bot-manual:focus { /* Add focus style for accessibility */
+    background-color: #A1887F; /* Slightly lighter brown on hover */
+    border-color: #795548;
+    color: #ffffff; /* Brighter text on hover */
+    outline: none; /* Remove default focus outline if desired */
+}
+/* === END: Bot Manual Button Style === */
+
+
 nav {
     display: flex;
     gap: 8px;
@@ -62,103 +136,167 @@ nav {
     flex-wrap: wrap;
 }
 
-/* --- Button, Select, Input Styles --- */
-button, select {
-    background-color: #4CAF50;
+/* --- Button, Select, Input Styles (Consistent) --- */
+
+/* --- General Button Style --- */
+/* Apply this to most standard buttons */
+button {
+    background-color: #4CAF50; /* Default Green */
     color: white;
     border: none;
-    padding: 8px 16px;
+    padding: 7px 14px;
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.2s;
     font-family: 'VT323', monospace;
-    font-size: 15px;
+    font-size: inherit; /* Inherit body font size */
 }
-button:hover, select:hover { background-color: #45a049; }
+button:hover:not(:disabled) { background-color: #45a049; } /* Darker Green Hover */
 button:disabled { background-color: #555; color: #aaa; cursor: not-allowed; }
-button:disabled:hover { background-color: #555; }
-#btn-test-code { background-color: #2196F3; }
-#btn-test-code:hover { background-color: #1e88e5; }
-#btn-self-destruct { background-color: #e74c3c; padding: 6px 12px; }
-#btn-self-destruct:hover { background-color: #c0392b; }
-select { background-color: #333; }
-select:disabled { background-color: #555; color: #aaa; cursor: not-allowed; }
-input#playerName {
-    font-family: 'VT323', monospace;
-    font-size: 15px;
-    background-color: #333;
-    color: #e0e0e0;
-    border: 1px solid #555;
-    padding: 8px;
-    border-radius: 4px;
-    margin-right: 5px;
+button:disabled:hover { background-color: #555; } /* Prevent hover effect when disabled */
+
+/* --- Specific Button Overrides --- */
+
+/* Test Code Button */
+#btn-test-code { background-color: #2196F3; } /* Blue */
+#btn-test-code:hover:not(:disabled) { background-color: #1e88e5; }
+
+/* Self Destruct Button */
+#btn-self-destruct { background-color: #e74c3c; padding: 5px 10px; font-size: 0.9em; } /* Red */
+#btn-self-destruct:hover:not(:disabled) { background-color: #c0392b; }
+
+/* Edit Loadout Button (Header) */
+#btn-edit-loadout {
+    background-color: #ff9800; /* Orange */
+    color: black;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    border-radius: 3px;
 }
-input#playerName:disabled { background-color: #555; color: #aaa; cursor: not-allowed; }
+#btn-edit-loadout:hover:not(:disabled) { background-color: #fb8c00; }
+
+/* Bot Manual Button (Header) */
+#btn-bot-manual {
+    display: inline-block;
+    background-color: #8D6E63; /* Brown */
+    color: #FFFDE7;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    border-radius: 3px;
+    text-decoration: none;
+    border: 1px solid #5D4037;
+    line-height: 1;
+    white-space: nowrap;
+}
+#btn-bot-manual:hover,
+#btn-bot-manual:focus {
+    background-color: #A1887F;
+    border-color: #795548;
+    color: #ffffff;
+    outline: none;
+}
+
+/* Logout Button (Header) */
+#btn-logout {
+    background-color: #e74c3c; /* Red */
+    color: white;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    border-radius: 3px;
+    margin-left: 10px; /* Add some space */
+}
+#btn-logout:hover:not(:disabled) { background-color: #c0392b; }
+
+/* Delete Loadout/Snippet Button (Small Red 'X') */
+#btn-delete-loadout, #builder-delete-loadout {
+    background-color: #c0392b; /* Darker Red */
+    padding: 3px 6px;
+    font-size: 0.8em;
+    line-height: 1; /* Adjust line height for small button */
+    min-width: auto; /* Allow shrinking */
+}
+#btn-delete-loadout:hover:not(:disabled),
+#builder-delete-loadout:hover:not(:disabled) { background-color: #a93226; }
 
 
-/* === Main Content Grid === */
+/* Base select style */
+select {
+    background-color: #333;
+    color: white;
+    border: 1px solid #555;
+    padding: 7px 14px;
+    border-radius: 4px;
+    font-family: 'VT323', monospace;
+    font-size: inherit;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+select:hover:not(:disabled) { background-color: #444; }
+select:disabled { background-color: #555; color: #aaa; cursor: not-allowed; }
+
+/* Style for input in Loadout Builder */
+input#loadout-name-input, input#builder-player-name {
+    font-family: 'VT323', monospace; font-size: 0.95rem; background-color: #333;
+    color: #e0e0e0; border: 1px solid #555; padding: 6px; border-radius: 4px; flex-grow: 1;
+}
+
+
+/* === Main Content Grid (3 Columns) === */
 .main-content-grid {
     display: grid;
-    /* Adjusted Columns: Arena col slightly wider, Dev col narrower */
+    /* Explicit 3 Columns with flex units and min widths */
     grid-template-columns: minmax(450px, 3.5fr) minmax(300px, 1.8fr) minmax(300px, 1.5fr);
-    grid-template-rows: 1fr;
-    gap: 15px;
-    flex-grow: 1;
-    min-height: 0;
+    grid-template-rows: 1fr; /* Single row that grows */
+    /* Reduced grid gap */
+    gap: 12px;
+    flex-grow: 1; /* Grid takes available space */
+    min-height: 0; /* Prevent grid overflowing container */
     width: 100%;
-    overflow: hidden;
+    overflow: hidden; /* Hide overflow from the grid itself */
 }
 
 
 /* === Column Styling === */
-.arena-column {
-    /* CHANGED: Now stacks API, Arena, Consoles Row */
+.arena-column,
+.devtools-column,
+.info-lobby-column {
     display: flex;
     flex-direction: column;
-    gap: 10px; /* Space between API, Arena, Consoles Row */
-    min-width: 0;
-    min-height: 0;
-    /* REMOVED justify/align center */
-    overflow: hidden; /* Contain children */
-}
-
-.devtools-column, /* Now contains only Editor Section */
-.info-lobby-column { /* No structural change needed here */
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+    gap: 10px; /* Default gap */
     min-width: 0;
     min-height: 0;
     overflow: hidden;
 }
+/* Use slightly larger gap for non-arena columns */
+.devtools-column, .info-lobby-column { gap: 12px; }
 
-/* Arena Column Content Styling */
+
+/* --- Arena Column Content Styling --- */
+/* API Help */
 .api-help {
-    /* Now positioned in arena-column */
     background-color: #333;
-    padding: 8px 12px; /* Reduced padding */
+    padding: 8px 12px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    flex-shrink: 0; /* Don't shrink API help */
-    max-height: 140px; /* Keep API help relatively small */
-    overflow-y: auto; /* Scroll if needed */
-    border: 1px solid #444; /* Add border for definition */
+    flex-shrink: 0;
+    max-height: 140px;
+    overflow-y: auto;
+    border: 1px solid #444;
 }
 .api-help h4 {
     font-family: 'VT323', monospace;
-    font-size: 16px; /* Smaller title */
+    font-size: 1.0rem;
     margin-bottom: 5px;
-    color: #aaa; /* Subdued color */
-    flex-shrink: 0;
+    color: #aaa;
     padding-bottom: 3px;
     border-bottom: 1px solid #555;
 }
-.api-help ul { list-style-position: inside; padding-left: 5px; }
-.api-help li { margin-bottom: 4px; font-size: 15px; }
+.api-help ul { list-style-position: inside; padding-left: 5px; margin:0; }
+.api-help li { margin-bottom: 4px; font-size: 0.9rem; }
 .api-help code {
     font-family: 'VT323', monospace;
     background-color: #444; padding: 2px 4px; border-radius: 3px;
-    color: #f0f0f0; font-size: 14px;
+    color: #f0f0f0; font-size: 0.85rem;
 }
 
 
@@ -169,139 +307,89 @@ input#playerName:disabled { background-color: #555; color: #aaa; cursor: not-all
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     display: block;
     max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
     aspect-ratio: 1 / 1;
-    /* ADDED: Allow arena to grow and fill vertical space */
-    flex-grow: 1;
-    min-height: 200px; /* Ensure minimum drawing space */
+    flex-grow: 1; /* Allow arena canvas to grow vertically */
+    min-height: 200px;
+    align-self: center;
+    width: auto;
 }
 
-/* NEW: Styling for the row containing the two consoles */
+/* Row containing the two consoles at the bottom of Arena Column */
 .consoles-row {
-    display: flex; /* Arrange consoles side-by-side */
-    gap: 15px; /* Space between consoles */
+    display: flex;
+    gap: 10px;
     width: 100%;
-    flex-shrink: 0; /* Prevent row from shrinking */
-}
-
-/* Styling for console panels *within* the consoles-row */
-.consoles-row .console-panel {
-    flex: 1; /* Each console takes half the width */
-    min-width: 0; /* Allow shrinking within flex */
-    display: flex; /* Use flex internally */
-    flex-direction: column; /* Stack title and log-box */
-    max-height: 250px; /* ADJUST max height for consoles */
-    /* Base panel styles (already defined below, ensure they apply) */
-    background-color: #333;
-    padding: 10px 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    overflow: hidden; /* Hide panel overflow */
-}
-
-/* Ensure log-box within consoles scrolls */
-.consoles-row .console-panel .log-box {
-     overflow-y: auto;
-     flex-grow: 1; /* Allow log-box to fill vertical space */
-     min-height: 50px; /* Prevent collapsing */
-     scrollbar-width: thin;
-     scrollbar-color: #666 #333;
-}
-.consoles-row .console-panel .log-box::-webkit-scrollbar { width: 8px; }
-.consoles-row .console-panel .log-box::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
-.consoles-row .console-panel .log-box::-webkit-scrollbar-thumb { background-color: #666; border-radius: 4px; border: 2px solid #333; }
-
-
-/* === Panel Base Styles (used by multiple elements) === */
-.console-panel,
-.stats-panel,
-/* .api-help, /* API help styled separately now */
-#lobby-area,
-#game-history-log,
-.editor-section /* Apply panel bg/border to editor section */
-{
-    background-color: #333;
-    padding: 10px 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border: 1px solid #444; /* Default border */
     flex-shrink: 0;
-    overflow: hidden;
+    /* Explicitly limit the row's height */
+    max-height: 270px; /* Example: panel max-height + padding */
+    min-height: 100px;
+}
+
+/* Shared styles for console panels within the consoles-row */
+.consoles-row .console-panel {
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
+    /* Panel height inherits limit from parent row */
+    max-height: 100%;
+    background-color: #333;
+    padding: 8px 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid #444;
+    overflow: hidden; /* Panel itself should not scroll */
 }
 
-/* Default max height for panels in info column */
-.stats-panel,
-#lobby-area,
-#game-history-log {
-    max-height: 250px; /* Adjust as needed */
-}
-
-/* Scrollable content within panels */
-.log-box,
-#robot-stats,
-#game-history-list {
-    overflow-y: auto;
-    flex-grow: 1;
-    min-height: 50px;
+.consoles-row .console-panel h3 {
     font-family: 'VT323', monospace;
-    word-wrap: break-word;
-    padding: 5px;
-    scrollbar-width: thin;
-    scrollbar-color: #666 #333;
-}
-.log-box::-webkit-scrollbar,
-#robot-stats::-webkit-scrollbar,
-#game-history-list::-webkit-scrollbar { width: 8px; }
-.log-box::-webkit-scrollbar-track,
-#robot-stats::-webkit-scrollbar-track,
-#game-history-list::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
-.log-box::-webkit-scrollbar-thumb,
-#robot-stats::-webkit-scrollbar-thumb,
-#game-history-list::-webkit-scrollbar-thumb { background-color: #666; border-radius: 4px; border: 2px solid #333; }
-
-#robot-stats { padding: 0; }
-
-
-/* Titles inside panels */
-.console-panel h3,
-.stats-panel h3,
-.editor-section h3,
-/* .api-help h4, /* API help styled separately */
-#lobby-area h3,
-#game-history-log h4 {
-    font-family: 'VT323', monospace;
-    font-size: 18px;
-    margin-bottom: 8px;
-    color: #4CAF50;
+    font-size: 1.0rem;
+    margin-bottom: 5px;
     flex-shrink: 0;
-    padding-bottom: 5px;
+    padding-bottom: 3px;
     border-bottom: 1px solid #555;
+    text-align: center;
 }
+
+/* Make the log-box inside consoles fill space and scroll */
+.consoles-row .console-panel .log-box {
+     overflow-y: auto; /* Enable vertical scroll *only* for the log box */
+     flex-grow: 1;
+     min-height: 50px;
+     /* Let the parent (.console-panel) limit height */
+     font-family: 'VT323', monospace;
+     word-wrap: break-word;
+     padding: 5px;
+     font-size: 0.9rem;
+     scrollbar-width: thin;
+     scrollbar-color: #666 #2a2a2a;
+}
+.consoles-row .console-panel .log-box::-webkit-scrollbar { width: 8px; }
+.consoles-row .console-panel .log-box::-webkit-scrollbar-track { background: #2a2a2a; border-radius: 4px; }
+.consoles-row .console-panel .log-box::-webkit-scrollbar-thumb { background-color: #666; border-radius: 4px; border: 2px solid #2a2a2a; }
 
 
 /* === DevTools Column (Editor Only) === */
 .editor-section {
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* Editor section takes ALL space in DevTools column */
-    min-height: 0; /* Was 300px, let flex handle it */
+    flex-grow: 1;
+    min-height: 0;
     overflow: hidden;
     background-color: #2a2a2a;
     padding: 10px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     border: 1px solid #444;
-    max-height: none; /* Remove max-height */
 }
 .editor-section h3 {
-    border-bottom: none;
+    font-family: 'VT323', monospace;
+    font-size: 1.0rem;
     margin-bottom: 5px;
-    padding-bottom: 0;
     color: #aaa;
-    font-size: 16px;
+    flex-shrink: 0;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #555;
 }
 
 .code-editor-wrapper {
@@ -309,16 +397,17 @@ input#playerName:disabled { background-color: #555; color: #aaa; cursor: not-all
     min-height: 200px;
     position: relative;
     display: flex;
+    border: 1px solid #444;
+    border-radius: 4px;
     margin-bottom: 10px;
+    overflow: hidden;
 }
 
 .CodeMirror {
     flex-grow: 1;
-    height: auto !important;
-    border-radius: 4px;
-    border: 1px solid #444;
+    height: 100% !important;
     font-family: 'VT323', monospace;
-    font-size: 16px;
+    font-size: 17px; /* Slightly larger editor font */
 }
 .CodeMirror-readonly .CodeMirror-cursor { display: none !important; }
 .CodeMirror-readonly { background-color: #222 !important; }
@@ -328,117 +417,430 @@ input#playerName:disabled { background-color: #555; color: #aaa; cursor: not-all
      gap: 10px;
      align-items: center;
      flex-shrink: 0;
-     margin-bottom: 5px;
+     padding: 5px 0 0 0;
+     flex-wrap: wrap; /* Allow wrapping on small screens */
 }
-#btn-delete-loadout { padding: 4px 8px; font-size: 14px; background-color: #c0392b; }
-#btn-delete-loadout:hover { background-color: #a93226; }
+/* Adjust delete button size slightly */
+#btn-delete-loadout { padding: 3px 6px; font-size: 0.8em; background-color: #c0392b; }
+#btn-delete-loadout:hover:not(:disabled) { background-color: #a93226; }
 #btn-delete-loadout:disabled { background-color: #555; color: #aaa; }
-#loadout-status { font-size: 14px; min-height: 1.2em; color: #aaa; flex-shrink: 0; }
+/* Adjust status font size */
+#loadout-status { font-size: 0.8rem; min-height: 1.2em; color: #aaa; flex-shrink: 0; margin-left: 5px; }
 
 
-/* === Console Log Specific Themes === */
-#robot-console-log { border-color: #0f400f; background-color: #1a1a1a; }
-#robot-console-log h3 { color: #00dd00; text-shadow: 0 0 4px #00dd00; text-align: center; border-bottom: none; }
-#robot-log-messages { background-color: #000000; color: #00FF41; font-size: 16px; border: 1px solid #004d00; text-shadow: 0 0 5px rgba(0, 255, 65, 0.5); position: relative; }
-#robot-log-messages::after { /* Scanline */ content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgba(0, 255, 0, 0.15); box-shadow: 0 0 4px 1px rgba(0, 255, 0, 0.15); z-index: 3; pointer-events: none; animation: scanline-log 6s linear infinite; }
+/* === Info/Lobby Column === */
+/* Shared panel styles within Info Column */
+.stats-panel,
+#lobby-area,
+#game-history-log {
+    background-color: #333;
+    /* Reduced panel padding */
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid #444;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
 
-#opponent-console-log { border-color: #4d0000; background-color: #1a1010; }
-#opponent-console-log h3 { color: #ff4136; text-shadow: 0 0 4px #ff4136; text-align: center; border-bottom: none; }
-#opponent-log-messages { background-color: #000000; color: #FF4136; font-size: 16px; border: 1px solid #4d0000; text-shadow: 0 0 5px rgba(255, 65, 54, 0.5); position: relative; }
-#opponent-log-messages::after { /* Scanline */ content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgba(255, 65, 54, 0.15); box-shadow: 0 0 4px 1px rgba(255, 65, 54, 0.15); z-index: 3; pointer-events: none; animation: scanline-log 6s linear infinite; }
+/* Reduced panel title font size */
+.stats-panel h3, #lobby-area h3, #game-history-log h4 {
+     font-family: 'VT323', monospace;
+     font-size: 1.1rem;
+     margin-bottom: 8px;
+     color: #4CAF50;
+     flex-shrink: 0;
+     padding-bottom: 5px;
+     border-bottom: 1px solid #555;
+}
 
-@keyframes scanline-log { 0% { transform: translateY(0%); opacity: 0.1; } 50% { opacity: 0.3; } 100% { transform: translateY(calc(100% - 2px)); opacity: 0.1; } }
+/* Specific panel sizing and content */
+/* Reduced max-height for stats panel */
+.stats-panel { max-height: 180px; }
 
-
-/* === Info/Lobby Column Specifics === */
-.stats-panel { max-height: 250px; }
-#dashboard-game-title { /* Style added by dashboard.js */ font-weight: bold; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #555; color: #4CAF50; font-family: "'VT323', monospace"; font-size: 18px; display: none; }
-.robot-stat { border-left: 3px solid #888; margin-bottom: 8px; padding: 5px 5px 5px 8px; font-family: "'VT323', monospace"; font-size: 15px; }
+/* Reduce font size inside stats panel */
+#robot-stats { overflow-y: auto; flex-grow: 1; padding: 5px 0; font-size: 0.9rem; }
+#dashboard-game-title { font-weight: bold; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #555; color: #4CAF50; font-family: "'VT323', monospace"; font-size: 1.0rem; display: none; }
+.robot-stat { border-left: 3px solid #888; margin-bottom: 6px; padding: 4px 4px 4px 8px; font-family: "'VT323', monospace"; font-size: inherit; }
 .robot-stat div { margin-bottom: 2px; }
 .robot-stat strong { color: #eee; }
 
-#lobby-area { border-top: none; padding: 10px; flex-grow: 1; max-height: none; }
-#lobby-area h3 { font-size: 18px; }
-#lobby-status { margin-bottom: 10px; font-weight: bold; color: #e0e0e0; flex-shrink: 0; font-size: 16px; }
-#event-log { max-height: 150px; flex-grow: 1; flex-shrink: 1; min-height: 80px; background: #222; font-size: 14px; border: 1px solid #555; overflow-y: scroll; margin-bottom: 10px; padding: 5px 8px; }
-#chat-area { display: flex; gap: 5px; flex-shrink: 0; margin-top: 10px; }
-#chat-input { flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 14px; }
-#send-chat { padding: 8px 16px; font-size: 15px; }
+#lobby-area { flex-grow: 1; max-height: none; } /* Lobby takes remaining space */
+/* Reduce lobby status font size */
+#lobby-status { margin-bottom: 8px; font-weight: bold; color: #e0e0e0; flex-shrink: 0; font-size: 1.0rem; }
+#event-log {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 80px;
+    max-height: 180px;
+    background: #222;
+    /* Reduce event log font size */
+    font-size: 0.85rem;
+    border: 1px solid #555;
+    overflow-y: auto; margin-bottom: 10px; padding: 5px 8px;
+    scrollbar-width: thin; scrollbar-color: #666 #222;
+}
+#event-log::-webkit-scrollbar { width: 8px; }
+#event-log::-webkit-scrollbar-track { background: #222; border-radius: 4px; }
+#event-log::-webkit-scrollbar-thumb { background-color: #666; border-radius: 4px; border: 2px solid #222; }
 
-#game-history-log { max-height: 220px; }
-#game-history-log h4 { font-size: 18px; }
-#game-history-list { font-size: 14px; }
+#chat-area { display: flex; gap: 5px; flex-shrink: 0; margin-top: auto; padding-top: 10px; }
+/* Reduce chat input/button font size */
+#chat-input { flex-grow: 1; padding: 6px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 0.9rem; }
+#send-chat { padding: 6px 12px; font-size: 0.9rem; }
+
+/* Reduced max-height for history panel */
+#game-history-log { max-height: 200px; }
+#game-history-list {
+    overflow-y: auto; flex-grow: 1;
+    /* Reduce history list font size */
+    font-size: 0.85rem;
+    padding-right: 5px;
+    scrollbar-width: thin; scrollbar-color: #666 #333;
+}
+#game-history-list::-webkit-scrollbar { width: 8px; }
+#game-history-list::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
+#game-history-list::-webkit-scrollbar-thumb { background-color: #666; border-radius: 4px; border: 2px solid #333; }
 #game-history-list > div { margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #444; color: #cccccc; }
 #game-history-list > div:last-child { border-bottom: none; margin-bottom: 0; }
 
 
+/* === Console Log Specific Themes === */
+/* Robot Console */
+#robot-console-log { border-color: #0f400f; background-color: #1a1a1a; }
+#robot-console-log h3 { color: #00dd00; text-shadow: 0 0 4px #00dd00; border-bottom: none; }
+#robot-log-messages { background-color: #000000; color: #00FF41; font-size: 1.0rem; border: 1px solid #004d00; text-shadow: 0 0 5px rgba(0, 255, 65, 0.5); position: relative; }
+#robot-log-messages::after { /* Scanline */ content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgba(0, 255, 0, 0.15); box-shadow: 0 0 4px 1px rgba(0, 255, 0, 0.15); z-index: 3; pointer-events: none; animation: scanline-log 6s linear infinite; }
+/* Opponent Console */
+#opponent-console-log { border-color: #4d0000; background-color: #1a1010; }
+#opponent-console-log h3 { color: #ff4136; text-shadow: 0 0 4px #ff4136; border-bottom: none; }
+#opponent-log-messages { background-color: #000000; color: #FF4136; font-size: 1.0rem; border: 1px solid #4d0000; text-shadow: 0 0 5px rgba(255, 65, 54, 0.5); position: relative; }
+#opponent-log-messages::after { /* Scanline */ content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgba(255, 65, 54, 0.15); box-shadow: 0 0 4px 1px rgba(255, 65, 54, 0.15); z-index: 3; pointer-events: none; animation: scanline-log 6s linear infinite; }
+/* Shared Scanline Animation */
+@keyframes scanline-log { 0% { transform: translateY(0%); opacity: 0.1; } 50% { opacity: 0.3; } 100% { transform: translateY(calc(100% - 2px)); opacity: 0.1; } }
+
+
+/* ============================================== */
+/* === START: Loadout Builder Overlay Styles === */
+/* ============================================== */
+#loadout-builder-overlay {
+    position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.85);
+    z-index: 1000; display: flex; justify-content: center; align-items: center;
+    padding: 20px; display: none; /* Initially Hidden */
+}
+#loadout-builder-content {
+    max-width: 900px; width: 100%; max-height: 90vh; padding: 25px 30px;
+    background-color: #0a0a0a; border: 3px solid #2196F3;
+    box-shadow: 0 0 15px rgba(33, 150, 243, 0.5), 0 0 30px rgba(33, 150, 243, 0.3);
+    border-radius: 10px; overflow: hidden; display: flex; flex-direction: column;
+    font-family: 'VT323', monospace; color: #e0e0e0;
+    font-size: 17px; /* Adjusted builder base font slightly */
+}
+#loadout-builder-content h2 {
+    font-family: 'Press Start 2P', cursive; font-size: 1.5rem; color: #2196F3; /* Adjusted */
+    text-align: center; margin-bottom: 25px; flex-shrink: 0;
+    text-shadow: 0 0 4px rgba(33, 150, 243, 0.6);
+}
+.loadout-builder-main {
+    display: grid; grid-template-columns: 1fr 250px; gap: 20px; /* Reduced gap */
+    overflow-y: auto; padding: 10px 5px; margin-bottom: 15px; flex-grow: 1; /* Adjusted padding/margin */
+}
+.loadout-section {
+    border: 1px solid #333; border-radius: 5px; padding: 12px; /* Adjusted */
+    background-color: rgba(33, 33, 33, 0.5);
+}
+.loadout-section h3 {
+    font-family: 'VT323', monospace; font-size: 1.1rem; color: #4CAF50; /* Adjusted */
+    margin-bottom: 12px; border-bottom: 1px dashed #444; padding-bottom: 4px; /* Adjusted */
+}
+.loadout-options { display: flex; flex-direction: column; gap: 15px; } /* Adjusted */
+.loadout-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } /* Adjusted */
+.loadout-controls label, .visual-controls label { margin-right: 5px; color: #aaa; min-width: 80px; text-align: right; font-size: 0.95rem;} /* Adjusted */
+.loadout-builder-main button, .loadout-builder-main select { padding: 5px 10px; font-size: 0.9rem; } /* Adjusted */
+.visual-controls { display: grid; grid-template-columns: auto 1fr auto; gap: 8px 12px; align-items: center; } /* Adjusted */
+.visual-controls select { width: 100%; }
+.visual-controls input[type="color"] { appearance: none; -webkit-appearance: none; width: 30px; height: 30px; border: 1px solid #555; border-radius: 4px; padding: 0; cursor: pointer; background-color: transparent; } /* Adjusted */
+.visual-controls input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.visual-controls input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+.code-controls { display: flex; gap: 8px; align-items: center; } /* Adjusted */
+.code-controls select { flex-grow: 1; }
+.loadout-preview-area { display: flex; flex-direction: column; align-items: center; gap: 12px; border: 1px solid #333; border-radius: 5px; padding: 12px; background-color: rgba(33, 33, 33, 0.5); } /* Adjusted */
+#loadout-preview { width: 150px; height: 150px; border: 1px solid #555; background-color: #1a1a1a; border-radius: 4px; }
+.loadout-preview-area span { font-size: 0.8rem; color: #aaa; } /* Adjusted */
+.loadout-builder-actions { display: flex; justify-content: space-between; padding-top: 15px; border-top: 1px solid #444; flex-shrink: 0; } /* Adjusted */
+#btn-enter-lobby { background-color: #4CAF50; font-size: 1.0rem; padding: 8px 16px; } /* Adjusted */
+#btn-enter-lobby:hover { background-color: #45a049; }
+#btn-quick-start { background-color: #555; font-size: 1.0rem; padding: 8px 16px; } /* Adjusted */
+#btn-quick-start:hover { background-color: #666; }
+
+/* Style for the new Preset Select dropdown */
+#builder-preset-select {
+    font-family: 'VT323', monospace; font-size: 0.9rem; background-color: #333;
+    color: #e0e0e0; border: 1px solid #555; padding: 5px 10px; border-radius: 4px;
+    cursor: pointer; transition: background-color 0.2s;
+}
+#builder-preset-select:hover { background-color: #444; }
+
+/* ============================================ */
+/* === END: Loadout Builder Overlay Styles === */
+/* ============================================ */
+
+
+/* --- START: Authentication Modal Styles --- */
+.auth-modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1500; /* Sit on top of everything */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0, 0, 0, 0.6); /* Black w/ opacity */
+    backdrop-filter: blur(3px); /* Optional blur effect */
+    /* Use flexbox to center content vertically and horizontally */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-modal-content {
+    background-color: #1a1a1a; /* Dark background */
+    /* margin: auto; Removed, flex handles centering */
+    padding: 30px 40px;
+    border: 2px solid #4CAF50; /* Accent border */
+    width: 90%;
+    max-width: 450px; /* Limit width */
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+    position: relative;
+    color: #e0e0e0;
+    font-family: 'VT323', monospace;
+}
+
+.auth-modal-content h2 {
+    text-align: center;
+    color: #4CAF50;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 1.4rem;
+    margin-bottom: 25px;
+}
+
+.auth-close-btn {
+    color: #aaa;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    transition: color 0.2s;
+}
+
+.auth-close-btn:hover,
+.auth-close-btn:focus {
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.auth-modal .form-group {
+    margin-bottom: 15px;
+}
+
+.auth-modal label {
+    display: block;
+    margin-bottom: 5px;
+    color: #ccc;
+    font-size: 1.1rem;
+}
+
+.auth-modal input[type="text"],
+.auth-modal input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    background-color: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-family: 'VT323', monospace;
+    font-size: 1.1rem;
+}
+.auth-modal input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+.auth-modal button[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 1.2rem;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.auth-modal button[type="submit"]:hover {
+    background-color: #45a049;
+}
+
+.auth-modal .error-message {
+    color: #e74c3c; /* Red for errors */
+    text-align: center;
+    margin-top: 15px;
+    min-height: 1.2em; /* Prevent layout shifts */
+    font-size: 1rem;
+}
+
+.auth-modal .switch-modal-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #aaa;
+}
+.auth-modal .switch-modal-link a {
+    color: #4CAF50;
+    text-decoration: none;
+    font-weight: bold;
+}
+.auth-modal .switch-modal-link a:hover {
+    text-decoration: underline;
+}
+/* --- END: Authentication Modal Styles --- */
+
+
 /* --- Responsive Adjustments --- */
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
     .main-content-grid {
         grid-template-columns: 1fr;
         grid-template-rows: auto auto auto;
         overflow-y: auto;
         overflow-x: hidden;
+        gap: 15px;
     }
-    .arena-column {
-        min-height: auto; /* Allow natural height */
-        overflow: visible; /* Prevent hiding content */
+    .arena-column, .devtools-column, .info-lobby-column {
+        min-height: auto;
+        overflow: visible;
+        gap: 12px;
     }
     #arena {
         max-height: 60vh;
         width: auto;
         max-width: 90%;
         margin: 0 auto;
-        flex-grow: 0; /* Don't let arena grow excessively when stacked */
+        flex-grow: 0;
     }
     .consoles-row {
-        flex-direction: column; /* Stack consoles vertically */
-        max-height: 400px; /* Allow more total height for stacked consoles */
+        flex-direction: column;
+        max-height: 40vh;
+        min-height: 150px;
+        gap: 10px;
     }
      .consoles-row .console-panel {
-         max-height: 190px; /* Limit individual console height */
+         max-height: 100%;
+         flex-grow: 1;
      }
-
-    .devtools-column, .info-lobby-column {
-         min-height: auto;
-         overflow: visible;
-    }
     .stats-panel, #lobby-area, #game-history-log, .editor-section, .api-help {
-        max-height: 350px; /* Generous max-height for stacked panels */
+        max-height: 40vh;
         overflow: hidden;
     }
     .editor-section {
-        min-height: 400px;
-        max-height: 60vh;
+        min-height: 300px;
+        max-height: 50vh;
     }
-    #lobby-area { flex-grow: 0; max-height: 400px; }
+    #lobby-area { flex-grow: 0; max-height: 300px; }
+    .api-help { max-height: 180px; }
+    .loadout-builder-main { grid-template-columns: 1fr; }
+    .loadout-preview-area { margin-top: 20px; }
+    #loadout-builder-content h2 { font-size: 1.3rem; }
 }
 
 @media (max-width: 768px) {
-    body { font-size: 18px; }
+    body { font-size: 16px; }
     .container { padding: 10px; }
-    header { flex-direction: column; align-items: center; gap: 10px; }
-    header img.header-logo { max-height: 30px; }
-    header h1 { font-size: 1.4rem; }
-    nav { justify-content: center; gap: 5px; width: 100%; }
-    button, select, input#playerName { font-size: 14px; padding: 6px 10px;}
-    #btn-delete-loadout { font-size: 12px; padding: 3px 6px;}
+    header { flex-direction: column; align-items: stretch; gap: 10px; }
+    /* Center player info area */
+    .player-info-area { justify-self: center; align-self: center; margin-right: 0; /* Remove margin when stacked */ }
+    header img.header-logo { max-height: 30px; align-self: center; }
+    header h1 { font-size: 1.4rem; text-align: center; }
+    nav { justify-content: center; gap: 5px; width: 100%; flex-direction: column; }
+    nav > button { padding: 5px 8px;} /* Adjust nav button padding */
+    #btn-delete-loadout, #builder-delete-loadout { font-size: 0.8em; padding: 2px 4px;}
 
     .main-content-grid { gap: 10px; }
-    .devtools-column, .info-lobby-column, .arena-column { gap: 10px; } /* Consistent gap */
+    .devtools-column, .info-lobby-column, .arena-column { gap: 10px; }
 
     #arena { max-height: 50vh; }
 
-    .consoles-row { max-height: 350px; gap: 10px; } /* Stacked consoles on mobile too */
-    .consoles-row .console-panel { max-height: 170px; padding: 8px 10px; }
+    .consoles-row { max-height: 35vh; }
+    .consoles-row .console-panel { padding: 6px 8px; }
+    .consoles-row .console-panel h3 { font-size: 0.9rem; }
+    .consoles-row .console-panel .log-box { font-size: 0.8rem; }
 
     .stats-panel, #lobby-area, #game-history-log, .editor-section, .api-help {
-        max-height: 300px;
-        padding: 8px 10px;
+        max-height: 35vh;
+        padding: 6px 8px;
     }
-     .api-help { max-height: 150px; }
-    .editor-section { min-height: 350px; max-height: 50vh;}
+    .stats-panel h3, #lobby-area h3, #game-history-log h4 { font-size: 1.0rem;}
+     #lobby-status { font-size: 0.9rem; }
+     #robot-stats { font-size: 0.8rem; }
+     #event-log { font-size: 0.8rem; }
+     #chat-input, #send-chat { font-size: 0.85rem; }
+     #game-history-list { font-size: 0.8rem; }
+    .api-help { max-height: 150px; }
+    .api-help h4 { font-size: 0.9rem; }
+    .api-help li { font-size: 0.8rem; }
+    .api-help code { font-size: 0.75rem; }
+    .editor-section { min-height: 250px; max-height: 45vh;}
     .CodeMirror { font-size: 15px; }
-    .log-box, #game-history-list, #event-log { font-size: 13px; }
-    .robot-stat { font-size: 13px; }
+    #lobby-area { max-height: 250px; }
+
+    #loadout-builder-content { padding: 15px; font-size: 15px;}
+     #loadout-builder-content h2 { font-size: 1.2rem; }
+     .loadout-builder-main { gap: 15px; }
+     .loadout-section h3 { font-size: 1.0rem; }
+     .loadout-builder-main button, .loadout-builder-main select, #loadout-name-input, #builder-player-name { font-size: 0.9rem; padding: 4px 8px; }
+     .visual-controls { grid-template-columns: auto 1fr; }
+     .visual-controls input[type="color"] { grid-column: 1 / 3; justify-self: center; margin-top: 5px; width: 25px; height: 25px; }
+     .loadout-builder-actions { flex-direction: column; gap: 10px; align-items: stretch; }
+     #btn-enter-lobby, #btn-quick-start { font-size: 0.9rem; padding: 6px 12px; }
+
+     .auth-modal-content { padding: 20px; max-width: 95%; }
+     .auth-modal-content h2 { font-size: 1.2rem; }
+}
+
+@media (max-width: 480px) {
+    body { font-size: 14px; }
+    header h1 { font-size: 1.2rem; }
+    .player-info-area { gap: 8px; padding: 4px 8px;} /* Adjust spacing/padding */
+    #player-name-display { font-size: 1.0rem; }
+    #btn-edit-loadout, #btn-bot-manual, #btn-logout { font-size: 0.75rem; padding: 3px 6px; }
+    nav { gap: 5px; }
+    nav > button { padding: 4px 6px;}
+    #btn-delete-loadout, #builder-delete-loadout { font-size: 0.7em; padding: 1px 3px;}
+    .CodeMirror { font-size: 14px; }
+    .log-box, #game-history-list, #event-log, .robot-stat, .api-help li, .api-help code { font-size: 0.85rem; }
+    .api-help h4 { font-size: 0.9rem; }
+    .consoles-row .console-panel h3 { font-size: 0.9rem; }
+    .stats-panel h3, #lobby-area h3, #game-history-log h4 { font-size: 0.95rem;}
+    #lobby-status { font-size: 0.85rem; }
+    #chat-input, #send-chat { font-size: 0.8rem; }
+
+    #loadout-builder-content { font-size: 14px; padding: 10px; }
+    #loadout-builder-content h2 { font-size: 1.0rem; margin-bottom: 15px; }
+    .loadout-section h3 { font-size: 0.95rem; }
+    .loadout-builder-main button, .loadout-builder-main select, #loadout-name-input, #builder-player-name { font-size: 0.85rem; padding: 3px 6px;}
+    .loadout-preview-area span { font-size: 0.7rem;}
+    #btn-enter-lobby, #btn-quick-start { font-size: 0.85rem; padding: 5px 10px; }
+
+     .auth-modal-content { padding: 15px 20px; }
+     .auth-modal-content h2 { font-size: 1.1rem; }
+     .auth-modal label, .auth-modal input, .auth-modal button { font-size: 1rem; }
+     .auth-modal .switch-modal-link { font-size: 0.8rem; }
 }
