@@ -75,8 +75,8 @@ class LoadoutBuilder {
 
     // --- Public Methods ---
 
-    /** Shows the loadout builder overlay */
-    async show() { // Make async for API calls
+    /** Shows the loadout builder overlay and populates data AFTER verifying auth */
+    async show() { // Keep async
         if (!this.overlayElement) {
             console.error("Cannot show builder: Overlay element missing.");
             return;
@@ -84,34 +84,46 @@ class LoadoutBuilder {
         console.log("[Builder Show] Showing overlay.");
         this.overlayElement.style.display = 'flex';
         this.isVisible = true;
+        this.updateStatus("Verifying session..."); // Initial status
 
-        // --- TODO: Fetch last used configuration name from API ---
-        // For now, we'll just load defaults or the first available config
-        let initialConfigToLoad = null;
-        // --------------------------------------------------------
-
-        // Populate dropdowns via API first
-        // Use Promise.all to fetch concurrently
-        this.updateStatus("Loading data...");
+        // --- START: Verify Session Before Populating ---
         try {
+            console.log("[Builder Show] Checking auth status via /api/auth/me before populating...");
+            const authStatus = await apiCall('/api/auth/me'); // Call the 'me' endpoint
+
+            if (!authStatus || !authStatus.isLoggedIn) {
+                // This shouldn't happen right after login, but handle it
+                console.error("[Builder Show] Auth check failed after login! User logged out unexpectedly?");
+                this.updateStatus("Session error. Please try logging in again.", true);
+                // Optionally, force logout/show login modal again via authHandler?
+                // window.authHandler?._handleLogout(); // Force logout? Be cautious.
+                this.loadConfiguration(null); // Load defaults
+                return; // Stop further execution in show()
+            }
+
+            console.log("[Builder Show] Auth check successful. Proceeding with data population.");
+            this.updateStatus("Loading data..."); // Update status
+
+            // --- TODO: Fetch last used configuration name from API ---
+            // (Keep this TODO for now)
+            let initialConfigToLoad = null;
+            // --------------------------------------------------------
+
+            // Populate dropdowns via API now that session is confirmed
             await Promise.all([
                  this.populateLoadoutSelect(), // Fetches and caches loadouts
                  this.populateCodeSelect()     // Fetches and caches snippets
             ]);
             this.updateStatus("Data loaded.");
 
-            // --- Decide which config to load initially ---
-            // If a last config preference was fetched, use that.
-            // Otherwise, if cached loadouts exist, try loading the first one.
-            // Otherwise, load defaults.
+             // --- Decide which config to load initially (logic remains the same) ---
             if (!initialConfigToLoad && this.cachedLoadouts.length > 0) {
-                 initialConfigToLoad = this.cachedLoadouts[0]; // Load the first available config data object
+                 initialConfigToLoad = this.cachedLoadouts[0];
                  console.log(`[Builder Show] No last config preference found, loading first available: '${initialConfigToLoad.config_name}'`);
             } else if (initialConfigToLoad) {
                  console.log(`[Builder Show] TODO: Handle loading specific last config preference: '${initialConfigToLoad}'`);
-                 // Find the full data object from cache based on name/id if initialConfigToLoad is just a name/id
                  const foundConfig = this.cachedLoadouts.find(cfg => cfg.config_name === initialConfigToLoad || cfg.id === initialConfigToLoad);
-                 initialConfigToLoad = foundConfig || null; // Use the found object or null
+                 initialConfigToLoad = foundConfig || null;
             }
 
             // Load the selected config data (or null for defaults)
@@ -119,11 +131,19 @@ class LoadoutBuilder {
             console.log("[Builder Show] Initial configuration loaded/set.");
 
         } catch (error) {
-            console.error("[Builder Show] Error during initial data fetch:", error);
-            this.updateStatus(`Error loading initial data: ${error.message}`, true);
+            // Handle errors from the initial /api/auth/me call OR the populate calls
+            console.error("[Builder Show] Error during initial auth check or data fetch:", error);
+            // Check if it was the auth call specifically
+            if (error.status === 401) {
+                 this.updateStatus(`Session validation failed: ${error.message}`, true);
+            } else {
+                 this.updateStatus(`Error loading initial data: ${error.message}`, true);
+            }
             this.loadConfiguration(null); // Load defaults on error
         }
+        // --- END: Verify Session Before Populating ---
     }
+
 
     /** Hides the loadout builder overlay */
     hide() {
@@ -582,15 +602,14 @@ class LoadoutBuilder {
         console.log(`[Enter Lobby] Validating Config: '${configName}', Robot: '${robotName}', Code: '${codeLoadoutName}'`);
 
         // Validation
-        if (!robotName) { alert("Please enter a Robot Name."); this.updateStatus("Save failed: Robot Name required.", true); return; }
-        if (!configName) { alert("Please enter a Configuration Name."); this.updateStatus("Save failed: Config Name required.", true); return; }
-        if (!codeLoadoutName) { alert("Please select code."); this.updateStatus("Save failed: Code Snippet required.", true); return; }
+        if (!robotName) { alert("Please enter a Robot Name."); return; }
+        if (!configName) { alert("Please enter a Configuration Name."); return; }
+        if (!codeLoadoutName) { alert("Please select code."); return; }
         if (!this.cachedSnippets.some(s => s.name === codeLoadoutName)) {
              alert(`Selected snippet "${codeLoadoutName}" is not available. Please refresh or select another.`);
              await this.populateCodeSelect(); // Refresh snippet list
              return;
         }
-        // --- End Validation ---
 
         // --- Save the final configuration via API ---
         let savedSuccessfully = false;
@@ -618,20 +637,7 @@ class LoadoutBuilder {
         }
         // --- End Save ---
 
-        // --- START: Proposed Fix ---
-        // Explicitly set Controls state to 'lobby' *after* successful save
-        // and *before* connecting network (which might also set it, but harmlessly).
-        if (typeof controls !== 'undefined' && controls?.setState) {
-             console.log("[Builder Enter Lobby] Explicitly setting Controls state to 'lobby'.");
-             controls.setState('lobby'); // <--- ENSURE UI STATE IS CORRECT HERE
-        } else {
-             console.error("[Builder Enter Lobby] Cannot set controls state: Controls object or setState method not found!");
-             // This would be a critical error if it happens
-             alert("Internal Error: Cannot update UI state after builder.");
-        }
-        // --- END: Proposed Fix ---
-
-        this.hide(); // Hide the builder
+        this.hide();
 
         // Update header icon (using global controls instance)
         if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
@@ -639,20 +645,18 @@ class LoadoutBuilder {
         }
 
         // Connect network (using global network instance)
-        // The network connect handler will also call setState('lobby'),
-        // but calling it here ensures the UI is correct immediately when the main view appears.
-        // The redundant call inside controls.setState should be harmless as it checks the current state.
-        if (typeof network !== 'undefined' && network.connect) {
-             if (!network.socket?.connected) {
-                 console.log(`[Enter Lobby] Triggering network connect.`);
-                 network.connect();
+        // Note: Connection is likely already handled by onLoginSuccess now,
+        // but this ensures controls state is updated correctly.
+        if (typeof network !== 'undefined') {
+             if (network.socket?.connected) {
+                  console.log(`[Enter Lobby] Network connected. Setting Controls state.`);
+                   if(typeof controls !== 'undefined') controls.setState('lobby'); // Ensure UI is in lobby state
              } else {
-                  console.log(`[Enter Lobby] Network already connected.`);
-                  // Ensure UI is in lobby state *again* just in case something went wrong
-                  if(typeof controls !== 'undefined') controls.setState('lobby');
+                  console.log(`[Enter Lobby] Network not connected, attempting connect (might be redundant).`);
+                  network.connect(); // Should be safe to call again if needed
              }
         } else {
-             console.error("Network object or connect method not found!");
+             console.error("Network object not found!");
              alert("Internal error: Cannot connect to network.");
         }
     } // End _handleEnterLobbyClick
@@ -675,17 +679,17 @@ class LoadoutBuilder {
               controls.updatePlayerHeaderDisplay();
          }
 
-         // Connect network
-         if (typeof network !== 'undefined' && network.connect) {
-             if (!network.socket?.connected) {
-                 console.log(`[Quick Start] Triggering network connect.`);
-                 network.connect();
-             } else {
-                 console.log(`[Quick Start] Network already connected.`);
+         // Connect network / Update state (Similar logic as Enter Lobby)
+         if (typeof network !== 'undefined') {
+             if (network.socket?.connected) {
+                 console.log(`[Quick Start] Network connected. Setting Controls state.`);
                   if(typeof controls !== 'undefined') controls.setState('lobby');
+             } else {
+                 console.log(`[Quick Start] Network not connected, attempting connect.`);
+                 network.connect();
              }
          } else {
-              console.error("Network object or connect method not found!");
+              console.error("Network object not found!");
               alert("Internal error: Cannot connect to network.");
          }
     } // End _handleQuickStartClick
