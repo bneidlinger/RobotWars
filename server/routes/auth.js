@@ -48,7 +48,6 @@ router.post('/register', async (req, res) => {
      }
     // --- End Validation ---
 
-
     // --- Use Database Transaction ---
     let client = null; // Define client variable outside try
     try {
@@ -60,11 +59,14 @@ router.post('/register', async (req, res) => {
         await client.query('BEGIN');
         console.log(`[Auth Register] Transaction BEGIN for ${username}`);
 
-        // 3. Check if username already exists (Use the client)
+        // 3. Check if username already exists WITHIN transaction for safety
+        // (Unique constraint will catch race conditions, but this check provides
+        // a slightly cleaner exit path if the user was created between the
+        // pre-check (if we had one) and BEGIN)
         const existingUser = await client.query('SELECT id FROM users WHERE username = $1', [username]);
         if (existingUser.rows.length > 0) {
             await client.query('ROLLBACK'); // Abort transaction
-            client.release(); // Release client BEFORE sending response
+            // DO NOT release client here, finally block handles it.
             console.log(`[Auth Register] Registration failed: Username '${username}' already taken. Transaction ROLLBACK.`);
             return res.status(409).json({ message: 'Username already taken.' });
         }
@@ -122,16 +124,29 @@ router.post('/register', async (req, res) => {
         console.error(`[Auth Register] Error during registration transaction for ${username}:`, error);
         if (client) {
             try {
-                await client.query('ROLLBACK'); // Rollback on any error
+                // Attempt to rollback only if transaction was potentially started
+                await client.query('ROLLBACK');
                 console.log(`[Auth Register] Transaction ROLLBACK executed due to error for ${username}.`);
             } catch (rollbackError) {
                 console.error(`[Auth Register] Error during ROLLBACK for ${username}:`, rollbackError);
             }
         }
-        res.status(500).json({ message: 'Internal server error during registration.' });
+
+        // --- Specific error handling for duplicate key ---
+        // Check PostgreSQL error code '23505' for unique constraint violation
+        if (error.code === '23505' && error.constraint && error.constraint.includes('users_username_key')) {
+             console.warn(`[Auth Register] Caught duplicate username constraint violation for ${username}.`);
+             // Return 409 Conflict instead of 500
+             res.status(409).json({ message: 'Username already taken.' });
+        } else {
+             // Return generic 500 for other errors
+            res.status(500).json({ message: 'Internal server error during registration.' });
+        }
+        // --- End Specific error handling ---
 
     } finally {
-        // --- IMPORTANT: Release Client ---
+        // --- IMPORTANT: Release Client (ONLY HERE) ---
+        // This block executes regardless of whether the try block succeeded or failed.
         if (client) {
             client.release(); // Release the client back to the pool
             console.log(`[Auth Register] DB client released for ${username}.`);
@@ -195,6 +210,7 @@ router.post('/login', async (req, res) => {
 
 // --- Logout ---
 router.post('/logout', (req, res) => {
+    const currentUsername = req.session?.username; // Get username before destroying
     req.session.destroy((err) => {
         if (err) {
             console.error('[Auth] Logout error:', err);
@@ -202,7 +218,7 @@ router.post('/logout', (req, res) => {
         }
         // Ensure the cookie is cleared even if session store removal has latency
         res.clearCookie('connect.sid', { path: '/' }); // Specify path if needed
-        console.log('[Auth] User logged out successfully.');
+        console.log(`[Auth] User '${currentUsername || 'Unknown'}' logged out successfully.`);
         res.status(200).json({ message: 'Logout successful.' });
     });
 });
