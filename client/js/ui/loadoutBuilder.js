@@ -75,7 +75,7 @@ class LoadoutBuilder {
 
     // --- Public Methods ---
 
-    /** Shows the loadout builder overlay and populates data AFTER verifying auth */
+    /** Shows the loadout builder overlay and populates data AFTER verifying auth, with retries */
     async show() { // Keep async
         if (!this.overlayElement) {
             console.error("Cannot show builder: Overlay element missing.");
@@ -86,62 +86,74 @@ class LoadoutBuilder {
         this.isVisible = true;
         this.updateStatus("Verifying session..."); // Initial status
 
-        // --- START: Verify Session Before Populating ---
-        try {
-            console.log("[Builder Show] Checking auth status via /api/auth/me before populating...");
-            const authStatus = await apiCall('/api/auth/me'); // Call the 'me' endpoint
+        // --- START: Verify Session with Retries ---
+        const MAX_AUTH_RETRIES = 3;
+        const RETRY_DELAY_MS = 300; // Delay between retries
 
-            if (!authStatus || !authStatus.isLoggedIn) {
-                // This shouldn't happen right after login, but handle it
-                console.error("[Builder Show] Auth check failed after login! User logged out unexpectedly?");
-                this.updateStatus("Session error. Please try logging in again.", true);
-                // Optionally, force logout/show login modal again via authHandler?
-                // window.authHandler?._handleLogout(); // Force logout? Be cautious.
-                this.loadConfiguration(null); // Load defaults
-                return; // Stop further execution in show()
+        for (let attempt = 1; attempt <= MAX_AUTH_RETRIES; attempt++) {
+            try {
+                console.log(`[Builder Show] Checking auth status via /api/auth/me (Attempt ${attempt}/${MAX_AUTH_RETRIES})...`);
+                const authStatus = await apiCall('/api/auth/me'); // Call the 'me' endpoint
+
+                if (authStatus?.isLoggedIn) {
+                    console.log("[Builder Show] Auth check successful. Proceeding with data population.");
+                    this.updateStatus("Loading data..."); // Update status
+
+                    // --- Fetch last used config (TODO remains) ---
+                    let initialConfigToLoad = null;
+
+                    // Populate dropdowns via API now that session is confirmed
+                    await Promise.all([
+                        this.populateLoadoutSelect(),
+                        this.populateCodeSelect()
+                    ]);
+                    this.updateStatus("Data loaded.");
+
+                    // --- Decide which config to load initially (logic remains the same) ---
+                    if (!initialConfigToLoad && this.cachedLoadouts.length > 0) {
+                         initialConfigToLoad = this.cachedLoadouts[0]; // Load the first available config data object
+                         console.log(`[Builder Show] No last config preference found, loading first available: '${initialConfigToLoad.config_name}'`);
+                    } else if (initialConfigToLoad) {
+                         console.log(`[Builder Show] TODO: Handle loading specific last config preference: '${initialConfigToLoad}'`);
+                         const foundConfig = this.cachedLoadouts.find(cfg => cfg.config_name === initialConfigToLoad || cfg.id === initialConfigToLoad);
+                         initialConfigToLoad = foundConfig || null; // Use the found object or null
+                    }
+                    this.loadConfiguration(initialConfigToLoad); // Load the selected config data (or null for defaults)
+                    console.log("[Builder Show] Initial configuration loaded/set.");
+                    return; // <<< EXIT show() successfully after population
+                } else {
+                    // Auth check returned isLoggedIn: false
+                    console.warn(`[Builder Show] Auth check attempt ${attempt} failed (isLoggedIn: false).`);
+                    if (attempt === MAX_AUTH_RETRIES) {
+                         console.error("[Builder Show] Auth check failed after multiple attempts! User logged out unexpectedly?");
+                         this.updateStatus("Session error. Please try logging in again.", true);
+                         this.loadConfiguration(null); // Load defaults
+                         return; // Exit after max retries
+                    }
+                    // Wait before retrying
+                    this.updateStatus(`Verifying session... (Attempt ${attempt + 1})`);
+                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+                }
+
+            } catch (error) {
+                // Handle errors from the /api/auth/me call itself
+                console.error(`[Builder Show] Error during auth check attempt ${attempt}:`, error);
+                if (error.status === 401) {
+                    this.updateStatus(`Session validation failed: ${error.message}`, true);
+                } else {
+                    this.updateStatus(`Error verifying session: ${error.message}`, true);
+                }
+
+                if (attempt === MAX_AUTH_RETRIES) {
+                     this.loadConfiguration(null); // Load defaults on final error
+                     return; // Exit after max retries
+                }
+                 // Wait before retrying after an error
+                this.updateStatus(`Retrying session verification... (Attempt ${attempt + 1})`);
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
             }
-
-            console.log("[Builder Show] Auth check successful. Proceeding with data population.");
-            this.updateStatus("Loading data..."); // Update status
-
-            // --- TODO: Fetch last used configuration name from API ---
-            // (Keep this TODO for now)
-            let initialConfigToLoad = null;
-            // --------------------------------------------------------
-
-            // Populate dropdowns via API now that session is confirmed
-            await Promise.all([
-                 this.populateLoadoutSelect(), // Fetches and caches loadouts
-                 this.populateCodeSelect()     // Fetches and caches snippets
-            ]);
-            this.updateStatus("Data loaded.");
-
-             // --- Decide which config to load initially (logic remains the same) ---
-            if (!initialConfigToLoad && this.cachedLoadouts.length > 0) {
-                 initialConfigToLoad = this.cachedLoadouts[0];
-                 console.log(`[Builder Show] No last config preference found, loading first available: '${initialConfigToLoad.config_name}'`);
-            } else if (initialConfigToLoad) {
-                 console.log(`[Builder Show] TODO: Handle loading specific last config preference: '${initialConfigToLoad}'`);
-                 const foundConfig = this.cachedLoadouts.find(cfg => cfg.config_name === initialConfigToLoad || cfg.id === initialConfigToLoad);
-                 initialConfigToLoad = foundConfig || null;
-            }
-
-            // Load the selected config data (or null for defaults)
-            this.loadConfiguration(initialConfigToLoad);
-            console.log("[Builder Show] Initial configuration loaded/set.");
-
-        } catch (error) {
-            // Handle errors from the initial /api/auth/me call OR the populate calls
-            console.error("[Builder Show] Error during initial auth check or data fetch:", error);
-            // Check if it was the auth call specifically
-            if (error.status === 401) {
-                 this.updateStatus(`Session validation failed: ${error.message}`, true);
-            } else {
-                 this.updateStatus(`Error loading initial data: ${error.message}`, true);
-            }
-            this.loadConfiguration(null); // Load defaults on error
-        }
-        // --- END: Verify Session Before Populating ---
+        } // End retry loop
+        // --- END: Verify Session with Retries ---
     }
 
 
@@ -734,3 +746,4 @@ class LoadoutBuilder {
 // Instantiate the builder globally and assign to window scope in main.js
 // Ensure this runs after the class definition
 // (No instantiation code here anymore)
+
