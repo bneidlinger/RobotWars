@@ -746,4 +746,3 @@ class LoadoutBuilder {
 // Instantiate the builder globally and assign to window scope in main.js
 // Ensure this runs after the class definition
 // (No instantiation code here anymore)
-

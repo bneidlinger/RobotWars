@@ -1675,7 +1675,7 @@ class Controls {
     constructor(game, network) {
         this.game = game;
         this.network = network;
-        this.uiState = 'lobby';
+        this.uiState = 'lobby'; // Initial state might be incorrect if not logged in
         this.isClientReady = false;
         this.testGameActive = false;
         this.statusTimeoutId = null; // Initialize timeout ID
@@ -1697,10 +1697,8 @@ class Controls {
         // --- End Element References ---
 
         this.setupEventListeners(); // Setup listeners after properties are initialized
-        this.updateUIForState(); // Set initial button states
 
-        // Populate the CODE SNIPPET dropdown via API on load
-        // Check login status before populating (handled internally by populateCodeSnippetSelect)
+        // Populate the CODE SNIPPET dropdown via API on load (will skip if not logged in)
         this.populateCodeSnippetSelect();
 
         console.log('Controls initialized (API Mode).');
@@ -1711,12 +1709,18 @@ class Controls {
     setState(newState) {
         const validStates = ['lobby', 'waiting', 'playing', 'spectating'];
         if (!validStates.includes(newState)) {
-            console.error(`Controls: Attempted to set invalid UI state: ${newState}`);
+            console.error(`[Controls.setState] Attempted to set invalid UI state: ${newState}`);
             return;
         }
-        if (this.uiState === newState) return;
+        // Log current and target state *before* any checks
+        // console.log(`[Controls.setState] >> Received request to change state from '${this.uiState}' to '${newState}'.`); // Verbose
 
-        console.log(`Controls UI State changing from '${this.uiState}' to '${newState}'`);
+        if (this.uiState === newState) {
+             // console.log(`[Controls.setState] -- State is already '${newState}'. Returning early.`); // Verbose
+             return;
+        }
+
+        console.log(`[Controls.setState] ++ State changing from '${this.uiState}' to '${newState}'. Proceeding to update UI...`);
         this.uiState = newState;
         if (newState !== 'waiting') this.isClientReady = false;
         this.updateUIForState(); // Update button states etc.
@@ -1724,102 +1728,65 @@ class Controls {
 
     /** Updates all relevant UI elements based on the current this.uiState */
     updateUIForState() {
-        // Use stored element references
         const editorIsAvailable = typeof editor !== 'undefined';
-
-        // Defaults
         let readyButtonText = "Loading...";
         let readyButtonColor = '#777';
         let readyButtonDisabled = true;
         let editorReadOnly = true;
         let selfDestructVisible = false;
         let testButtonDisabled = true;
-        let codeSnippetControlsDisabled = true; // For main UI snippet controls
-        let editLoadoutDisabled = true; // Default to disabled
+        let codeSnippetControlsDisabled = true;
+        let editLoadoutDisabled = true;
 
-        // --- START: UPDATED Login Check ---
-        // Determine states based on AuthHandler instance and internal uiState
-        // Ensure window.authHandler exists before checking its state
         const loggedIn = window.authHandler?.isLoggedIn ?? false;
-        // --- END: UPDATED Login Check ---
-
-        // --- START: Added Logging ---
-        // Add logging to confirm what's happening
-        console.log(`[Controls.updateUIForState] Called. State: '${this.uiState}', LoggedIn check: ${loggedIn}`);
-        // --- END: Added Logging ---
+        // Log the state being evaluated by this specific call
+        // console.log(`[Controls.updateUIForState] --> Evaluating UI based on State: '${this.uiState}', LoggedIn: ${loggedIn}`); // Verbose
 
         if (loggedIn) {
              switch (this.uiState) {
                  case 'lobby':
-                     // --- START: Added Logging ---
-                     console.log('[Controls.updateUIForState] Applying ENABLED state for lobby.');
-                     // --- END: Added Logging ---
-                     readyButtonText = "Ready Up";
-                     readyButtonColor = '#4CAF50';
-                     readyButtonDisabled = false;
-                     editorReadOnly = false;
-                     selfDestructVisible = false;
-                     testButtonDisabled = false;
-                     codeSnippetControlsDisabled = false; // Enable snippet controls in lobby
-                     editLoadoutDisabled = false;
+                     // console.log('[Controls.updateUIForState] --> Applying ENABLED state for lobby.'); // Verbose
+                     readyButtonText = "Ready Up"; readyButtonColor = '#4CAF50'; readyButtonDisabled = false;
+                     editorReadOnly = false; selfDestructVisible = false; testButtonDisabled = false;
+                     codeSnippetControlsDisabled = false; editLoadoutDisabled = false;
                      break;
                  case 'waiting':
-                     readyButtonText = "Waiting... (Click to Unready)";
-                     readyButtonColor = '#FFA500';
-                     readyButtonDisabled = false;
-                     editorReadOnly = true;
-                     selfDestructVisible = false;
-                     testButtonDisabled = true;
-                     codeSnippetControlsDisabled = true;
-                     editLoadoutDisabled = true;
+                     // console.log('[Controls.updateUIForState] --> Applying WAITING state.'); // Verbose
+                     readyButtonText = "Waiting... (Click to Unready)"; readyButtonColor = '#FFA500'; readyButtonDisabled = false;
+                     editorReadOnly = true; selfDestructVisible = false; testButtonDisabled = true;
+                     codeSnippetControlsDisabled = true; editLoadoutDisabled = true;
                      break;
-                 case 'playing':
-                 case 'spectating':
+                 case 'playing': case 'spectating':
+                     // console.log(`[Controls.updateUIForState] --> Applying ${this.uiState.toUpperCase()} state.`); // Verbose
                      readyButtonText = this.uiState === 'playing' ? "Game in Progress..." : "Spectating...";
-                     readyButtonColor = this.uiState === 'playing' ? '#777' : '#4682B4';
-                     readyButtonDisabled = true;
-                     editorReadOnly = true;
-                     selfDestructVisible = (this.uiState === 'playing');
-                     testButtonDisabled = true;
-                     codeSnippetControlsDisabled = true;
-                     editLoadoutDisabled = true;
+                     readyButtonColor = this.uiState === 'playing' ? '#777' : '#4682B4'; readyButtonDisabled = true;
+                     editorReadOnly = true; selfDestructVisible = (this.uiState === 'playing'); testButtonDisabled = true;
+                     codeSnippetControlsDisabled = true; editLoadoutDisabled = true;
                      break;
                  default:
-                      console.warn(`[Controls.updateUIForState] Applying DISABLED state (default/unknown UI state: ${this.uiState}).`);
-                      // Keep defaults (disabled)
-                      break;
+                     console.warn(`[Controls.updateUIForState] --> Applying DISABLED state (default/unknown UI state: ${this.uiState}).`);
+                     break;
              }
         } else {
-            // --- START: Added Logging ---
-             console.log('[Controls.updateUIForState] Applying DISABLED state (loggedIn check failed).');
-             // --- END: Added Logging ---
-             // Keep defaults (disabled)
-             readyButtonText = "Please Log In"; // Ensure text reflects state
-             readyButtonDisabled = true;
-             editorReadOnly = true;
-             selfDestructVisible = false;
-             testButtonDisabled = true;
-             codeSnippetControlsDisabled = true;
+             // console.log('[Controls.updateUIForState] --> Applying DISABLED state (loggedIn check failed).'); // Verbose
+             readyButtonText = "Please Log In"; readyButtonDisabled = true; editorReadOnly = true;
+             selfDestructVisible = false; testButtonDisabled = true; codeSnippetControlsDisabled = true;
              editLoadoutDisabled = true;
         }
 
-
-        // Apply UI changes using stored references
+        // Apply UI changes
         if (this.readyButton) { this.readyButton.textContent = readyButtonText; this.readyButton.style.backgroundColor = readyButtonColor; this.readyButton.disabled = readyButtonDisabled; }
         if (this.resetButton) { this.resetButton.disabled = (this.uiState !== 'lobby' || !loggedIn); }
         if (this.selfDestructButton) { this.selfDestructButton.style.display = selfDestructVisible ? 'inline-block' : 'none'; this.selfDestructButton.disabled = !selfDestructVisible; }
         if (this.testButton) { this.testButton.disabled = testButtonDisabled; }
-        // Main Editor Snippet Controls
         if (this.saveSnippetButton) { this.saveSnippetButton.disabled = codeSnippetControlsDisabled; }
         if (this.loadSnippetSelect) { this.loadSnippetSelect.disabled = codeSnippetControlsDisabled; }
-        // Ensure delete button is disabled if select is disabled or has no value
         if (this.deleteSnippetButton) { this.deleteSnippetButton.disabled = codeSnippetControlsDisabled || (this.loadSnippetSelect && !this.loadSnippetSelect.value); }
-        // Header Edit Button
         if (this.editLoadoutButton) { this.editLoadoutButton.disabled = editLoadoutDisabled; }
+        try { if (editorIsAvailable && editor.setOption) editor.setOption("readOnly", editorReadOnly); }
+        catch (e) { console.error("Error setting CodeMirror readOnly option:", e); }
 
-        try {
-            if (editorIsAvailable && editor.setOption) editor.setOption("readOnly", editorReadOnly);
-        } catch (e) { console.error("Error setting CodeMirror readOnly option:", e); }
+        // console.log(`[Controls.updateUIForState] << UI Update Applied. ReadyBtn Disabled: ${readyButtonDisabled}, TestBtn Disabled: ${testButtonDisabled}, Editor Controls Disabled: ${codeSnippetControlsDisabled}, EditLoadout Disabled: ${editLoadoutDisabled}`); // Verbose
     }
 
 
@@ -1828,48 +1795,45 @@ class Controls {
         // Add listeners only if elements exist
         if (this.editLoadoutButton) {
             this.editLoadoutButton.addEventListener('click', () => {
+                 if (!window.authHandler?.isLoggedIn) return;
                  if (this.uiState !== 'lobby') return;
-                 if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
-                     console.log("Edit Loadout button clicked, showing builder.");
+                 if (typeof window.loadoutBuilderInstance?.show === 'function') {
+                     console.log("[Controls] Edit Loadout button clicked, showing builder.");
                      window.loadoutBuilderInstance.show();
-                 } else {
-                     console.error("LoadoutBuilder instance not found!");
-                     alert("Error: Cannot open the loadout builder.");
-                 }
+                 } else { console.error("LoadoutBuilder instance not found!"); alert("Error: Cannot open the loadout builder."); }
              });
         } else { console.warn("Edit Loadout Button not found for listener."); }
 
         if (this.readyButton) {
-             this.readyButton.addEventListener('click', async () => { // Make async for potential await
+             this.readyButton.addEventListener('click', async () => { // Make async
                 if (!this.network?.socket?.connected) { alert("Not connected to server."); return; }
-                // Use updated login check
                 if (!window.authHandler?.isLoggedIn) { alert("Please log in first."); return; }
 
                 if (this.uiState === 'lobby') {
                     console.log('Ready Up button clicked (State: lobby)');
+                    this.updateLoadoutStatus("Preparing loadout...");
 
-                    // --- TODO: Implement _prepareLoadoutData using API ---
-                    // This function needs to:
-                    // 1. Get the "last selected config name" (needs API endpoint)
-                    // 2. If none, prompt user or use default.
-                    // 3. Fetch the specific loadout config data using `GET /api/loadouts/:configName` (needs implementation)
-                    // 4. If loadout has snippet name/id, fetch the code using `GET /api/snippets/:snippetName`
-                    // 5. Combine visuals, code, robotName into `loadoutData` object
-                    // 6. Send to network handler
-                    // -----------------------------------------------------
-                    this.updateLoadoutStatus("Ready Up: Fetching loadout data via API not yet implemented.", true);
-                    alert("TODO: Implement fetching/sending loadout data from server for Ready Up.");
+                    // --- START: Prepare Loadout ---
+                    const { loadoutData, error } = await this._prepareLoadoutData("Ready Up");
+                    if (error) {
+                         alert(error);
+                         this.updateLoadoutStatus(`Ready Up failed: ${error}`, true);
+                         return;
+                    }
+                    if (!loadoutData) {
+                         alert("Internal Error: Failed to prepare loadout data.");
+                         this.updateLoadoutStatus("Ready Up failed: Could not prepare data.", true);
+                         return;
+                    }
+                    // --- END: Prepare Loadout ---
 
-                    // const { loadoutData, error } = await this._prepareLoadoutData("Ready Up");
-                    // if (error) { alert(error); return; }
-                    // if (!loadoutData) { alert("Internal Error: Failed to prepare loadout data."); return; }
-                    // this.network.sendLoadoutData(loadoutData); // Use new name/structure
-                    // this.isClientReady = true;
-                    // this.setState('waiting');
-                    // this.updatePlayerHeaderDisplay(); // Update header icon
-
-                    // TEMPORARY: Just switch state for UI testing
+                    // --- START: Send Data & Update State ---
+                    this.network.sendLoadoutData(loadoutData); // Use new name/structure
+                    this.isClientReady = true;
                     this.setState('waiting');
+                    this.updatePlayerHeaderDisplay(); // Update header icon
+                    this.updateLoadoutStatus("Waiting for opponent...");
+                    // --- END: Send Data & Update State ---
 
                 } else if (this.uiState === 'waiting') {
                     console.log('Unready button clicked (State: waiting)');
@@ -1883,7 +1847,6 @@ class Controls {
 
         if (this.resetButton) {
              this.resetButton.addEventListener('click', () => {
-                 // Use updated login check
                 if (this.uiState !== 'lobby' || !window.authHandler?.isLoggedIn) return;
                 console.log('Reset button clicked');
                 if (this.game?.renderer?.redrawArenaBackground) this.game.renderer.redrawArenaBackground();
@@ -1913,7 +1876,6 @@ class Controls {
                  if (selectedName) {
                      this.loadCodeSnippet(selectedName); // Uses API now
                  }
-                 // Ensure delete button state updates correctly
                  if (this.deleteSnippetButton) {
                      this.deleteSnippetButton.disabled = !selectedName || this.uiState !== 'lobby';
                  }
@@ -1934,24 +1896,34 @@ class Controls {
 
 
          if (this.testButton) {
-             this.testButton.addEventListener('click', async () => { // Make async for potential await
+             this.testButton.addEventListener('click', async () => { // Make async
                 if (this.uiState !== 'lobby') return;
                 if (!this.network?.socket?.connected) { alert("Not connected to server."); return; }
-                // Use updated login check
                 if (!window.authHandler?.isLoggedIn) { alert("Please log in first."); return; }
 
-                 // --- TODO: Implement _prepareLoadoutData using API ---
-                 // Same logic needed as for 'Ready Up' button
-                 // -----------------------------------------------------
-                 this.updateLoadoutStatus("Test Code: Fetching loadout data via API not yet implemented.", true);
-                 alert("TODO: Implement fetching/sending loadout data from server for Test Code.");
+                this.updateLoadoutStatus("Preparing test game...");
 
-                 // const { loadoutData, error } = await this._prepareLoadoutData("Test Code");
-                 // if (error) { alert(error); return; }
-                 // if (!loadoutData) { alert("Internal Error: Failed to prepare loadout data for test."); return; }
-                 // this.network.requestTestGame(loadoutData); // Use new name/structure
-                 // if (window.updateLobbyStatus) window.updateLobbyStatus('Requesting Test Game...');
-                 // this.updatePlayerHeaderDisplay();
+                // --- START: Prepare Loadout ---
+                 const { loadoutData, error } = await this._prepareLoadoutData("Test Code");
+                 if (error) {
+                      alert(error);
+                      this.updateLoadoutStatus(`Test failed: ${error}`, true);
+                      return;
+                 }
+                 if (!loadoutData) {
+                      alert("Internal Error: Failed to prepare loadout data for test.");
+                      this.updateLoadoutStatus("Test failed: Could not prepare data.", true);
+                      return;
+                 }
+                 // --- END: Prepare Loadout ---
+
+                 // --- START: Send Request ---
+                 this.network.requestTestGame(loadoutData); // Use new name/structure
+                 if (window.updateLobbyStatus) window.updateLobbyStatus('Requesting Test Game...');
+                 this.updatePlayerHeaderDisplay(); // Reflect potentially changed name/visuals?
+                 this.updateLoadoutStatus("Test game requested...");
+                 // Note: State change to 'playing' happens via 'gameStart' event from server
+                 // --- END: Send Request ---
             });
         } else { console.warn("Test Code Button not found for listener."); }
 
@@ -1970,20 +1942,75 @@ class Controls {
 
     /**
      * Helper function to prepare loadout data for Ready Up or Test Code.
-     * NOTE: Requires significant API integration. Temporarily disabled.
+     * Fetches the code for the currently selected snippet via API.
+     * Uses the robot name and visuals currently set in the LoadoutBuilder instance.
      * @private
      * @async
+     * @param {string} context - 'Ready Up' or 'Test Code' for logging/errors.
+     * @returns {Promise<{loadoutData: object|null, error: string|null}>}
      */
     async _prepareLoadoutData(context) {
-         console.error(`_prepareLoadoutData called for context "${context}" but is not yet implemented using server API calls.`);
-         const accountName = window.currentUser?.username || 'UnknownUser';
-         this.updateLoadoutStatus(`Error: Loadout data preparation not implemented (${context})`, true);
-         return { loadoutData: null, error: `(${context}) Feature temporarily disabled for ${accountName}. Loadout data fetching not yet implemented.` };
+        console.log(`[Controls._prepareLoadoutData] Preparing for context: ${context}`);
+
+        // Get current selections from LoadoutBuilder instance
+        const builderState = window.loadoutBuilderInstance?.currentLoadout;
+        if (!builderState) {
+             console.error(`[Controls._prepareLoadoutData] LoadoutBuilder instance or currentLoadout not found!`);
+             return { loadoutData: null, error: `(${context}) Internal Error: Loadout builder state unavailable.` };
+        }
+
+        const { robotName, visuals, codeLoadoutName } = builderState;
+
+        // --- Validation ---
+        if (!robotName || typeof robotName !== 'string' || robotName.trim().length === 0) {
+             return { loadoutData: null, error: `(${context}) Please set a Robot Name in the Loadout Builder.` };
+        }
+        if (!visuals || typeof visuals !== 'object') { // Add basic visuals check
+            return { loadoutData: null, error: `(${context}) Visual configuration is missing. Open the builder.` };
+        }
+        if (!codeLoadoutName || typeof codeLoadoutName !== 'string' || codeLoadoutName.trim().length === 0) {
+             return { loadoutData: null, error: `(${context}) Please select a Code Snippet in the Loadout Builder.` };
+        }
+        // --- End Validation ---
+
+        this.updateLoadoutStatus(`(${context}) Fetching code for "${codeLoadoutName}"...`);
+        try {
+             // --- Fetch the selected snippet's code ---
+             const encodedName = encodeURIComponent(codeLoadoutName);
+             const snippet = await apiCall(`/api/snippets/${encodedName}`, 'GET');
+
+             if (!snippet || typeof snippet.code !== 'string') {
+                  throw new Error(`API did not return valid code for snippet "${codeLoadoutName}".`);
+             }
+
+             // --- Construct the final loadout data object ---
+             const loadoutData = {
+                 name: robotName.trim(), // Use the robot name from builder
+                 visuals: visuals,       // Use the visuals object from builder
+                 code: snippet.code      // Use the fetched code
+             };
+
+             console.log(`[Controls._prepareLoadoutData] Successfully prepared data for ${context}:`, { name: loadoutData.name, visuals: '...', code: '...' });
+             this.updateLoadoutStatus(`(${context}) Loadout ready.`);
+             return { loadoutData: loadoutData, error: null };
+
+        } catch (error) {
+             console.error(`[Controls._prepareLoadoutData] Error preparing loadout data for ${context}:`, error);
+             let userMessage = error.message || 'Unknown error.';
+             if (error.status === 404) {
+                 userMessage = `Selected code snippet "${codeLoadoutName}" not found. It might have been deleted. Check Loadout Builder.`;
+             } else if (error.status === 401) {
+                  userMessage = `Authentication error fetching code. Please log in again.`;
+             } else {
+                 userMessage = `Failed to fetch code for "${codeLoadoutName}": ${userMessage}`;
+             }
+             return { loadoutData: null, error: `(${context}) ${userMessage}` };
+        }
     }
 
 
     // --- Code SNIPPET Management Methods (Using API) ---
-
+    // ... (No changes to saveCodeSnippet, loadCodeSnippet, deleteCodeSnippet, populateCodeSnippetSelect) ...
     /** Saves or updates a code snippet via API */
     async saveCodeSnippet(name, code) {
         this.updateLoadoutStatus(`Saving snippet "${name}"...`);
@@ -2055,11 +2082,8 @@ class Controls {
     async populateCodeSnippetSelect(selectName = null) {
          if (!this.loadSnippetSelect) { console.error("Snippet select element not found."); return; }
 
-         // Use updated login check - only fetch if logged in
          const loggedIn = window.authHandler?.isLoggedIn ?? false;
          if (!loggedIn) {
-             console.log("[Controls.populateCodeSnippetSelect] Skipping fetch: User not logged in.");
-             // Clear dropdown options except placeholder
              while (this.loadSnippetSelect.options.length > 1) { this.loadSnippetSelect.remove(1); }
              this.loadSnippetSelect.value = "";
              this.loadSnippetSelect.disabled = true;
@@ -2067,7 +2091,6 @@ class Controls {
              return;
          }
 
-         // Disable controls during population
          const originallyDisabled = {
              select: this.loadSnippetSelect.disabled,
              deleteBtn: this.deleteSnippetButton ? this.deleteSnippetButton.disabled : true
@@ -2075,14 +2098,12 @@ class Controls {
          this.loadSnippetSelect.disabled = true;
          if (this.deleteSnippetButton) this.deleteSnippetButton.disabled = true;
 
-         // Clear existing options (except the placeholder)
          while (this.loadSnippetSelect.options.length > 1) { this.loadSnippetSelect.remove(1); }
 
          try {
-             const snippets = await apiCall('/api/snippets', 'GET'); // Fetch snippets for user
+             const snippets = await apiCall('/api/snippets', 'GET');
 
              if (Array.isArray(snippets)) {
-                 console.log(`[Controls] Fetched ${snippets.length} snippets from API.`);
                  snippets.sort((a, b) => a.name.localeCompare(b.name));
                  snippets.forEach(snippet => {
                      const option = document.createElement('option');
@@ -2102,16 +2123,13 @@ class Controls {
              }
 
          } catch (error) {
-              // Check for 401 specifically, which might happen during initial load race conditions
               if (error.status === 401) {
-                 console.warn("[Controls] API Error populating snippet select: 401 Unauthorized. User might not be fully logged in yet during initial call.");
-                 // Don't show an error message, just leave dropdown empty/disabled
+                 console.warn("[Controls] API Error populating snippet select: 401 Unauthorized.");
               } else {
                  console.error("[Controls] API Error populating snippet select:", error);
                  this.updateLoadoutStatus(`Error fetching snippets: ${error.message}`, true);
               }
          } finally {
-              // Re-enable controls based on UI state and login status
               const isLoggedInNow = window.authHandler?.isLoggedIn ?? false;
               const codeSnippetControlsDisabled = !(isLoggedInNow && this.uiState === 'lobby');
               this.loadSnippetSelect.disabled = codeSnippetControlsDisabled;
@@ -2126,31 +2144,40 @@ class Controls {
     /**
      * Updates ONLY the player icon in the header.
      * The player name is handled by auth.js using the account username.
-     * NOTE: Basic implementation, doesn't fetch specific loadout visuals yet.
+     * TODO: Needs to fetch the *active* loadout's visuals.
      */
     updatePlayerHeaderDisplay() {
         const iconDisplay = document.getElementById('player-icon-display');
         if (!iconDisplay) { console.warn("Player header icon display element not found."); return; }
 
-        // Use updated login check
         const loggedIn = window.authHandler?.isLoggedIn ?? false;
         let displayColor = '#888';
         let tooltipText = 'Loadout Config: Unknown (API TODO)';
 
-        // --- TODO: Implement fetching user's last selected config via API ---
-        // ---------------------------------------------------------------------
+        // --- TODO: Fetch user's active config visuals via API ---
+        // This should eventually:
+        // 1. GET /api/users/me/active-config (or similar)
+        // 2. Based on result, GET /api/loadouts/:configName
+        // 3. Use loadout.visuals.chassis.color (or similar) for the icon background
+        // -----------------------------------------------------
 
         if (!loggedIn) {
              displayColor = '#555'; tooltipText = 'Loadout Config: N/A';
         } else {
-            // TEMPORARY: Just use a generic logged-in color
-             displayColor = '#4CAF50';
-             tooltipText = 'Account Logged In';
+             // TEMPORARY: Use LoadoutBuilder's current visuals if available
+             const builderVisuals = window.loadoutBuilderInstance?.currentLoadout?.visuals;
+             if (builderVisuals?.chassis?.color) {
+                 displayColor = builderVisuals.chassis.color;
+                 tooltipText = `Active Loadout (using builder state): ${window.loadoutBuilderInstance.currentLoadout.configName || 'Unsaved'}`;
+             } else {
+                 // Fallback if builder state unavailable or incomplete
+                 displayColor = '#4CAF50'; // Generic logged-in color
+                 tooltipText = 'Account Logged In (Loadout visuals unavailable)';
+             }
         }
 
         iconDisplay.style.backgroundColor = displayColor;
         iconDisplay.title = tooltipText;
-        // console.log(`[Controls] Updated header icon (basic). Color: ${displayColor}, Tooltip: ${tooltipText}`);
     }
 
 
@@ -2471,8 +2498,8 @@ class LoadoutBuilder {
 
     // --- Public Methods ---
 
-    /** Shows the loadout builder overlay */
-    async show() { // Make async for API calls
+    /** Shows the loadout builder overlay and populates data AFTER verifying auth, with retries */
+    async show() { // Keep async
         if (!this.overlayElement) {
             console.error("Cannot show builder: Overlay element missing.");
             return;
@@ -2480,46 +2507,78 @@ class LoadoutBuilder {
         console.log("[Builder Show] Showing overlay.");
         this.overlayElement.style.display = 'flex';
         this.isVisible = true;
+        this.updateStatus("Verifying session..."); // Initial status
 
-        // --- TODO: Fetch last used configuration name from API ---
-        // For now, we'll just load defaults or the first available config
-        let initialConfigToLoad = null;
-        // --------------------------------------------------------
+        // --- START: Verify Session with Retries ---
+        const MAX_AUTH_RETRIES = 3;
+        const RETRY_DELAY_MS = 300; // Delay between retries
 
-        // Populate dropdowns via API first
-        // Use Promise.all to fetch concurrently
-        this.updateStatus("Loading data...");
-        try {
-            await Promise.all([
-                 this.populateLoadoutSelect(), // Fetches and caches loadouts
-                 this.populateCodeSelect()     // Fetches and caches snippets
-            ]);
-            this.updateStatus("Data loaded.");
+        for (let attempt = 1; attempt <= MAX_AUTH_RETRIES; attempt++) {
+            try {
+                console.log(`[Builder Show] Checking auth status via /api/auth/me (Attempt ${attempt}/${MAX_AUTH_RETRIES})...`);
+                const authStatus = await apiCall('/api/auth/me'); // Call the 'me' endpoint
 
-            // --- Decide which config to load initially ---
-            // If a last config preference was fetched, use that.
-            // Otherwise, if cached loadouts exist, try loading the first one.
-            // Otherwise, load defaults.
-            if (!initialConfigToLoad && this.cachedLoadouts.length > 0) {
-                 initialConfigToLoad = this.cachedLoadouts[0]; // Load the first available config data object
-                 console.log(`[Builder Show] No last config preference found, loading first available: '${initialConfigToLoad.config_name}'`);
-            } else if (initialConfigToLoad) {
-                 console.log(`[Builder Show] TODO: Handle loading specific last config preference: '${initialConfigToLoad}'`);
-                 // Find the full data object from cache based on name/id if initialConfigToLoad is just a name/id
-                 const foundConfig = this.cachedLoadouts.find(cfg => cfg.config_name === initialConfigToLoad || cfg.id === initialConfigToLoad);
-                 initialConfigToLoad = foundConfig || null; // Use the found object or null
+                if (authStatus?.isLoggedIn) {
+                    console.log("[Builder Show] Auth check successful. Proceeding with data population.");
+                    this.updateStatus("Loading data..."); // Update status
+
+                    // --- Fetch last used config (TODO remains) ---
+                    let initialConfigToLoad = null;
+
+                    // Populate dropdowns via API now that session is confirmed
+                    await Promise.all([
+                        this.populateLoadoutSelect(),
+                        this.populateCodeSelect()
+                    ]);
+                    this.updateStatus("Data loaded.");
+
+                    // --- Decide which config to load initially (logic remains the same) ---
+                    if (!initialConfigToLoad && this.cachedLoadouts.length > 0) {
+                         initialConfigToLoad = this.cachedLoadouts[0]; // Load the first available config data object
+                         console.log(`[Builder Show] No last config preference found, loading first available: '${initialConfigToLoad.config_name}'`);
+                    } else if (initialConfigToLoad) {
+                         console.log(`[Builder Show] TODO: Handle loading specific last config preference: '${initialConfigToLoad}'`);
+                         const foundConfig = this.cachedLoadouts.find(cfg => cfg.config_name === initialConfigToLoad || cfg.id === initialConfigToLoad);
+                         initialConfigToLoad = foundConfig || null; // Use the found object or null
+                    }
+                    this.loadConfiguration(initialConfigToLoad); // Load the selected config data (or null for defaults)
+                    console.log("[Builder Show] Initial configuration loaded/set.");
+                    return; // <<< EXIT show() successfully after population
+                } else {
+                    // Auth check returned isLoggedIn: false
+                    console.warn(`[Builder Show] Auth check attempt ${attempt} failed (isLoggedIn: false).`);
+                    if (attempt === MAX_AUTH_RETRIES) {
+                         console.error("[Builder Show] Auth check failed after multiple attempts! User logged out unexpectedly?");
+                         this.updateStatus("Session error. Please try logging in again.", true);
+                         this.loadConfiguration(null); // Load defaults
+                         return; // Exit after max retries
+                    }
+                    // Wait before retrying
+                    this.updateStatus(`Verifying session... (Attempt ${attempt + 1})`);
+                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+                }
+
+            } catch (error) {
+                // Handle errors from the /api/auth/me call itself
+                console.error(`[Builder Show] Error during auth check attempt ${attempt}:`, error);
+                if (error.status === 401) {
+                    this.updateStatus(`Session validation failed: ${error.message}`, true);
+                } else {
+                    this.updateStatus(`Error verifying session: ${error.message}`, true);
+                }
+
+                if (attempt === MAX_AUTH_RETRIES) {
+                     this.loadConfiguration(null); // Load defaults on final error
+                     return; // Exit after max retries
+                }
+                 // Wait before retrying after an error
+                this.updateStatus(`Retrying session verification... (Attempt ${attempt + 1})`);
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
             }
-
-            // Load the selected config data (or null for defaults)
-            this.loadConfiguration(initialConfigToLoad);
-            console.log("[Builder Show] Initial configuration loaded/set.");
-
-        } catch (error) {
-            console.error("[Builder Show] Error during initial data fetch:", error);
-            this.updateStatus(`Error loading initial data: ${error.message}`, true);
-            this.loadConfiguration(null); // Load defaults on error
-        }
+        } // End retry loop
+        // --- END: Verify Session with Retries ---
     }
+
 
     /** Hides the loadout builder overlay */
     hide() {
@@ -3021,16 +3080,18 @@ class LoadoutBuilder {
         }
 
         // Connect network (using global network instance)
-        if (typeof network !== 'undefined' && network.connect) {
-             if (!network.socket?.connected) {
-                 console.log(`[Enter Lobby] Triggering network connect.`);
-                 network.connect();
+        // Note: Connection is likely already handled by onLoginSuccess now,
+        // but this ensures controls state is updated correctly.
+        if (typeof network !== 'undefined') {
+             if (network.socket?.connected) {
+                  console.log(`[Enter Lobby] Network connected. Setting Controls state.`);
+                   if(typeof controls !== 'undefined') controls.setState('lobby'); // Ensure UI is in lobby state
              } else {
-                  console.log(`[Enter Lobby] Network already connected.`);
-                  if(typeof controls !== 'undefined') controls.setState('lobby'); // Ensure UI is in lobby state
+                  console.log(`[Enter Lobby] Network not connected, attempting connect (might be redundant).`);
+                  network.connect(); // Should be safe to call again if needed
              }
         } else {
-             console.error("Network object or connect method not found!");
+             console.error("Network object not found!");
              alert("Internal error: Cannot connect to network.");
         }
     } // End _handleEnterLobbyClick
@@ -3053,17 +3114,17 @@ class LoadoutBuilder {
               controls.updatePlayerHeaderDisplay();
          }
 
-         // Connect network
-         if (typeof network !== 'undefined' && network.connect) {
-             if (!network.socket?.connected) {
-                 console.log(`[Quick Start] Triggering network connect.`);
-                 network.connect();
-             } else {
-                 console.log(`[Quick Start] Network already connected.`);
+         // Connect network / Update state (Similar logic as Enter Lobby)
+         if (typeof network !== 'undefined') {
+             if (network.socket?.connected) {
+                 console.log(`[Quick Start] Network connected. Setting Controls state.`);
                   if(typeof controls !== 'undefined') controls.setState('lobby');
+             } else {
+                 console.log(`[Quick Start] Network not connected, attempting connect.`);
+                 network.connect();
              }
          } else {
-              console.error("Network object or connect method not found!");
+              console.error("Network object not found!");
               alert("Internal error: Cannot connect to network.");
          }
     } // End _handleQuickStartClick
@@ -4151,40 +4212,42 @@ class AuthHandler {
     _onLoginSuccess() {
         console.log("[AuthHandler] _onLoginSuccess Actions Triggered");
 
-        // Show Loadout Builder
-        console.log("[AuthHandler] Attempting to show Loadout Builder...");
-        if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
-            window.loadoutBuilderInstance.show();
-        } else {
-            console.error("[AuthHandler] LoadoutBuilder instance (window.loadoutBuilderInstance) not available!");
-            alert("Critical Error: Failed to load Robot Builder UI.");
-             if(this.mainContainer) this.mainContainer.style.display = 'flex';
-        }
-
-        // Update header ICON via Controls
-        // Use setTimeout to allow main.js to fully finish component instantiation if needed
+        // Minimal delay to allow browser cookie processing to START
         setTimeout(() => {
-            // console.log("[AuthHandler] Attempting header icon update via Controls..."); // Less verbose
+            console.log("[AuthHandler] Minimal delay complete, proceeding with post-login UI setup...");
+
+            // Show Loadout Builder - It will now handle its own auth check before fetching data
+            console.log("[AuthHandler] Attempting to show Loadout Builder (will self-verify auth)...");
+            if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
+                window.loadoutBuilderInstance.show(); // Call show, it does the rest
+            } else {
+                console.error("[AuthHandler] LoadoutBuilder instance (window.loadoutBuilderInstance) not available!");
+                alert("Critical Error: Failed to load Robot Builder UI.");
+                 if(this.mainContainer) this.mainContainer.style.display = 'flex';
+            }
+
+            // Update header ICON via Controls (Can stay here, doesn't rely on session cookie immediately)
             if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
                 controls.updatePlayerHeaderDisplay();
             } else {
                  console.warn("[AuthHandler] Controls object or updatePlayerHeaderDisplay method not available yet for icon update.");
             }
-        }, 50); // Reduced delay slightly
 
-        // Connect WebSocket
-        if (typeof network !== 'undefined' && network.connect) {
-             // console.log("[AuthHandler] Attempting WebSocket connection..."); // Less verbose
-             if (!network.socket || !network.socket.connected) {
-                network.connect();
-             } else {
-                console.log("[AuthHandler] WebSocket already connected.");
-                 if(typeof controls !== 'undefined') controls.setState('lobby');
-             }
-        } else {
-             console.warn("[AuthHandler] Network object not available to connect.");
-        }
+            // Connect WebSocket (Can stay here)
+            if (typeof network !== 'undefined' && network.connect) {
+                 if (!network.socket || !network.socket.connected) {
+                    network.connect();
+                 } else {
+                    console.log("[AuthHandler] WebSocket already connected.");
+                     if(typeof controls !== 'undefined') controls.setState('lobby');
+                 }
+            } else {
+                 console.warn("[AuthHandler] Network object not available to connect.");
+            }
+
+        }, 100); // Reduced delay (e.g., 100ms)
     }
+
 
     /** Actions to perform after logout */
     _onLogoutSuccess() {
@@ -5981,7 +6044,6 @@ router.post('/register', async (req, res) => {
      }
     // --- End Validation ---
 
-
     // --- Use Database Transaction ---
     let client = null; // Define client variable outside try
     try {
@@ -5993,11 +6055,14 @@ router.post('/register', async (req, res) => {
         await client.query('BEGIN');
         console.log(`[Auth Register] Transaction BEGIN for ${username}`);
 
-        // 3. Check if username already exists (Use the client)
+        // 3. Check if username already exists WITHIN transaction for safety
+        // (Unique constraint will catch race conditions, but this check provides
+        // a slightly cleaner exit path if the user was created between the
+        // pre-check (if we had one) and BEGIN)
         const existingUser = await client.query('SELECT id FROM users WHERE username = $1', [username]);
         if (existingUser.rows.length > 0) {
             await client.query('ROLLBACK'); // Abort transaction
-            client.release(); // Release client BEFORE sending response
+            // DO NOT release client here, finally block handles it.
             console.log(`[Auth Register] Registration failed: Username '${username}' already taken. Transaction ROLLBACK.`);
             return res.status(409).json({ message: 'Username already taken.' });
         }
@@ -6055,16 +6120,29 @@ router.post('/register', async (req, res) => {
         console.error(`[Auth Register] Error during registration transaction for ${username}:`, error);
         if (client) {
             try {
-                await client.query('ROLLBACK'); // Rollback on any error
+                // Attempt to rollback only if transaction was potentially started
+                await client.query('ROLLBACK');
                 console.log(`[Auth Register] Transaction ROLLBACK executed due to error for ${username}.`);
             } catch (rollbackError) {
                 console.error(`[Auth Register] Error during ROLLBACK for ${username}:`, rollbackError);
             }
         }
-        res.status(500).json({ message: 'Internal server error during registration.' });
+
+        // --- Specific error handling for duplicate key ---
+        // Check PostgreSQL error code '23505' for unique constraint violation
+        if (error.code === '23505' && error.constraint && error.constraint.includes('users_username_key')) {
+             console.warn(`[Auth Register] Caught duplicate username constraint violation for ${username}.`);
+             // Return 409 Conflict instead of 500
+             res.status(409).json({ message: 'Username already taken.' });
+        } else {
+             // Return generic 500 for other errors
+            res.status(500).json({ message: 'Internal server error during registration.' });
+        }
+        // --- End Specific error handling ---
 
     } finally {
-        // --- IMPORTANT: Release Client ---
+        // --- IMPORTANT: Release Client (ONLY HERE) ---
+        // This block executes regardless of whether the try block succeeded or failed.
         if (client) {
             client.release(); // Release the client back to the pool
             console.log(`[Auth Register] DB client released for ${username}.`);
@@ -6128,6 +6206,7 @@ router.post('/login', async (req, res) => {
 
 // --- Logout ---
 router.post('/logout', (req, res) => {
+    const currentUsername = req.session?.username; // Get username before destroying
     req.session.destroy((err) => {
         if (err) {
             console.error('[Auth] Logout error:', err);
@@ -6135,7 +6214,7 @@ router.post('/logout', (req, res) => {
         }
         // Ensure the cookie is cleared even if session store removal has latency
         res.clearCookie('connect.sid', { path: '/' }); // Specify path if needed
-        console.log('[Auth] User logged out successfully.');
+        console.log(`[Auth] User '${currentUsername || 'Unknown'}' logged out successfully.`);
         res.status(200).json({ message: 'Logout successful.' });
     });
 });
@@ -7126,76 +7205,91 @@ function initializeSocketHandler(io, db) { // db might be needed by GameManager 
         console.log(`[Socket ${socket.id}] Client connected: User '${username}' (ID: ${userId})`);
         socket.emit('assignId', socket.id); // Still useful for client-side logic
 
-        // --- Game Manager Interaction (Needs Adaptation) ---
-        // We need to refactor how players are added/managed.
-        // Instead of adding immediately, we might wait for a 'joinLobby' event
-        // or manage players based on their logged-in status.
-        // For now, let's assume GameManager.addPlayer is adapted.
-        gameManager.addPlayer(socket, userId, username); // Pass user info
+        // --- START: Adapted Player Adding ---
+        // Add player to GameManager using their user info.
+        // GameManager should handle preventing duplicates or managing state if already connected.
+        gameManager.addPlayer(socket); // Pass socket, GM can get user info if needed or addPlayer is adapted
+        // --- END: Adapted Player Adding ---
 
-        // --- Spectator Check / Lobby Logic (Needs Adaptation) ---
-        // This needs to be re-evaluated based on the new lobby flow
-        // Maybe only logged-in users not in a game are added to pending?
-        // ... (Spectator logic might remain similar if GameManager handles it) ...
-
-        // --- Send Initial Game History ---
-        // This can stay the same if GameManager manages history correctly
-        gameManager.broadcastGameHistory(socket); // Maybe broadcast to specific socket
+        // --- Send Initial Game History to just this user ---
+        gameManager.broadcastGameHistory(socket);
 
 
         socket.on('disconnect', () => {
             console.log(`[Socket ${socket.id}] Client disconnected: User '${username}' (ID: ${userId})`);
-            gameManager.removePlayer(socket.id, userId); // Pass userId too
+            // Ensure GameManager uses socket.id to remove, but might need userId too for cross-referencing
+            gameManager.removePlayer(socket.id); // Pass socket.id for removal
         });
 
-        // === Event Listeners - Need to use userId/username from session ===
+        // === Event Listeners - Use userId/username from session ===
 
+        // Handles 'Ready Up' signal with full loadout data
         socket.on('submitPlayerData', (loadoutData) => {
-             // Use session info, not just socket.id
-             if (!userId) return socket.emit('authError', { message: 'Session expired. Please log in.' });
-             // ... (Validation remains similar) ...
-             const finalName = username; // Use the authenticated username
-             const finalData = {
-                 // name: finalName, // Name comes from session/user profile
-                 visuals: loadoutData.visuals,
-                 code: loadoutData.code
-             };
-             // GameManager needs to know which user submitted
-             gameManager.handlePlayerLoadout(socket.id, userId, finalData); // Pass userId
+             if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
+
+             // Validate received loadoutData structure
+             if (!loadoutData || typeof loadoutData.name !== 'string' || !loadoutData.visuals || typeof loadoutData.code !== 'string') {
+                 console.error(`[Socket ${socket.id}] Received invalid loadoutData structure from user ${username}:`, loadoutData);
+                 socket.emit('lobbyEvent', { message: 'Invalid loadout data received. Please try again.', type: 'error' });
+                 return;
+             }
+             // Note: Server uses the validated loadoutData.name (robot name) directly.
+             // The username from session identifies the *account*.
+             console.log(`[Socket ${socket.id}] User ${username} submitted player data (Robot: ${loadoutData.name})`);
+             // Pass the full loadoutData received from client to GameManager
+             gameManager.handlePlayerCode(socket.id, loadoutData); // handlePlayerCode expects the full {name, visuals, code}
         });
 
+        // Handles 'Unready' signal
         socket.on('playerUnready', () => {
-             if (!userId) return socket.emit('authError', { message: 'Session expired. Please log in.' });
-             gameManager.setPlayerReadyStatus(socket.id, userId, false); // Pass userId
+             if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
+             console.log(`[Socket ${socket.id}] User ${username} unreadied.`);
+             // Pass socket.id only, GameManager uses this to find the player
+             gameManager.setPlayerReadyStatus(socket.id, false);
         });
 
+        // Handles 'Test Code' request with full loadout data
         socket.on('requestTestGame', (loadoutData) => {
-            if (!userId) return socket.emit('authError', { message: 'Session expired. Please log in.' });
-            // ... (Validation) ...
-             const finalName = username; // Use the authenticated username
-             const finalData = {
-                 // name: finalName, // Name comes from session
-                 visuals: loadoutData.visuals,
-                 code: loadoutData.code
-             };
-             gameManager.startTestGameForPlayer(socket, userId, finalData); // Pass userId
+            if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
+
+            // Validate received loadoutData structure
+            if (!loadoutData || typeof loadoutData.name !== 'string' || !loadoutData.visuals || typeof loadoutData.code !== 'string') {
+                 console.error(`[Socket ${socket.id}] Received invalid loadoutData structure for test game from user ${username}:`, loadoutData);
+                 socket.emit('lobbyEvent', { message: 'Invalid loadout data received for test game. Please try again.', type: 'error' });
+                 return;
+            }
+
+            console.log(`[Socket ${socket.id}] User ${username} requested test game (Robot: ${loadoutData.name})`);
+            // --- START: Corrected Call ---
+            // Pass the socket object and the full loadoutData object received from the client
+            gameManager.startTestGameForPlayer(socket, loadoutData);
+            // --- END: Corrected Call ---
         });
 
+        // Handles Chat Messages
         socket.on('chatMessage', (data) => {
-             if (!userId) return socket.emit('authError', { message: 'Session expired. Please log in.' });
+             if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
              const senderName = username; // Use session username
-             // ... (Validation and sanitization) ...
-             io.emit('chatUpdate', { sender: senderName, text: sanitizedText }); // Removed isSpectator for now
+             const messageText = data?.text || '';
+
+             // Basic validation/sanitization (consider a library for robustness)
+             if (typeof messageText !== 'string' || messageText.trim().length === 0 || messageText.length > 100) {
+                 console.warn(`[Socket ${socket.id}] User ${username} sent invalid chat message.`);
+                 return; // Ignore empty or too long messages
+             }
+             const sanitizedText = messageText.trim(); // Basic trim
+
+             console.log(`[Socket ${socket.id}] Chat from ${senderName}: ${sanitizedText}`);
+             io.emit('chatUpdate', { sender: senderName, text: sanitizedText });
         });
 
+        // Handles Self-Destruct request
         socket.on('selfDestruct', () => {
-             if (!userId) return socket.emit('authError', { message: 'Session expired. Please log in.' });
-             gameManager.handleSelfDestruct(socket.id, userId); // Pass userId
+             if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
+             console.log(`[Socket ${socket.id}] User ${username} requested self-destruct.`);
+             // Pass socket.id only, GameManager uses this to find the player/game
+             gameManager.handleSelfDestruct(socket.id);
         });
-
-        // --- Code Error/Robot Log Handling ---
-        // These might need slight adjustments if GameInstance needs user context
-        // Or if we want to ensure errors are only sent to the correct user's socket
 
     });
 

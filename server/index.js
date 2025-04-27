@@ -54,7 +54,16 @@ const sessionMiddleware = session({
 // --- Express Middleware ---
 app.use(express.json()); // Middleware to parse JSON request bodies
 app.use(express.urlencoded({ extended: true })); // Middleware for URL-encoded request bodies
-app.use(sessionMiddleware); // Use session middleware for all Express routes AFTER body parsing
+
+// --- Trust Proxy ---
+// ***** IMPORTANT: Add this BEFORE app.use(sessionMiddleware) *****
+// Necessary when running behind a reverse proxy (like Render)
+// for secure cookies (cookie.secure=true) to work correctly.
+// It tells Express to trust the X-Forwarded-* headers set by the proxy.
+app.set('trust proxy', 1); // Trust the first proxy hop (common setting for Render/Heroku)
+// --- End Trust Proxy ---
+
+app.use(sessionMiddleware); // Use session middleware for all Express routes AFTER body parsing and trust proxy
 
 // --- Socket.IO Session Sharing ---
 // Make express-session data accessible to Socket.IO connection handlers
@@ -63,8 +72,8 @@ io.engine.use(sessionMiddleware);
 
 // --- API Routes ---
 app.use('/api/auth', authRoutes);
-app.use('/api/snippets', snippetRoutes); // Placeholder, requires authMiddleware inside
-app.use('/api/loadouts', loadoutRoutes); // Placeholder, requires authMiddleware inside
+app.use('/api/snippets', snippetRoutes); // Applies authMiddleware inside the route file
+app.use('/api/loadouts', loadoutRoutes); // Applies authMiddleware inside the route file
 // --- End API Routes ---
 
 // --- Static Files ---
@@ -77,6 +86,8 @@ app.use(express.static(clientPath));
 // --- Catch-all for SPA (Single Page Application) routing ---
 // If no API route or static file matched, send index.html for client-side routing
 app.get('*', (req, res) => {
+  // Log requests that fall through to the catch-all for debugging proxy/routing issues
+  console.log(`[Catch-All] Serving index.html for path: ${req.path}`);
   res.sendFile(path.join(clientPath, 'index.html'));
 });
 // --- End Catch-all ---
@@ -88,10 +99,21 @@ initializeSocketHandler(io, db); // Pass db if GameManager or other parts need i
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Access the game at: http://localhost:${PORT}`);
+  if (process.env.NODE_ENV === 'production') {
+      console.log("Running in PRODUCTION mode.");
+  } else {
+       console.log("Running in DEVELOPMENT mode.");
+  }
   if (!process.env.SESSION_SECRET && process.env.NODE_ENV !== 'development') {
       console.warn("Reminder: SESSION_SECRET environment variable not set.");
   }
-  if (process.env.NODE_ENV !== 'production' && sessionMiddleware.cookie?.secure) {
+  if (process.env.NODE_ENV !== 'production' && sessionMiddleware.options.cookie.secure) {
        console.warn("Warning: Secure cookies enabled but NODE_ENV is not 'production'. Cookies may not work over HTTP.");
+  }
+  // Verify trust proxy setting after server start
+  if (app.get('trust proxy')) {
+    console.log(`Express 'trust proxy' setting is enabled (Value: ${app.get('trust proxy')}).`);
+  } else {
+    console.warn("Express 'trust proxy' setting is NOT enabled. Secure cookies may fail behind a proxy.");
   }
 });
