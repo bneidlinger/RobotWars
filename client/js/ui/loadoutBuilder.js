@@ -651,6 +651,15 @@ class LoadoutBuilder {
 
         this.hide();
 
+        const selectedSnippetName = finalConfig.codeLoadoutName;
+        if (selectedSnippetName && typeof controls !== 'undefined' && controls.loadCodeSnippet) {
+            console.log(`[Enter Lobby] Loading snippet '${selectedSnippetName}' into main editor.`);
+            // Use the Controls method which handles API call and editor update
+            controls.loadCodeSnippet(selectedSnippetName);
+        } else {
+            console.warn(`[Enter Lobby] Could not update main editor. Snippet: ${selectedSnippetName}, Controls: ${typeof controls}`);
+}
+
         // Update header icon (using global controls instance)
         if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
              controls.updatePlayerHeaderDisplay();

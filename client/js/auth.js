@@ -253,41 +253,63 @@ class AuthHandler {
     _onLoginSuccess() {
         console.log("[AuthHandler] _onLoginSuccess Actions Triggered");
 
-        // Minimal delay to allow browser cookie processing to START
+        // Show Loadout Builder immediately - It handles its own auth check/delay now
+        console.log("[AuthHandler] Attempting to show Loadout Builder (will self-verify auth)...");
+        if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
+            window.loadoutBuilderInstance.show(); // Call show, it does the rest
+        } else {
+            console.error("[AuthHandler] LoadoutBuilder instance (window.loadoutBuilderInstance) not available!");
+            alert("Critical Error: Failed to load Robot Builder UI.");
+             if(this.mainContainer) this.mainContainer.style.display = 'flex'; // Ensure main area is visible even if builder fails
+        }
+
+        // Update header ICON via Controls
+        if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
+            controls.updatePlayerHeaderDisplay();
+        } else {
+             console.warn("[AuthHandler] Controls object or updatePlayerHeaderDisplay method not available yet for icon update.");
+        }
+
+        // Connect WebSocket
+        if (typeof network !== 'undefined' && network.connect) {
+             if (!network.socket || !network.socket.connected) {
+                console.log("[AuthHandler] Connecting WebSocket...");
+                network.connect();
+             } else {
+                console.log("[AuthHandler] WebSocket already connected.");
+                 if(typeof controls !== 'undefined') controls.setState('lobby');
+             }
+        } else {
+             console.warn("[AuthHandler] Network object not available to connect.");
+        }
+
+        // --- START: Refresh Editor ---
+        // Attempt to refresh the main editor to fix potential rendering issues
+        // Do this after a very short delay to allow the flex container to render
         setTimeout(() => {
-            console.log("[AuthHandler] Minimal delay complete, proceeding with post-login UI setup...");
-
-            // Show Loadout Builder - It will now handle its own auth check before fetching data
-            console.log("[AuthHandler] Attempting to show Loadout Builder (will self-verify auth)...");
-            if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
-                window.loadoutBuilderInstance.show(); // Call show, it does the rest
-            } else {
-                console.error("[AuthHandler] LoadoutBuilder instance (window.loadoutBuilderInstance) not available!");
-                alert("Critical Error: Failed to load Robot Builder UI.");
-                 if(this.mainContainer) this.mainContainer.style.display = 'flex';
+            if (typeof editor !== 'undefined' && editor?.refresh) {
+                console.log("[AuthHandler _onLoginSuccess] Refreshing main editor...");
+                try { editor.refresh(); } catch(e) { console.error("Error refreshing editor:", e); }
             }
+        }, 50); // Short delay (50ms)
+        // --- END: Refresh Editor ---
 
-            // Update header ICON via Controls (Can stay here, doesn't rely on session cookie immediately)
-            if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
-                controls.updatePlayerHeaderDisplay();
-            } else {
-                 console.warn("[AuthHandler] Controls object or updatePlayerHeaderDisplay method not available yet for icon update.");
-            }
+        // --- START: Populate Controls Snippet Dropdown ---
+        // Needs to happen AFTER login state is confirmed and UI is potentially visible
+        // Can also happen after a short delay, or rely on controls object being ready
+        if (typeof controls !== 'undefined' && controls.populateCodeSnippetSelect) {
+            console.log("[AuthHandler _onLoginSuccess] Populating main editor snippet dropdown...");
+            // Using a small delay here too might be safer if controls initialization
+            // relies on something async, though it shouldn't normally
+            setTimeout(() => {
+                 controls.populateCodeSnippetSelect(); // Call the population method again
+            }, 100); // Slightly longer delay? Or try 0?
+        } else {
+            console.warn("[AuthHandler _onLoginSuccess] Controls object or populateCodeSnippetSelect not found for dropdown population.");
+        }
+        // --- END: Populate Controls Snippet Dropdown ---
 
-            // Connect WebSocket (Can stay here)
-            if (typeof network !== 'undefined' && network.connect) {
-                 if (!network.socket || !network.socket.connected) {
-                    network.connect();
-                 } else {
-                    console.log("[AuthHandler] WebSocket already connected.");
-                     if(typeof controls !== 'undefined') controls.setState('lobby');
-                 }
-            } else {
-                 console.warn("[AuthHandler] Network object not available to connect.");
-            }
-
-        }, 100); // Reduced delay (e.g., 100ms)
-    }
+    } // End _onLoginSuccess
 
 
     /** Actions to perform after logout */
@@ -322,6 +344,10 @@ class AuthHandler {
         // Reset Controls UI state (disables buttons, etc.)
         if (typeof controls !== 'undefined') {
              controls.setState('lobby'); // This will trigger updateUIForState with loggedIn=false
+             // Also clear the controls snippet dropdown
+             if(controls.populateCodeSnippetSelect) {
+                controls.populateCodeSnippetSelect(); // Will clear because loggedIn is false
+             }
         }
 
         // Show the login modal
@@ -368,7 +394,7 @@ class AuthHandler {
 
             if (this._loggedIn) { // Use internal state check
                 console.log("[AuthHandler] User is already logged in. Triggering post-login actions.");
-                this._onLoginSuccess();
+                this._onLoginSuccess(); // Call the updated function
             } else {
                 console.log("[AuthHandler] User is not logged in. Showing login modal.");
                 this._showModal('login-modal');
