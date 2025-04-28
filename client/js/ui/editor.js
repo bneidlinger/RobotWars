@@ -3,6 +3,37 @@
 let editor;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- START: Define Default Code Directly ---
+    const defaultCode = `// Simple Tank Bot (using state object)
+// Moves in a straight line until hit, then changes direction
+
+// Initialize state ONCE
+if (typeof state.currentDirection === 'undefined') {
+    state.currentDirection = 0;
+    state.lastDamage = 0; // Track damage from previous tick
+    console.log('Simple Tank Initialized');
+}
+
+// Check if damage increased since last tick
+if (robot.damage() > state.lastDamage) {
+    console.log('Tank hit! Changing direction.');
+    state.currentDirection = (state.currentDirection + 90 + Math.random() * 90) % 360;
+}
+state.lastDamage = robot.damage(); // Update damage tracking
+
+// Move forward
+robot.drive(state.currentDirection, 3);
+
+// Scan for enemies - use 'let' for temporary variable
+let scanResult = robot.scan(state.currentDirection, 45);
+
+// Fire if enemy detected
+if (scanResult) {
+    robot.fire(scanResult.direction, 2);
+}`;
+    // --- END: Define Default Code Directly ---
+
+
     // Initialize CodeMirror editor
     try {
         editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
@@ -14,31 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
             matchBrackets: true
         });
 
-        // --- START: Improved Default Code Loading ---
-        const defaultSnippetName = 'Simple Tank';
-        let defaultCode = `// Default code if snippet/storage fails\nconsole.log("Default Code Active");\nrobot.drive(0,0);`; // Basic Fallback
-
-        // Attempt to load the default snippet directly from LocalStorageManager defaults
-        if (typeof LocalStorageManager !== 'undefined') {
-            try {
-                 const storageManager = new LocalStorageManager(); // Instance to access defaults
-                 // Access the defaultSnippets property directly
-                 if (storageManager.defaultSnippets && storageManager.defaultSnippets[defaultSnippetName]) {
-                     defaultCode = storageManager.defaultSnippets[defaultSnippetName];
-                     console.log(`Editor initialized with default snippet: ${defaultSnippetName}`);
-                 } else {
-                     // This case means the default wasn't defined in storage.js, which is a code issue
-                     console.error(`Default snippet "${defaultSnippetName}" NOT DEFINED in LocalStorageManager. Using basic default.`);
-                 }
-            } catch (storageError) {
-                 console.error("Error creating storage manager for default code:", storageError);
-            }
-        } else {
-            console.warn("LocalStorageManager not available for default code loading.");
-        }
-
+        // Set the default code defined above
         editor.setValue(defaultCode);
-        // --- END: Improved Default Code Loading ---
+        console.log(`Editor initialized with built-in default code.`);
+
 
     } catch(editorError) {
         console.error("FATAL: Failed to initialize CodeMirror editor:", editorError);
@@ -49,41 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Removed event listener for #sample-code
-
 }); // End DOMContentLoaded
 
 
-// Function remains, uses storageManager defaults if available
-function loadSampleCode(sampleName) {
-    if (!editor) {
-        console.error("Cannot load sample code: Editor not initialized.");
-        return;
-    }
-    let code = '';
-    let snippetsToUse = {};
-
-    if (typeof LocalStorageManager !== 'undefined') {
-        try {
-            const storageManager = new LocalStorageManager();
-            // Use the defined defaults property
-            snippetsToUse = storageManager.defaultSnippets || {};
-        } catch(e) {
-            console.error("Error getting default snippets from storage manager", e);
-        }
-    } else {
-         console.warn("LocalStorageManager not available to load sample code definitions.");
-    }
-
-    if (snippetsToUse[sampleName]) {
-        code = snippetsToUse[sampleName];
-    } else {
-        console.warn(`Sample code definition for '${sampleName}' not found.`);
-        code = `// Sample code '${sampleName}' not found.\nrobot.drive(0,0);`; // Provide fallback
-    }
-
-    if (code) {
-        editor.setValue(code);
-        if (window.addEventLogMessage) window.addEventLogMessage(`Loaded sample code: ${sampleName}`, 'info');
-    }
-}
+// Sample code loading can be removed or kept if you define samples differently later
+// function loadSampleCode(sampleName) { ... } // Keep or remove as needed
