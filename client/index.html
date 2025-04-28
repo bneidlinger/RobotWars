@@ -228,6 +228,9 @@
                 <button id="btn-test-code">Test Code</button>
                 <button id="btn-self-destruct" style="display: none;">Self-Destruct</button>
                 <button id="btn-reset">Reset</button>
+                <!-- START: Added Volume Toggle Button -->
+                <button id="btn-toggle-volume" title="Mute/Unmute Music">🔊</button>
+                <!-- END: Added Volume Toggle Button -->
             </nav>
 
         </header>
@@ -277,10 +280,12 @@
                      </div>
                      <div class="editor-controls">
                          <button id="btn-save-code">Save Code Snippet</button>
+                         <!-- Recommended rename: id="editor-snippet-select" -->
                          <select id="loadout-select"> <!-- For loading snippets into editor -->
                              <option value="" selected>Load Code Snippet...</option>
                              <!-- Options populated by JS -->
                          </select>
+                         <!-- Recommended rename: id="btn-delete-editor-snippet" -->
                          <button id="btn-delete-loadout" disabled title="Delete selected snippet">✖</button>
                          <span id="loadout-status"></span>
                      </div>
@@ -316,6 +321,11 @@
 
     </div> <!-- End .container -->
 
+    <!-- START: Added Audio Element for Background Music -->
+    <audio id="background-music" loop preload="auto" src="/assets/audio/soundtrack.mp3"></audio>
+    <!-- Note: Replace soundtrack.mp3 with your actual filename -->
+    <!-- END: Added Audio Element -->
+
     <!-- Scripts (Corrected Order) -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
@@ -324,18 +334,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
     <script src="js/engine/arena.js"></script>
     <script src="js/engine/game.js"></script>
-    <script src="js/engine/audio.js"></script>
-    <script src="js/utils/storage.js"></script> <!-- Still needed temporarily for snippets -->
+    <script src="js/engine/audio.js"></script> <!-- Defines AudioManager -->
+    <!-- LocalStorageManager no longer needed for snippets/loadouts -->
+    <!-- <script src="js/utils/storage.js"></script> -->
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
-    <script src="js/ui/loadoutBuilder.js"></script> <!-- Builder needs to define global instance -->
+    <script src="js/ui/loadoutBuilder.js"></script> <!-- Defines LoadoutBuilder -->
     <script src="js/ui/lobby.js"></script>
     <script src="js/ui/history.js"></script>
-    <script src="js/network.js"></script>
-    <!-- Load Controls BEFORE Auth -->
-    <script src="js/ui/controls.js"></script> <!-- Defines global 'controls' -->
-    <script src="js/auth.js"></script> <!-- Defines global 'currentUser', uses 'controls' -->
-    <!-- Load Main LAST -->
-    <script src="js/main.js"></script> <!-- Uses globals -->
+    <script src="js/network.js"></script> <!-- Defines Network -->
+    <script src="js/ui/controls.js"></script> <!-- Defines Controls -->
+    <script src="js/auth.js"></script> <!-- Defines AuthHandler, apiCall, uses controls -->
+    <script src="js/main.js"></script> <!-- Instantiates globals, uses others -->
 </body>
 </html>

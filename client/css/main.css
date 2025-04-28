@@ -207,6 +207,29 @@ button:disabled:hover { background-color: #555; } /* Prevent hover effect when d
 }
 #btn-logout:hover:not(:disabled) { background-color: #c0392b; }
 
+/* START: Volume Toggle Button Styles */
+#btn-toggle-volume {
+    background-color: #607d8b; /* Bluish-grey */
+    color: white;
+    padding: 5px 8px; /* Adjust padding if needed */
+    font-size: 1.2rem; /* Make emoji slightly larger */
+    line-height: 1;
+    border-radius: 4px;
+    width: 40px; /* Fixed width */
+    text-align: center;
+}
+#btn-toggle-volume:hover:not(:disabled) { background-color: #546e7a; }
+
+/* Style for when music is muted (optional visual feedback) */
+#btn-toggle-volume.muted {
+    background-color: #444; /* Darker grey when muted */
+    color: #aaa;
+}
+#btn-toggle-volume.muted:hover:not(:disabled) {
+     background-color: #555;
+}
+/* END: Volume Toggle Button Styles */
+
 /* Delete Loadout/Snippet Button (Small Red 'X') */
 #btn-delete-loadout, #builder-delete-loadout {
     background-color: #c0392b; /* Darker Red */
@@ -770,7 +793,9 @@ input#loadout-name-input, input#builder-player-name {
     header img.header-logo { max-height: 30px; align-self: center; }
     header h1 { font-size: 1.4rem; text-align: center; }
     nav { justify-content: center; gap: 5px; width: 100%; flex-direction: column; }
-    nav > button { padding: 5px 8px;} /* Adjust nav button padding */
+    /* START: Added #btn-toggle-volume to responsive padding */
+    nav > button, #btn-toggle-volume { padding: 5px 8px;} /* Adjust nav button padding */
+    /* END: Added #btn-toggle-volume */
     #btn-delete-loadout, #builder-delete-loadout { font-size: 0.8em; padding: 2px 4px;}
 
     .main-content-grid { gap: 10px; }
@@ -822,7 +847,9 @@ input#loadout-name-input, input#builder-player-name {
     #player-name-display { font-size: 1.0rem; }
     #btn-edit-loadout, #btn-bot-manual, #btn-logout { font-size: 0.75rem; padding: 3px 6px; }
     nav { gap: 5px; }
-    nav > button { padding: 4px 6px;}
+    /* START: Added #btn-toggle-volume to responsive padding */
+    nav > button, #btn-toggle-volume { padding: 4px 6px;}
+    /* END: Added #btn-toggle-volume */
     #btn-delete-loadout, #builder-delete-loadout { font-size: 0.7em; padding: 1px 3px;}
     .CodeMirror { font-size: 14px; }
     .log-box, #game-history-list, #event-log, .robot-stat, .api-help li, .api-help code { font-size: 0.85rem; }

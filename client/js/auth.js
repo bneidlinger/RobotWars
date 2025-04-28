@@ -159,7 +159,7 @@ class AuthHandler {
             console.log('[AuthHandler] Login successful:', data);
             this._updateAuthState(true, data.user); // Update internal and global state
             this._closeModal('login-modal');
-            this._onLoginSuccess();
+            this._onLoginSuccess(); // Call the updated success handler
         } catch (error) {
             console.error('[AuthHandler] Login failed:', error);
             this.loginError.textContent = error.message || 'Login failed. Please try again.';
@@ -189,7 +189,7 @@ class AuthHandler {
             console.log('[AuthHandler] Registration successful:', data);
             this._updateAuthState(true, data.user); // Update internal and global state
             this._closeModal('register-modal');
-            this._onLoginSuccess();
+            this._onLoginSuccess(); // Call the updated success handler
         } catch (error) {
             console.error('[AuthHandler] Registration failed:', error);
             this.registerError.textContent = error.message || 'Registration failed. Please try again.';
@@ -253,6 +253,16 @@ class AuthHandler {
     _onLoginSuccess() {
         console.log("[AuthHandler] _onLoginSuccess Actions Triggered");
 
+        // --- START: Request Music Start ---
+        // Attempt to start music after login (counts as user interaction context)
+        if (typeof audioManager !== 'undefined' && audioManager.requestMusicStart) {
+            console.log("[AuthHandler _onLoginSuccess] Requesting background music start...");
+            audioManager.requestMusicStart();
+        } else {
+             console.warn("[AuthHandler _onLoginSuccess] AudioManager or requestMusicStart not found.");
+        }
+        // --- END: Request Music Start ---
+
         // Show Loadout Builder immediately - It handles its own auth check/delay now
         console.log("[AuthHandler] Attempting to show Loadout Builder (will self-verify auth)...");
         if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
@@ -296,7 +306,6 @@ class AuthHandler {
 
         // --- START: Populate Controls Snippet Dropdown ---
         // Needs to happen AFTER login state is confirmed and UI is potentially visible
-        // Can also happen after a short delay, or rely on controls object being ready
         if (typeof controls !== 'undefined' && controls.populateCodeSnippetSelect) {
             console.log("[AuthHandler _onLoginSuccess] Populating main editor snippet dropdown...");
             // Using a small delay here too might be safer if controls initialization
@@ -346,6 +355,7 @@ class AuthHandler {
              controls.setState('lobby'); // This will trigger updateUIForState with loggedIn=false
              // Also clear the controls snippet dropdown
              if(controls.populateCodeSnippetSelect) {
+                console.log("[AuthHandler _onLogoutSuccess] Clearing main editor snippet dropdown.");
                 controls.populateCodeSnippetSelect(); // Will clear because loggedIn is false
              }
         }
