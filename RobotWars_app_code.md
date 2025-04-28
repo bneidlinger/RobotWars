@@ -3074,6 +3074,15 @@ class LoadoutBuilder {
 
         this.hide();
 
+        const selectedSnippetName = finalConfig.codeLoadoutName;
+        if (selectedSnippetName && typeof controls !== 'undefined' && controls.loadCodeSnippet) {
+            console.log(`[Enter Lobby] Loading snippet '${selectedSnippetName}' into main editor.`);
+            // Use the Controls method which handles API call and editor update
+            controls.loadCodeSnippet(selectedSnippetName);
+        } else {
+            console.warn(`[Enter Lobby] Could not update main editor. Snippet: ${selectedSnippetName}, Controls: ${typeof controls}`);
+}
+
         // Update header icon (using global controls instance)
         if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
              controls.updatePlayerHeaderDisplay();
@@ -4212,41 +4221,63 @@ class AuthHandler {
     _onLoginSuccess() {
         console.log("[AuthHandler] _onLoginSuccess Actions Triggered");
 
-        // Minimal delay to allow browser cookie processing to START
+        // Show Loadout Builder immediately - It handles its own auth check/delay now
+        console.log("[AuthHandler] Attempting to show Loadout Builder (will self-verify auth)...");
+        if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
+            window.loadoutBuilderInstance.show(); // Call show, it does the rest
+        } else {
+            console.error("[AuthHandler] LoadoutBuilder instance (window.loadoutBuilderInstance) not available!");
+            alert("Critical Error: Failed to load Robot Builder UI.");
+             if(this.mainContainer) this.mainContainer.style.display = 'flex'; // Ensure main area is visible even if builder fails
+        }
+
+        // Update header ICON via Controls
+        if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
+            controls.updatePlayerHeaderDisplay();
+        } else {
+             console.warn("[AuthHandler] Controls object or updatePlayerHeaderDisplay method not available yet for icon update.");
+        }
+
+        // Connect WebSocket
+        if (typeof network !== 'undefined' && network.connect) {
+             if (!network.socket || !network.socket.connected) {
+                console.log("[AuthHandler] Connecting WebSocket...");
+                network.connect();
+             } else {
+                console.log("[AuthHandler] WebSocket already connected.");
+                 if(typeof controls !== 'undefined') controls.setState('lobby');
+             }
+        } else {
+             console.warn("[AuthHandler] Network object not available to connect.");
+        }
+
+        // --- START: Refresh Editor ---
+        // Attempt to refresh the main editor to fix potential rendering issues
+        // Do this after a very short delay to allow the flex container to render
         setTimeout(() => {
-            console.log("[AuthHandler] Minimal delay complete, proceeding with post-login UI setup...");
-
-            // Show Loadout Builder - It will now handle its own auth check before fetching data
-            console.log("[AuthHandler] Attempting to show Loadout Builder (will self-verify auth)...");
-            if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
-                window.loadoutBuilderInstance.show(); // Call show, it does the rest
-            } else {
-                console.error("[AuthHandler] LoadoutBuilder instance (window.loadoutBuilderInstance) not available!");
-                alert("Critical Error: Failed to load Robot Builder UI.");
-                 if(this.mainContainer) this.mainContainer.style.display = 'flex';
+            if (typeof editor !== 'undefined' && editor?.refresh) {
+                console.log("[AuthHandler _onLoginSuccess] Refreshing main editor...");
+                try { editor.refresh(); } catch(e) { console.error("Error refreshing editor:", e); }
             }
+        }, 50); // Short delay (50ms)
+        // --- END: Refresh Editor ---
 
-            // Update header ICON via Controls (Can stay here, doesn't rely on session cookie immediately)
-            if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
-                controls.updatePlayerHeaderDisplay();
-            } else {
-                 console.warn("[AuthHandler] Controls object or updatePlayerHeaderDisplay method not available yet for icon update.");
-            }
+        // --- START: Populate Controls Snippet Dropdown ---
+        // Needs to happen AFTER login state is confirmed and UI is potentially visible
+        // Can also happen after a short delay, or rely on controls object being ready
+        if (typeof controls !== 'undefined' && controls.populateCodeSnippetSelect) {
+            console.log("[AuthHandler _onLoginSuccess] Populating main editor snippet dropdown...");
+            // Using a small delay here too might be safer if controls initialization
+            // relies on something async, though it shouldn't normally
+            setTimeout(() => {
+                 controls.populateCodeSnippetSelect(); // Call the population method again
+            }, 100); // Slightly longer delay? Or try 0?
+        } else {
+            console.warn("[AuthHandler _onLoginSuccess] Controls object or populateCodeSnippetSelect not found for dropdown population.");
+        }
+        // --- END: Populate Controls Snippet Dropdown ---
 
-            // Connect WebSocket (Can stay here)
-            if (typeof network !== 'undefined' && network.connect) {
-                 if (!network.socket || !network.socket.connected) {
-                    network.connect();
-                 } else {
-                    console.log("[AuthHandler] WebSocket already connected.");
-                     if(typeof controls !== 'undefined') controls.setState('lobby');
-                 }
-            } else {
-                 console.warn("[AuthHandler] Network object not available to connect.");
-            }
-
-        }, 100); // Reduced delay (e.g., 100ms)
-    }
+    } // End _onLoginSuccess
 
 
     /** Actions to perform after logout */
@@ -4281,6 +4312,10 @@ class AuthHandler {
         // Reset Controls UI state (disables buttons, etc.)
         if (typeof controls !== 'undefined') {
              controls.setState('lobby'); // This will trigger updateUIForState with loggedIn=false
+             // Also clear the controls snippet dropdown
+             if(controls.populateCodeSnippetSelect) {
+                controls.populateCodeSnippetSelect(); // Will clear because loggedIn is false
+             }
         }
 
         // Show the login modal
@@ -4327,7 +4362,7 @@ class AuthHandler {
 
             if (this._loggedIn) { // Use internal state check
                 console.log("[AuthHandler] User is already logged in. Triggering post-login actions.");
-                this._onLoginSuccess();
+                this._onLoginSuccess(); // Call the updated function
             } else {
                 console.log("[AuthHandler] User is not logged in. Showing login modal.");
                 this._showModal('login-modal');
@@ -5930,7 +5965,16 @@ const sessionMiddleware = session({
 // --- Express Middleware ---
 app.use(express.json()); // Middleware to parse JSON request bodies
 app.use(express.urlencoded({ extended: true })); // Middleware for URL-encoded request bodies
-app.use(sessionMiddleware); // Use session middleware for all Express routes AFTER body parsing
+
+// --- Trust Proxy ---
+// ***** IMPORTANT: Add this BEFORE app.use(sessionMiddleware) *****
+// Necessary when running behind a reverse proxy (like Render)
+// for secure cookies (cookie.secure=true) to work correctly.
+// It tells Express to trust the X-Forwarded-* headers set by the proxy.
+app.set('trust proxy', 1); // Trust the first proxy hop (common setting for Render/Heroku)
+// --- End Trust Proxy ---
+
+app.use(sessionMiddleware); // Use session middleware for all Express routes AFTER body parsing and trust proxy
 
 // --- Socket.IO Session Sharing ---
 // Make express-session data accessible to Socket.IO connection handlers
@@ -5939,8 +5983,8 @@ io.engine.use(sessionMiddleware);
 
 // --- API Routes ---
 app.use('/api/auth', authRoutes);
-app.use('/api/snippets', snippetRoutes); // Placeholder, requires authMiddleware inside
-app.use('/api/loadouts', loadoutRoutes); // Placeholder, requires authMiddleware inside
+app.use('/api/snippets', snippetRoutes); // Applies authMiddleware inside the route file
+app.use('/api/loadouts', loadoutRoutes); // Applies authMiddleware inside the route file
 // --- End API Routes ---
 
 // --- Static Files ---
@@ -5953,6 +5997,8 @@ app.use(express.static(clientPath));
 // --- Catch-all for SPA (Single Page Application) routing ---
 // If no API route or static file matched, send index.html for client-side routing
 app.get('*', (req, res) => {
+  // Log requests that fall through to the catch-all for debugging proxy/routing issues
+  console.log(`[Catch-All] Serving index.html for path: ${req.path}`);
   res.sendFile(path.join(clientPath, 'index.html'));
 });
 // --- End Catch-all ---
@@ -5964,11 +6010,22 @@ initializeSocketHandler(io, db); // Pass db if GameManager or other parts need i
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Access the game at: http://localhost:${PORT}`);
+  if (process.env.NODE_ENV === 'production') {
+      console.log("Running in PRODUCTION mode.");
+  } else {
+       console.log("Running in DEVELOPMENT mode.");
+  }
   if (!process.env.SESSION_SECRET && process.env.NODE_ENV !== 'development') {
       console.warn("Reminder: SESSION_SECRET environment variable not set.");
   }
-  if (process.env.NODE_ENV !== 'production' && sessionMiddleware.cookie?.secure) {
+  if (process.env.NODE_ENV !== 'production' && sessionMiddleware.options.cookie.secure) {
        console.warn("Warning: Secure cookies enabled but NODE_ENV is not 'production'. Cookies may not work over HTTP.");
+  }
+  // Verify trust proxy setting after server start
+  if (app.get('trust proxy')) {
+    console.log(`Express 'trust proxy' setting is enabled (Value: ${app.get('trust proxy')}).`);
+  } else {
+    console.warn("Express 'trust proxy' setting is NOT enabled. Secure cookies may fail behind a proxy.");
   }
 });
 ```
@@ -5980,12 +6037,23 @@ server.listen(PORT, () => {
 // Middleware to check if the user is authenticated
 
 module.exports = (req, res, next) => {
+    // --- START: Added Logging ---
+    console.log(`[AuthMiddleware] Triggered for path: ${req.path}`);
+    console.log(`[AuthMiddleware] Session ID from Cookie (via express-session): ${req.sessionID}`);
+    console.log(`[AuthMiddleware] req.session object:`, JSON.stringify(req.session)); // Log the session object content
+    // console.log('[AuthMiddleware] Cookie Header Raw:', req.headers['cookie']); // Optionally log raw header if needed
+    // --- END: Added Logging ---
+
+    // Original check
     if (req.session && req.session.userId) {
         // User is authenticated, proceed to the next middleware or route handler
+        console.log(`[AuthMiddleware] Authorized. User ID: ${req.session.userId}, Username: ${req.session.username}`);
+        // Optionally attach userId to req for easier access in routes (though req.session.userId is standard)
+        // req.userId = req.session.userId;
         return next();
     } else {
         // User is not authenticated
-        console.warn('[Auth Middleware] Access denied: No active session.');
+        console.warn('[AuthMiddleware] Access DENIED: No active session or userId found in session.');
         return res.status(401).json({ message: 'Authentication required. Please log in.' });
     }
 };

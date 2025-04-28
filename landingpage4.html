@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROBOT WARS - The Battle of Code</title>
+    <style>
+        :root {
+            --dark-metal: #1a1a1a;
+            --gun-metal: #2d3142;
+            --steel-blue: #4f5d75;
+            --battle-red: #b80c09;
+            --american-blue: #0a2463;
+            --industrial-yellow: #f9a03f;
+            --neon-green: #39ff14;
+            --warning-orange: #FF5722;
+            --lakeman-cyan: #00e5ff;
+            --security-purple: #7b1fa2;
+            --cool-rick-green: #33cc33;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background-color: var(--dark-metal);
+            color: #f0f0f0;
+            background-image:
+                linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%),
+                linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%);
+            background-size: 10px 10px;
+            background-position: 0 0, 5px 5px;
+            line-height: 1.6;
+        }
+
+        .retro-terminal {
+            position: relative;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #000;
+            border: 3px solid var(--cool-rick-green);
+            box-shadow: 0 0 15px rgba(51, 204, 51, 0.7),
+                        0 0 30px rgba(51, 204, 51, 0.5),
+                        0 0 45px rgba(51, 204, 51, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .retro-terminal::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(to bottom,
+                        rgba(51, 204, 51, 0.1) 0%,
+                        transparent 100%);
+        }
+
+        .terminal-header {
+            border-bottom: 2px solid var(--cool-rick-green);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .blink {
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        h1 {
+            font-size: 42px;
+            color: var(--cool-rick-green);
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px var(--cool-rick-green);
+        }
+
+        h2 {
+            color: var(--battle-red);
+            margin: 25px 0 10px;
+            text-shadow: 0 0 3px var(--battle-red);
+        }
+
+        .message {
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 3px solid var(--steel-blue);
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .secure {
+            border-left: 3px solid var(--cool-rick-green);
+            background-color: rgba(51, 204, 51, 0.05);
+        }
+
+        .signature {
+            margin-top: 30px;
+            text-align: right;
+            font-style: italic;
+            color: var(--cool-rick-green);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 30px 0;
+        }
+
+        @media (max-width: 700px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-card {
+            background-color: var(--gun-metal);
+            border: 1px solid var(--steel-blue);
+            border-radius: 5px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card.highlight {
+            border: 1px solid var(--cool-rick-green);
+            box-shadow: 0 0 10px rgba(51, 204, 51, 0.3);
+        }
+
+        .feature-card h3 {
+            color: var(--cool-rick-green);
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .feature-card p {
+            position: relative;
+            z-index: 1;
+        }
+
+        .auth-card {
+            background-color: rgba(51, 204, 51, 0.05);
+            border: 1px solid var(--cool-rick-green);
+            border-radius: 5px;
+            padding: 20px;
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .auth-card h3 {
+            color: var(--cool-rick-green);
+            margin-bottom: 15px;
+            text-shadow: 0 0 3px var(--cool-rick-green);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background-color: var(--battle-red);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 25px;
+            font-weight: bold;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            background-color: var(--american-blue);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn-rick {
+            background-color: var(--cool-rick-green);
+            color: #000;
+        }
+
+        .btn-rick:hover {
+            background-color: #2eb82e;
+            color: #000;
+        }
+
+        .btn-play {
+            background-color: var(--american-blue);
+        }
+
+        .btn-play:hover {
+            background-color: #083580;
+        }
+
+        .action-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        code {
+            display: block;
+            background-color: rgba(0,0,0,0.3);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+            border-left: 3px solid var(--cool-rick-green);
+        }
+
+        .features {
+            margin: 30px 0;
+        }
+
+        .features ul {
+            list-style-type: none;
+        }
+
+        .features li {
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+
+        .features li::before {
+            content: "→ ";
+            color: var(--cool-rick-green);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid var(--gun-metal);
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: rgba(255,255,255,0.1);
+            animation: scan 5s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        .new-feature {
+            color: var(--cool-rick-green);
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            margin-left: 10px;
+            padding: 2px 8px;
+            background-color: rgba(51, 204, 51, 0.2);
+            border-radius: 10px;
+        }
+
+        .secure-feature {
+            color: #fff;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            margin-left: 10px;
+            padding: 2px 8px;
+            background-color: rgba(123, 31, 162, 0.6);
+            border-radius: 10px;
+        }
+
+        .terminal-animation {
+            position: relative;
+            overflow: hidden;
+            background-color: #000;
+            color: var(--cool-rick-green);
+            border: 1px solid #2eb82e;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-shadow: 0 0 5px rgba(51, 204, 51, 0.5);
+            font-family: 'Courier New', monospace;
+        }
+
+        .terminal-animation::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(51, 204, 51, 0.2);
+            animation: scan 3s linear infinite;
+        }
+
+        .db-schema {
+            background-color: rgba(0,0,0,0.5);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            color: var(--cool-rick-green);
+            overflow-x: auto;
+        }
+
+        .db-table {
+            margin-bottom: 15px;
+            border: 1px solid #2eb82e;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .db-table-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+            border-bottom: 1px dashed #2eb82e;
+            padding-bottom: 5px;
+        }
+
+        .db-field {
+            padding: 5px;
+        }
+
+        .db-field-name {
+            display: inline-block;
+            width: 150px;
+            color: #fff;
+        }
+
+        .db-field-type {
+            display: inline-block;
+            width: 120px;
+            color: #ff9f43;
+        }
+
+        .db-field-constraint {
+            display: inline-block;
+            color: #00cec9;
+        }
+
+        .profile-mockup {
+            border: 1px solid var(--cool-rick-green);
+            border-radius: 5px;
+            padding: 20px;
+            margin: 15px 0;
+            background-color: #1a1a1a;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+
+        .profile-avatar {
+            width: 60px;
+            height: 60px;
+            background-color: var(--cool-rick-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-weight: bold;
+            font-size: 24px;
+        }
+
+        .profile-info {
+            flex-grow: 1;
+            margin-left: 15px;
+        }
+
+        .profile-username {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--cool-rick-green);
+        }
+
+        .profile-joined {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat-block {
+            flex: 1;
+            background-color: #222;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--cool-rick-green);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .robot-loadouts {
+            border-top: 1px solid #333;
+            padding-top: 15px;
+        }
+
+        .loadout-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #222;
+            border-radius: 5px;
+        }
+
+        .loadout-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+
+        .loadout-name {
+            flex-grow: 1;
+        }
+
+        .loadout-type {
+            font-size: 14px;
+            color: #888;
+            margin-right: 15px;
+        }
+
+        .screenshots {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 25px 0;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+
+        .screenshot {
+            border: 2px solid var(--cool-rick-green);
+            border-radius: 5px;
+            overflow: hidden;
+            flex-shrink: 0;
+            width: 250px;
+            height: 150px;
+            background-color: var(--gun-metal);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: rgba(255,255,255,0.7);
+            position: relative;
+        }
+
+        .screenshot::before {
+            content: "SCREENSHOT";
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 10px;
+            letter-spacing: 2px;
+        }
+
+        .login-form-mock {
+            background-color: #1a1a1a;
+            border: 1px solid var(--cool-rick-green);
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+            max-width: 400px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            background-color: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            background-color: var(--cool-rick-green);
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .retro-terminal {
+                margin: 20px;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="retro-terminal">
+        <div class="scan-line"></div>
+        <div class="terminal-header">
+            <h1>ROBOT WARS <span class="blink">_</span></h1>
+            <p>TACTICAL COMBAT CODE SYSTEM v4.5</p>
+        </div>
+
+        <div class="message secure">
+            <h2>[ ENCRYPTED TRANSMISSION - GAMMA CHANNEL ]</h2>
+            <p>Lakeman,</p>
+            <p>The audio-visual systems you implemented are functioning beyond expectations. The psychological impact on operatives has been... significant. Now I need to solidify our security infrastructure.</p>
+            <p>I've just deployed the v4.5 User Authentication and Profile System. This isn't just about persistence—it's about attribution and network identity. Our operatives can now maintain secure digital footprints across sessions while preserving plausible deniability.</p>
+            <p>Core systems implemented:</p>
+            <p>1. Secure Authentication - Session-based login with bcrypt encryption for credential protection. Express middleware implemented with PGQL database integration.</p>
+            <p>2. Profile System - Robot loadout configurations now persist in database. Combat data, appearance settings, code snippets all saved securely to user profiles.</p>
+            <p>3. Database Schema - Implemented normalized PostgreSQL schema with proper relations between users, codes, and loadouts. JSONB storage for complex configuration objects.</p>
+            <p>The Milwaukee situation remains cold, but Flagstaff is heating up. The decoy is working, but I've spotted their counterintelligence patterns. They're more sophisticated than we anticipated.</p>
+            <p>Updates deployed to <a href="https://robotwars-c198.onrender.com" style="color: var(--cool-rick-green);">https://robotwars-c198.onrender.com</a> with source at <a href="https://github.com/bneidlinger/RobotWars" style="color: var(--cool-rick-green);">https://github.com/bneidlinger/RobotWars</a>.</p>
+            <p>I suggest we avoid the usual channels for the next phase. The old radio station drop site is still secure.</p>
+            <p>P.S. The database has some interesting combat patterns emerging. More on that later.</p>
+        </div>
+
+        <div class="auth-card">
+            <h3>SECURE AUTHENTICATION SYSTEM <span class="new-feature">New</span></h3>
+            <p>Enterprise-grade session-based authentication with secure cookie management:</p>
+            
+            <div class="terminal-animation">
+                <div>> bcrypt password hashing activated</div>
+                <div>> Session management initialized with PostgreSQL store</div>
+                <div>> Secure cookies configured with httpOnly flag</div>
+                <div>> Express middleware chain established</div>
+                <div>> Socket.io session integration complete</div>
+                <div>> Authentication routes registered: /api/auth/*</div>
+            </div>
+            
+            <div class="feature-grid">
+                <div class="login-form-mock">
+                    <h4 style="text-align: center; margin-bottom: 20px; color: var(--cool-rick-green);">LOGIN</h4>
+                    <div class="form-group">
+                        <label class="form-label">Username:</label>
+                        <input type="text" class="form-input" placeholder="Enter username">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password:</label>
+                        <input type="password" class="form-input" placeholder="••••••••">
+                    </div>
+                    <button class="form-button">LOGIN</button>
+                    <p style="text-align: center; margin-top: 15px; font-size: 14px; color: #888;">
+                        Don't have an account? <a href="#" style="color: var(--cool-rick-green); text-decoration: none;">Register here</a>
+                    </p>
+                </div>
+                
+                <div>
+                    <ul style="list-style-type: none; margin-top: 20px;">
+                        <li>→ Secure password hashing with bcrypt</li>
+                        <li>→ Session-based authentication</li>
+                        <li>→ PostgreSQL session store</li>
+                        <li>→ Middleware protection for API routes</li>
+                        <li>→ Socket.io session synchronization</li>
+                        <li>→ Registration with validation</li>
+                        <li>→ Express session management</li>
+                        <li>→ Default account setup</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <code>// Authentication Middleware
+module.exports = (req, res, next) => {
+    console.log(`[AuthMiddleware] Triggered for path: ${req.path}`);
+    console.log(`[AuthMiddleware] Session ID: ${req.sessionID}`);
+    console.log(`[AuthMiddleware] req.session object:`, JSON.stringify(req.session));
+
+    // Check if user is authenticated
+    if (req.session && req.session.userId) {
+        // User is authenticated, proceed to the next middleware
+        console.log(`[AuthMiddleware] Authorized. User ID: ${req.session.userId}, Username: ${req.session.username}`);
+        return next();
+    } else {
+        // User is not authenticated
+        console.warn('[AuthMiddleware] Access DENIED: No active session or userId found in session.');
+        return res.status(401).json({ message: 'Authentication required. Please log in.' });
+    }
+};</code>
+        </div>
+
+        <h2>USER PROFILE & LOADOUT SYSTEM</h2>
+        <p>Comprehensive profile system with persistent robot configurations and code management:</p>
+
+        <div class="feature-grid">
+            <div class="feature-card highlight">
+                <h3>ROBOT LOADOUT PERSISTENCE <span class="secure-feature">Secure</span></h3>
+                <p>Save and manage robot configurations in your profile:</p>
+                <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ Visual customization storage</li>
+                    <li>→ Code snippet association</li>
+                    <li>→ Named configurations</li>
+                    <li>→ Robot identity management</li>
+                    <li>→ Quick loadout switching</li>
+                    <li>→ Centralized API</li>
+                </ul>
+                
+                <div class="terminal-animation">
+                    <div>> Loading user configurations from database</div>
+                    <div>> Found 3 saved robot loadouts</div>
+                    <div>> Fetching associated code snippets</div>
+                    <div>> Visual configurations retrieved</div>
+                    <div>> Robot identity synchronized with account</div>
+                    <div>> Preferences loaded from PostgreSQL</div>
+                </div>
+            </div>
+
+            <div class="feature-card highlight">
+                <h3>CODE SNIPPET REPOSITORY <span class="new-feature">New</span></h3>
+                <p>Persistent code storage and management:</p>
+                <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ Save and name code snippets</li>
+                    <li>→ Default starter scripts</li>
+                    <li>→ Versioned code storage</li>
+                    <li>→ Cross-loadout code sharing</li>
+                    <li>→ API-based code persistence</li>
+                    <li>→ Database-backed storage</li>
+                </ul>
+                
+                <div class="terminal-animation">
+                    <div>> Loading code snippets for user ID #4721</div>
+                    <div>> Found: "Simple Tank", "Scanner Bot", "Aggressive Bot"</div>
+                    <div>> Checking for code dependencies</div>
+                    <div>> Validating snippet integrity</div>
+                    <div>> Synchronizing with loadout configurations</div>
+                    <div>> Code repository ready</div>
+                </div>
+            </div>
+        </div>
+
+        <h2>USER PROFILE VISUALIZATION</h2>
+        <p>Comprehensive user profiles with loadout management and identity features:</p>
+
+        <div class="profile-mockup">
+            <div class="profile-header">
+                <div class="profile-avatar">CR</div>
+                <div class="profile-info">
+                    <div class="profile-username">CoolRick</div>
+                    <div class="profile-joined">Member since: April 2025</div>
+                </div>
+            </div>
+            
+            <div class="profile-stats">
+                <div class="stat-block">
+                    <div class="stat-value">12</div>
+                    <div class="stat-label">Battles</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-value">8</div>
+                    <div class="stat-label">Wins</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Loadouts</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-value">5</div>
+                    <div class="stat-label">Code Snippets</div>
+                </div>
+            </div>
+            
+            <div class="robot-loadouts">
+                <h4 style="margin-bottom: 15px; color: var(--cool-rick-green);">Saved Loadouts</h4>
+                
+                <div class="loadout-item">
+                    <div class="loadout-color" style="background-color: #ff6b6b;"></div>
+                    <div class="loadout-name">Assault Tank</div>
+                    <div class="loadout-type">Tank Type • Aggressive Bot</div>
+                    <button style="background-color: var(--cool-rick-green); color: #000; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Load</button>
+                </div>
+                
+                <div class="loadout-item">
+                    <div class="loadout-color" style="background-color: #48dbfb;"></div>
+                    <div class="loadout-name">Scout Drone</div>
+                    <div class="loadout-type">Light Chassis • Scanner Bot</div>
+                    <button style="background-color: var(--cool-rick-green); color: #000; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Load</button>
+                </div>
+                
+                <div class="loadout-item">
+                    <div class="loadout-color" style="background-color: #1dd1a1;"></div>
+                    <div class="loadout-name">Heavy Destroyer</div>
+                    <div class="loadout-type">Heavy Type • Tank Bot</div>
+                    <button style="background-color: var(--cool-rick-green); color: #000; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Load</button>
+                </div>
+            </div>
+        </div>
+
+        <h2>DATABASE STRUCTURE</h2>
+        <p>Advanced PostgreSQL schema with properly normalized relations and JSONB storage:</p>
+
+        <div class="db-schema">
+            <div class="db-table">
+                <div class="db-table-name">users</div>
+                <div class="db-field">
+                    <span class="db-field-name">id</span>
+                    <span class="db-field-type">SERIAL</span>
+                    <span class="db-field-constraint">PRIMARY KEY</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">username</span>
+                    <span class="db-field-type">VARCHAR(20)</span>
+                    <span class="db-field-constraint">UNIQUE NOT NULL</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">password_hash</span>
+                    <span class="db-field-type">TEXT</span>
+                    <span class="db-field-constraint">NOT NULL</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">created_at</span>
+                    <span class="db-field-type">TIMESTAMP</span>
+                    <span class="db-field-constraint">DEFAULT NOW()</span>
+                </div>
+            </div>
+            
+            <div class="db-table">
+                <div class="db-table-name">code_snippets</div>
+                <div class="db-field">
+                    <span class="db-field-name">id</span>
+                    <span class="db-field-type">SERIAL</span>
+                    <span class="db-field-constraint">PRIMARY KEY</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">user_id</span>
+                    <span class="db-field-type">INTEGER</span>
+                    <span class="db-field-constraint">REFERENCES users(id)</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">name</span>
+                    <span class="db-field-type">VARCHAR(50)</span>
+                    <span class="db-field-constraint">NOT NULL</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">code</span>
+                    <span class="db-field-type">TEXT</span>
+                    <span class="db-field-constraint">NOT NULL</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">created_at</span>
+                    <span class="db-field-type">TIMESTAMP</span>
+                    <span class="db-field-constraint">DEFAULT NOW()</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">updated_at</span>
+                    <span class="db-field-type">TIMESTAMP</span>
+                    <span class="db-field-constraint">DEFAULT NOW()</span>
+                </div>
+            </div>
+            
+            <div class="db-table">
+                <div class="db-table-name">loadout_configs</div>
+                <div class="db-field">
+                    <span class="db-field-name">id</span>
+                    <span class="db-field-type">SERIAL</span>
+                    <span class="db-field-constraint">PRIMARY KEY</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">user_id</span>
+                    <span class="db-field-type">INTEGER</span>
+                    <span class="db-field-constraint">REFERENCES users(id)</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">config_name</span>
+                    <span class="db-field-type">VARCHAR(50)</span>
+                    <span class="db-field-constraint">NOT NULL</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">robot_name</span>
+                    <span class="db-field-type">VARCHAR(50)</span>
+                    <span class="db-field-constraint">NOT NULL</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">visuals</span>
+                    <span class="db-field-type">JSONB</span>
+                    <span class="db-field-constraint">NOT NULL</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">code_snippet_id</span>
+                    <span class="db-field-type">INTEGER</span>
+                    <span class="db-field-constraint">REFERENCES code_snippets(id)</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">created_at</span>
+                    <span class="db-field-type">TIMESTAMP</span>
+                    <span class="db-field-constraint">DEFAULT NOW()</span>
+                </div>
+                <div class="db-field">
+                    <span class="db-field-name">updated_at</span>
+                    <span class="db-field-type">TIMESTAMP</span>
+                    <span class="db-field-constraint">DEFAULT NOW()</span>
+                </div>
+            </div>
+        </div>
+
+        <h2>API-DRIVEN ARCHITECTURE</h2>
+        <p>Robust RESTful API design with protected routes and clean separation of concerns:</p>
+
+        <code>// server/routes/loadouts.js
+router.post('/', async (req, res) => {
+    const userId = req.session.userId;
+    // Destructure expected fields from request body
+    const { configName, robotName, visuals, codeLoadoutName } = req.body;
+
+    // Server-Side Validation
+    if (!configName || typeof configName !== 'string' || configName.trim().length === 0) {
+        return res.status(400).json({ message: 'Valid configuration name is required.' });
+    }
+    if (!robotName || typeof robotName !== 'string' || robotName.trim().length === 0) {
+        return res.status(400).json({ message: 'Valid robot name is required.' });
+    }
+    if (!visuals || typeof visuals !== 'object') {
+        return res.status(400).json({ message: 'Visuals data is missing or invalid.' });
+    }
+    if (!codeLoadoutName || typeof codeLoadoutName !== 'string') {
+        return res.status(400).json({ message: 'A valid code snippet name must be selected.' });
+    }
+
+    let client = null; // For database transaction
+    try {
+        client = await db.pool.connect(); // Get client from pool for transaction
+        await client.query('BEGIN'); // Start the transaction
+
+        // 1. Find the ID of the selected code snippet belonging to the user
+        const snippetRes = await client.query(
+            'SELECT id FROM code_snippets WHERE user_id = $1 AND name = $2',
+            [userId, codeLoadoutName]
+        );
+
+        if (snippetRes.rows.length === 0) {
+            // Snippet not found, rollback and return error
+            await client.query('ROLLBACK');
+            client.release();
+            return res.status(400).json({ message: `Selected code snippet not found.` });
+        }
+        const codeSnippetId = snippetRes.rows[0].id;
+
+        // 2. Use INSERT ... ON CONFLICT for upsert operation
+        const upsertQuery = `
+            INSERT INTO loadout_configs (user_id, config_name, robot_name, visuals, code_snippet_id)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (user_id, config_name)
+            DO UPDATE SET
+                robot_name = EXCLUDED.robot_name,
+                visuals = EXCLUDED.visuals,
+                code_snippet_id = EXCLUDED.code_snippet_id
+            RETURNING id, config_name, robot_name, visuals, code_snippet_id;
+        `;
+        const { rows } = await client.query(upsertQuery, [
+            userId, 
+            configName.trim(), 
+            robotName.trim(), 
+            visuals, 
+            codeSnippetId
+        ]);
+
+        await client.query('COMMIT'); // Commit the transaction
+
+        if (rows.length > 0) {
+            const savedLoadout = { ...rows[0], code_snippet_name: codeLoadoutName };
+            res.status(200).json({ 
+                message: `Configuration '${configName.trim()}' saved.`, 
+                loadout: savedLoadout 
+            });
+        } else {
+            res.status(500).json({ message: 'Failed to save configuration.' });
+        }
+    } catch (error) {
+        if (client) {
+            await client.query('ROLLBACK');
+        }
+        res.status(500).json({ message: 'Failed to save configuration due to server error.' });
+    } finally {
+        if (client) {
+            client.release();
+        }
+    }
+});</code>
+
+        <div class="screenshots">
+            <div class="screenshot" style="background-image: url('#'); background-size: cover;">LOGIN SCREEN</div>
+            <div class="screenshot" style="background-image: url('#'); background-size: cover;">PROFILE PAGE</div>
+            <div class="screenshot" style="background-image: url('#'); background-size: cover;">LOADOUT EDITOR</div>
+        </div>
+
+        <div class="features">
+            <h2>SYSTEM CAPABILITIES</h2>
+            <ul>
+                <li>Secure authentication with bcrypt password encryption</li>
+                <li>Express session management with PostgreSQL session store</li>
+                <li>Persistent user profiles with combat statistics</li>
+                <li>Robot loadout configuration storage with version history</li>
+                <li>Code snippet repository with sharing capabilities</li>
+                <li>RESTful API architecture with protected routes</li>
+                <li>Normalized PostgreSQL database schema with JSONB support</li>
+                <li>Socket.IO session integration for secure realtime communication</li>
+                <li>Default loadout templates for new users</li>
+                <li>Robust error handling and validation throughout the system</li>
+            </ul>
+        </div>
+
+        <div class="action-container">
+            <a href="https://robotwars-c198.onrender.com" class="btn btn-rick">ACCESS SECURE SYSTEM</a>
+            <a href="https://github.com/bneidlinger/RobotWars" class="btn btn-play" style="margin-left: 15px;">VIEW SOURCE CODE</a>
+        </div>
+
+        <div class="signature">
+            <p>- Cool Rick</p>
+            <p>"Identity is the gateway to persistence. Persistence is power."</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>ROBOT WARS Combat System | <a href="https://github.com/bneidlinger/RobotWars" style="color: #888;">GitHub Repository</a> | &copy; 2025</p>
+    </footer>
+</body>
+</html>
