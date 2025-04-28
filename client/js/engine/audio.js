@@ -10,15 +10,15 @@ class AudioManager {
         this.sounds = {};
         this.soundEffectsMuted = false; // For sound effects only
         this.soundEffectFiles = {
-            fire: '/assets/audio/fire.wav',
-            explosion: '/assets/audio/explosion.wav',
-            hit: '/assets/audio/hit.wav'
+            fire: '/assets/audio/fire.mp3',
+            explosion: '/assets/audio/explosion.mp3',
+            hit: '/assets/audio/hit.mp3'
         };
 
         // --- NEW: Background Music Elements & State ---
         this.backgroundMusicElement = document.getElementById('background-music');
         this.volumeToggleButton = document.getElementById('btn-toggle-volume');
-        this.isMusicMuted = true; // Start muted by default
+        this.isMusicMuted = false; // start playing by default
         this.musicStarted = false; // Flag to prevent multiple start attempts
         this.musicVolumeKey = 'robotWarsMusicMuted'; // localStorage key
 
