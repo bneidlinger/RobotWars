@@ -302,6 +302,7 @@ class Controls {
         }
 
         const { robotName, visuals, codeLoadoutName } = builderState;
+        console.log(`[Controls._prepareLoadoutData] Builder state for prepare:`, JSON.parse(JSON.stringify(builderState))); // DEBUG: Log builder state
 
         // --- Validation ---
         if (!robotName || typeof robotName !== 'string' || robotName.trim().length === 0) {
@@ -324,6 +325,10 @@ class Controls {
              if (!snippet || typeof snippet.code !== 'string') {
                   throw new Error(`API did not return valid code for snippet "${codeLoadoutName}".`);
              }
+
+             // <<< START: ADDED DEBUG LOG >>>
+             console.log(`[Controls._prepareLoadoutData] Fetched Code Content for '${codeLoadoutName}':\n`, snippet.code);
+             // <<< END: ADDED DEBUG LOG >>>
 
              // --- Construct the final loadout data object ---
              const loadoutData = {
@@ -352,7 +357,6 @@ class Controls {
 
 
     // --- Code SNIPPET Management Methods (Using API) ---
-    // ... (No changes to saveCodeSnippet, loadCodeSnippet, deleteCodeSnippet, populateCodeSnippetSelect) ...
     /** Saves or updates a code snippet via API */
     async saveCodeSnippet(name, code) {
         this.updateLoadoutStatus(`Saving snippet "${name}"...`);
@@ -382,6 +386,14 @@ class Controls {
                  this.updateLoadoutStatus(`Loaded snippet: ${name}`);
                  if(this.loadSnippetSelect) this.loadSnippetSelect.value = name;
                  if(this.deleteSnippetButton) this.deleteSnippetButton.disabled = (this.uiState !== 'lobby');
+                 // --- START: Added Refresh after loading code ---
+                 // Sometimes needed if editor was hidden or dimensions changed
+                 setTimeout(() => {
+                     if(editor?.refresh) {
+                         try { editor.refresh(); } catch(e) { console.error("Error refreshing editor after load:", e); }
+                     }
+                 }, 10); // Tiny delay
+                 // --- END: Added Refresh ---
              } else {
                   console.error("[Controls] CodeMirror editor (setValue) not available.");
                   this.updateLoadoutStatus("Editor not ready.", true);
@@ -440,7 +452,10 @@ class Controls {
          this.loadSnippetSelect.disabled = true;
          if (this.deleteSnippetButton) this.deleteSnippetButton.disabled = true;
 
+         // Store current value before clearing
+         const currentValue = this.loadSnippetSelect.value;
          while (this.loadSnippetSelect.options.length > 1) { this.loadSnippetSelect.remove(1); }
+
 
          try {
              const snippets = await apiCall('/api/snippets', 'GET');
@@ -454,8 +469,11 @@ class Controls {
                      this.loadSnippetSelect.appendChild(option);
                  });
 
+                 // Try to re-select the provided name, then the original value, then default
                  if (selectName && snippets.some(s => s.name === selectName)) {
                      this.loadSnippetSelect.value = selectName;
+                 } else if (currentValue && snippets.some(s => s.name === currentValue)){
+                      this.loadSnippetSelect.value = currentValue;
                  } else {
                      this.loadSnippetSelect.value = "";
                  }
