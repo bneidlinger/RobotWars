@@ -10,9 +10,9 @@ class AudioManager {
         this.sounds = {};
         this.soundEffectsMuted = false; // For sound effects only
         this.soundEffectFiles = {
-            fire: '/assets/audio/fire.mp3',
-            explosion: '/assets/audio/explosion.mp3',
-            hit: '/assets/audio/hit.mp3'
+            fire: '/assets/sounds/fire.mp3',
+            explosion: '/assets/sounds/explosion.mp3',
+            hit: '/assets/sounds/hit.mp3'
         };
 
         // --- NEW: Background Music Elements & State ---

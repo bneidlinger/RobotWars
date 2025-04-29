@@ -238,6 +238,29 @@ button:disabled:hover { background-color: #555; } /* Prevent hover effect when d
 }
 #btn-logout:hover:not(:disabled) { background-color: #c0392b; }
 
+/* START: Volume Toggle Button Styles */
+#btn-toggle-volume {
+    background-color: #607d8b; /* Bluish-grey */
+    color: white;
+    padding: 5px 8px; /* Adjust padding if needed */
+    font-size: 1.2rem; /* Make emoji slightly larger */
+    line-height: 1;
+    border-radius: 4px;
+    width: 40px; /* Fixed width */
+    text-align: center;
+}
+#btn-toggle-volume:hover:not(:disabled) { background-color: #546e7a; }
+
+/* Style for when music is muted (optional visual feedback) */
+#btn-toggle-volume.muted {
+    background-color: #444; /* Darker grey when muted */
+    color: #aaa;
+}
+#btn-toggle-volume.muted:hover:not(:disabled) {
+     background-color: #555;
+}
+/* END: Volume Toggle Button Styles */
+
 /* Delete Loadout/Snippet Button (Small Red 'X') */
 #btn-delete-loadout, #builder-delete-loadout {
     background-color: #c0392b; /* Darker Red */
@@ -801,7 +824,9 @@ input#loadout-name-input, input#builder-player-name {
     header img.header-logo { max-height: 30px; align-self: center; }
     header h1 { font-size: 1.4rem; text-align: center; }
     nav { justify-content: center; gap: 5px; width: 100%; flex-direction: column; }
-    nav > button { padding: 5px 8px;} /* Adjust nav button padding */
+    /* START: Added #btn-toggle-volume to responsive padding */
+    nav > button, #btn-toggle-volume { padding: 5px 8px;} /* Adjust nav button padding */
+    /* END: Added #btn-toggle-volume */
     #btn-delete-loadout, #builder-delete-loadout { font-size: 0.8em; padding: 2px 4px;}
 
     .main-content-grid { gap: 10px; }
@@ -853,7 +878,9 @@ input#loadout-name-input, input#builder-player-name {
     #player-name-display { font-size: 1.0rem; }
     #btn-edit-loadout, #btn-bot-manual, #btn-logout { font-size: 0.75rem; padding: 3px 6px; }
     nav { gap: 5px; }
-    nav > button { padding: 4px 6px;}
+    /* START: Added #btn-toggle-volume to responsive padding */
+    nav > button, #btn-toggle-volume { padding: 4px 6px;}
+    /* END: Added #btn-toggle-volume */
     #btn-delete-loadout, #builder-delete-loadout { font-size: 0.7em; padding: 1px 3px;}
     .CodeMirror { font-size: 14px; }
     .log-box, #game-history-list, #event-log, .robot-stat, .api-help li, .api-help code { font-size: 0.85rem; }
@@ -3188,6 +3215,37 @@ class LoadoutBuilder {
 let editor;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- START: Define Default Code Directly ---
+    const defaultCode = `// Simple Tank Bot (using state object)
+// Moves in a straight line until hit, then changes direction
+
+// Initialize state ONCE
+if (typeof state.currentDirection === 'undefined') {
+    state.currentDirection = 0;
+    state.lastDamage = 0; // Track damage from previous tick
+    console.log('Simple Tank Initialized');
+}
+
+// Check if damage increased since last tick
+if (robot.damage() > state.lastDamage) {
+    console.log('Tank hit! Changing direction.');
+    state.currentDirection = (state.currentDirection + 90 + Math.random() * 90) % 360;
+}
+state.lastDamage = robot.damage(); // Update damage tracking
+
+// Move forward
+robot.drive(state.currentDirection, 3);
+
+// Scan for enemies - use 'let' for temporary variable
+let scanResult = robot.scan(state.currentDirection, 45);
+
+// Fire if enemy detected
+if (scanResult) {
+    robot.fire(scanResult.direction, 2);
+}`;
+    // --- END: Define Default Code Directly ---
+
+
     // Initialize CodeMirror editor
     try {
         editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
@@ -3199,31 +3257,10 @@ document.addEventListener('DOMContentLoaded', () => {
             matchBrackets: true
         });
 
-        // --- START: Improved Default Code Loading ---
-        const defaultSnippetName = 'Simple Tank';
-        let defaultCode = `// Default code if snippet/storage fails\nconsole.log("Default Code Active");\nrobot.drive(0,0);`; // Basic Fallback
-
-        // Attempt to load the default snippet directly from LocalStorageManager defaults
-        if (typeof LocalStorageManager !== 'undefined') {
-            try {
-                 const storageManager = new LocalStorageManager(); // Instance to access defaults
-                 // Access the defaultSnippets property directly
-                 if (storageManager.defaultSnippets && storageManager.defaultSnippets[defaultSnippetName]) {
-                     defaultCode = storageManager.defaultSnippets[defaultSnippetName];
-                     console.log(`Editor initialized with default snippet: ${defaultSnippetName}`);
-                 } else {
-                     // This case means the default wasn't defined in storage.js, which is a code issue
-                     console.error(`Default snippet "${defaultSnippetName}" NOT DEFINED in LocalStorageManager. Using basic default.`);
-                 }
-            } catch (storageError) {
-                 console.error("Error creating storage manager for default code:", storageError);
-            }
-        } else {
-            console.warn("LocalStorageManager not available for default code loading.");
-        }
-
+        // Set the default code defined above
         editor.setValue(defaultCode);
-        // --- END: Improved Default Code Loading ---
+        console.log(`Editor initialized with built-in default code.`);
+
 
     } catch(editorError) {
         console.error("FATAL: Failed to initialize CodeMirror editor:", editorError);
@@ -3234,44 +3271,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Removed event listener for #sample-code
-
 }); // End DOMContentLoaded
 
 
-// Function remains, uses storageManager defaults if available
-function loadSampleCode(sampleName) {
-    if (!editor) {
-        console.error("Cannot load sample code: Editor not initialized.");
-        return;
-    }
-    let code = '';
-    let snippetsToUse = {};
-
-    if (typeof LocalStorageManager !== 'undefined') {
-        try {
-            const storageManager = new LocalStorageManager();
-            // Use the defined defaults property
-            snippetsToUse = storageManager.defaultSnippets || {};
-        } catch(e) {
-            console.error("Error getting default snippets from storage manager", e);
-        }
-    } else {
-         console.warn("LocalStorageManager not available to load sample code definitions.");
-    }
-
-    if (snippetsToUse[sampleName]) {
-        code = snippetsToUse[sampleName];
-    } else {
-        console.warn(`Sample code definition for '${sampleName}' not found.`);
-        code = `// Sample code '${sampleName}' not found.\nrobot.drive(0,0);`; // Provide fallback
-    }
-
-    if (code) {
-        editor.setValue(code);
-        if (window.addEventLogMessage) window.addEventLogMessage(`Loaded sample code: ${sampleName}`, 'info');
-    }
-}
+// Sample code loading can be removed or kept if you define samples differently later
+// function loadSampleCode(sampleName) { ... } // Keep or remove as needed
 ```
 
 ## client/js/ui/lobby.js
@@ -4127,7 +4131,7 @@ class AuthHandler {
             console.log('[AuthHandler] Login successful:', data);
             this._updateAuthState(true, data.user); // Update internal and global state
             this._closeModal('login-modal');
-            this._onLoginSuccess();
+            this._onLoginSuccess(); // Call the updated success handler
         } catch (error) {
             console.error('[AuthHandler] Login failed:', error);
             this.loginError.textContent = error.message || 'Login failed. Please try again.';
@@ -4157,7 +4161,7 @@ class AuthHandler {
             console.log('[AuthHandler] Registration successful:', data);
             this._updateAuthState(true, data.user); // Update internal and global state
             this._closeModal('register-modal');
-            this._onLoginSuccess();
+            this._onLoginSuccess(); // Call the updated success handler
         } catch (error) {
             console.error('[AuthHandler] Registration failed:', error);
             this.registerError.textContent = error.message || 'Registration failed. Please try again.';
@@ -4221,6 +4225,16 @@ class AuthHandler {
     _onLoginSuccess() {
         console.log("[AuthHandler] _onLoginSuccess Actions Triggered");
 
+        // --- START: Request Music Start ---
+        // Attempt to start music after login (counts as user interaction context)
+        if (typeof audioManager !== 'undefined' && audioManager.requestMusicStart) {
+            console.log("[AuthHandler _onLoginSuccess] Requesting background music start...");
+            audioManager.requestMusicStart();
+        } else {
+             console.warn("[AuthHandler _onLoginSuccess] AudioManager or requestMusicStart not found.");
+        }
+        // --- END: Request Music Start ---
+
         // Show Loadout Builder immediately - It handles its own auth check/delay now
         console.log("[AuthHandler] Attempting to show Loadout Builder (will self-verify auth)...");
         if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
@@ -4264,7 +4278,6 @@ class AuthHandler {
 
         // --- START: Populate Controls Snippet Dropdown ---
         // Needs to happen AFTER login state is confirmed and UI is potentially visible
-        // Can also happen after a short delay, or rely on controls object being ready
         if (typeof controls !== 'undefined' && controls.populateCodeSnippetSelect) {
             console.log("[AuthHandler _onLoginSuccess] Populating main editor snippet dropdown...");
             // Using a small delay here too might be safer if controls initialization
@@ -4314,6 +4327,7 @@ class AuthHandler {
              controls.setState('lobby'); // This will trigger updateUIForState with loggedIn=false
              // Also clear the controls snippet dropdown
              if(controls.populateCodeSnippetSelect) {
+                console.log("[AuthHandler _onLogoutSuccess] Clearing main editor snippet dropdown.");
                 controls.populateCodeSnippetSelect(); // Will clear because loggedIn is false
              }
         }
@@ -5000,6 +5014,9 @@ class Network {
                 <button id="btn-test-code">Test Code</button>
                 <button id="btn-self-destruct" style="display: none;">Self-Destruct</button>
                 <button id="btn-reset">Reset</button>
+                <!-- START: Added Volume Toggle Button -->
+                <button id="btn-toggle-volume" title="Mute/Unmute Music">🔊</button>
+                <!-- END: Added Volume Toggle Button -->
             </nav>
 
         </header>
@@ -5049,10 +5066,12 @@ class Network {
                      </div>
                      <div class="editor-controls">
                          <button id="btn-save-code">Save Code Snippet</button>
+                         <!-- Recommended rename: id="editor-snippet-select" -->
                          <select id="loadout-select"> <!-- For loading snippets into editor -->
                              <option value="" selected>Load Code Snippet...</option>
                              <!-- Options populated by JS -->
                          </select>
+                         <!-- Recommended rename: id="btn-delete-editor-snippet" -->
                          <button id="btn-delete-loadout" disabled title="Delete selected snippet">✖</button>
                          <span id="loadout-status"></span>
                      </div>
@@ -5088,6 +5107,9 @@ class Network {
 
     </div> <!-- End .container -->
 
+    <!-- START: Added Audio Element for Background Music -->
+    <audio id="background-music" loop preload="auto" src="/assets/audio/soundtrack.mp3"></audio>
+
     <!-- Scripts (Corrected Order) -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
@@ -5096,19 +5118,18 @@ class Network {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
     <script src="js/engine/arena.js"></script>
     <script src="js/engine/game.js"></script>
-    <script src="js/engine/audio.js"></script>
-    <script src="js/utils/storage.js"></script> <!-- Still needed temporarily for snippets -->
+    <script src="js/engine/audio.js"></script> <!-- Defines AudioManager -->
+    <!-- LocalStorageManager no longer needed for snippets/loadouts -->
+    <!-- <script src="js/utils/storage.js"></script> -->
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
-    <script src="js/ui/loadoutBuilder.js"></script> <!-- Builder needs to define global instance -->
+    <script src="js/ui/loadoutBuilder.js"></script> <!-- Defines LoadoutBuilder -->
     <script src="js/ui/lobby.js"></script>
     <script src="js/ui/history.js"></script>
-    <script src="js/network.js"></script>
-    <!-- Load Controls BEFORE Auth -->
-    <script src="js/ui/controls.js"></script> <!-- Defines global 'controls' -->
-    <script src="js/auth.js"></script> <!-- Defines global 'currentUser', uses 'controls' -->
-    <!-- Load Main LAST -->
-    <script src="js/main.js"></script> <!-- Uses globals -->
+    <script src="js/network.js"></script> <!-- Defines Network -->
+    <script src="js/ui/controls.js"></script> <!-- Defines Controls -->
+    <script src="js/auth.js"></script> <!-- Defines AuthHandler, apiCall, uses controls -->
+    <script src="js/main.js"></script> <!-- Instantiates globals, uses others -->
 </body>
 </html>
 ```
