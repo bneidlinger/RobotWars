@@ -11,7 +11,7 @@ class AudioManager {
         this.soundEffectsMuted = false; // For sound effects only
         this.soundEffectFiles = {
             fire: '/assets/sounds/fire.mp3',
-            explosion: '/assets/sounds/explosion.mp3',
+            explosion: '/assets/sounds/explode.mp3',
             hit: '/assets/sounds/hit.mp3'
         };
 
