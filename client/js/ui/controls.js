@@ -156,6 +156,7 @@ class Controls {
                     this.updateLoadoutStatus("Preparing loadout...");
 
                     // --- START: Prepare Loadout ---
+                    // Use context 'Ready Up'
                     const { loadoutData, error } = await this._prepareLoadoutData("Ready Up");
                     if (error) {
                          alert(error);
@@ -246,6 +247,7 @@ class Controls {
                 this.updateLoadoutStatus("Preparing test game...");
 
                 // --- START: Prepare Loadout ---
+                 // Use context 'Test Code'
                  const { loadoutData, error } = await this._prepareLoadoutData("Test Code");
                  if (error) {
                       alert(error);
@@ -284,11 +286,13 @@ class Controls {
 
     /**
      * Helper function to prepare loadout data for Ready Up or Test Code.
-     * Fetches the code for the currently selected snippet via API.
-     * Uses the robot name and visuals currently set in the LoadoutBuilder instance.
+     * Fetches code based on context:
+     * - 'Ready Up': Fetches code for the snippet linked in the Loadout Builder via API.
+     * - 'Test Code': Gets the code directly from the live CodeMirror editor.
+     * Uses the robot name and visuals currently set in the LoadoutBuilder instance for both contexts.
      * @private
      * @async
-     * @param {string} context - 'Ready Up' or 'Test Code' for logging/errors.
+     * @param {string} context - 'Ready Up' or 'Test Code' for logging/errors and determining code source.
      * @returns {Promise<{loadoutData: object|null, error: string|null}>}
      */
     async _prepareLoadoutData(context) {
@@ -304,56 +308,106 @@ class Controls {
         const { robotName, visuals, codeLoadoutName } = builderState;
         console.log(`[Controls._prepareLoadoutData] Builder state for prepare:`, JSON.parse(JSON.stringify(builderState))); // DEBUG: Log builder state
 
-        // --- Validation ---
+        // --- Validation (Applies to both contexts) ---
         if (!robotName || typeof robotName !== 'string' || robotName.trim().length === 0) {
              return { loadoutData: null, error: `(${context}) Please set a Robot Name in the Loadout Builder.` };
         }
         if (!visuals || typeof visuals !== 'object') { // Add basic visuals check
             return { loadoutData: null, error: `(${context}) Visual configuration is missing. Open the builder.` };
         }
-        if (!codeLoadoutName || typeof codeLoadoutName !== 'string' || codeLoadoutName.trim().length === 0) {
-             return { loadoutData: null, error: `(${context}) Please select a Code Snippet in the Loadout Builder.` };
-        }
         // --- End Validation ---
 
-        this.updateLoadoutStatus(`(${context}) Fetching code for "${codeLoadoutName}"...`);
-        try {
-             // --- Fetch the selected snippet's code ---
-             const encodedName = encodeURIComponent(codeLoadoutName);
-             const snippet = await apiCall(`/api/snippets/${encodedName}`, 'GET');
+        let codeToUse = null;
+        let error = null;
 
-             if (!snippet || typeof snippet.code !== 'string') {
-                  throw new Error(`API did not return valid code for snippet "${codeLoadoutName}".`);
-             }
+        // --- START: Context-based Code Retrieval ---
+        if (context === "Test Code") {
+            console.log("[Controls._prepareLoadoutData] Context is 'Test Code'. Getting code from editor.");
+            try {
+                // Ensure editor instance exists and get its value
+                if (typeof editor !== 'undefined' && typeof editor.getValue === 'function') {
+                     codeToUse = editor.getValue();
+                     if (typeof codeToUse !== 'string' || codeToUse.trim() === '') {
+                         error = `(${context}) Code editor is empty. Cannot run test.`;
+                         console.warn("[Controls._prepareLoadoutData] Editor is empty for Test Code.");
+                     } else {
+                         console.log("[Controls._prepareLoadoutData] Successfully retrieved code from live editor.");
+                         this.updateLoadoutStatus(`(${context}) Using code from editor.`);
+                     }
+                } else {
+                     error = `(${context}) Internal Error: Code editor instance not available.`;
+                     console.error("[Controls._prepareLoadoutData] CodeMirror editor instance not found!");
+                }
+            } catch (e) {
+                 error = `(${context}) Internal Error: Failed to get code from editor. ${e.message}`;
+                 console.error("[Controls._prepareLoadoutData] Error getting code from editor:", e);
+            }
 
-             // <<< START: ADDED DEBUG LOG >>>
-             console.log(`[Controls._prepareLoadoutData] Fetched Code Content for '${codeLoadoutName}':\n`, snippet.code);
-             // <<< END: ADDED DEBUG LOG >>>
+        } else if (context === "Ready Up") {
+            console.log("[Controls._prepareLoadoutData] Context is 'Ready Up'. Getting code via API.");
+            // Validation specific to 'Ready Up' (needs a selected snippet name)
+            if (!codeLoadoutName || typeof codeLoadoutName !== 'string' || codeLoadoutName.trim().length === 0) {
+                 return { loadoutData: null, error: `(${context}) Please select a Code Snippet in the Loadout Builder.` };
+            }
 
-             // --- Construct the final loadout data object ---
-             const loadoutData = {
-                 name: robotName.trim(), // Use the robot name from builder
-                 visuals: visuals,       // Use the visuals object from builder
-                 code: snippet.code      // Use the fetched code
-             };
+            this.updateLoadoutStatus(`(${context}) Fetching code for "${codeLoadoutName}"...`);
+            try {
+                 // --- Fetch the selected snippet's code ---
+                 const encodedName = encodeURIComponent(codeLoadoutName);
+                 const snippet = await apiCall(`/api/snippets/${encodedName}`, 'GET');
 
-             console.log(`[Controls._prepareLoadoutData] Successfully prepared data for ${context}:`, { name: loadoutData.name, visuals: '...', code: '...' });
-             this.updateLoadoutStatus(`(${context}) Loadout ready.`);
-             return { loadoutData: loadoutData, error: null };
+                 if (!snippet || typeof snippet.code !== 'string') {
+                      // This is an error condition for Ready Up
+                      error = `(${context}) API did not return valid code for snippet "${codeLoadoutName}". It might have been deleted. Check Loadout Builder.`;
+                      console.error(`[Controls._prepareLoadoutData] Invalid API response for snippet ${codeLoadoutName}:`, snippet);
+                 } else {
+                      codeToUse = snippet.code;
+                      console.log(`[Controls._prepareLoadoutData] Fetched Code Content for '${codeLoadoutName}'.`);
+                      this.updateLoadoutStatus(`(${context}) Fetched code for ${codeLoadoutName}.`);
+                 }
 
-        } catch (error) {
-             console.error(`[Controls._prepareLoadoutData] Error preparing loadout data for ${context}:`, error);
-             let userMessage = error.message || 'Unknown error.';
-             if (error.status === 404) {
-                 userMessage = `Selected code snippet "${codeLoadoutName}" not found. It might have been deleted. Check Loadout Builder.`;
-             } else if (error.status === 401) {
-                  userMessage = `Authentication error fetching code. Please log in again.`;
-             } else {
-                 userMessage = `Failed to fetch code for "${codeLoadoutName}": ${userMessage}`;
-             }
-             return { loadoutData: null, error: `(${context}) ${userMessage}` };
+            } catch (fetchError) {
+                 console.error(`[Controls._prepareLoadoutData] Error preparing loadout data for ${context}:`, fetchError);
+                 let userMessage = fetchError.message || 'Unknown error.';
+                 if (fetchError.status === 404) {
+                     userMessage = `Selected code snippet "${codeLoadoutName}" not found. It might have been deleted. Check Loadout Builder.`;
+                 } else if (fetchError.status === 401) {
+                      userMessage = `Authentication error fetching code. Please log in again.`;
+                 } else {
+                     userMessage = `Failed to fetch code for "${codeLoadoutName}": ${userMessage}`;
+                 }
+                 error = `(${context}) ${userMessage}`; // Assign to the outer error variable
+            }
+        } else {
+             // Unknown context
+             error = `(${context}) Internal Error: Unknown context passed to _prepareLoadoutData.`;
+             console.error(error);
         }
-    }
+        // --- END: Context-based Code Retrieval ---
+
+
+        // --- Final Check and Return ---
+        if (error) {
+             // An error occurred in either path
+             return { loadoutData: null, error: error };
+        }
+        if (codeToUse === null || typeof codeToUse !== 'string') {
+             // Should have been caught by specific error handling above, but as a fallback
+             return { loadoutData: null, error: `(${context}) Failed to obtain valid robot code.` };
+        }
+
+        // If we reach here, we have name, visuals, and codeToUse
+        const loadoutData = {
+             name: robotName.trim(),
+             visuals: visuals,
+             code: codeToUse // Use the code obtained based on the context
+        };
+
+        console.log(`[Controls._prepareLoadoutData] Successfully prepared data for ${context}:`, { name: loadoutData.name, visuals: '...', code: '...' });
+        this.updateLoadoutStatus(`(${context}) Loadout ready.`);
+        return { loadoutData: loadoutData, error: null };
+
+    } // <-- End _prepareLoadoutData
 
 
     // --- Code SNIPPET Management Methods (Using API) ---

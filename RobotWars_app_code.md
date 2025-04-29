@@ -1987,6 +1987,7 @@ class Controls {
         }
 
         const { robotName, visuals, codeLoadoutName } = builderState;
+        console.log(`[Controls._prepareLoadoutData] Builder state for prepare:`, JSON.parse(JSON.stringify(builderState))); // DEBUG: Log builder state
 
         // --- Validation ---
         if (!robotName || typeof robotName !== 'string' || robotName.trim().length === 0) {
@@ -2009,6 +2010,10 @@ class Controls {
              if (!snippet || typeof snippet.code !== 'string') {
                   throw new Error(`API did not return valid code for snippet "${codeLoadoutName}".`);
              }
+
+             // <<< START: ADDED DEBUG LOG >>>
+             console.log(`[Controls._prepareLoadoutData] Fetched Code Content for '${codeLoadoutName}':\n`, snippet.code);
+             // <<< END: ADDED DEBUG LOG >>>
 
              // --- Construct the final loadout data object ---
              const loadoutData = {
@@ -2037,7 +2042,6 @@ class Controls {
 
 
     // --- Code SNIPPET Management Methods (Using API) ---
-    // ... (No changes to saveCodeSnippet, loadCodeSnippet, deleteCodeSnippet, populateCodeSnippetSelect) ...
     /** Saves or updates a code snippet via API */
     async saveCodeSnippet(name, code) {
         this.updateLoadoutStatus(`Saving snippet "${name}"...`);
@@ -2067,6 +2071,14 @@ class Controls {
                  this.updateLoadoutStatus(`Loaded snippet: ${name}`);
                  if(this.loadSnippetSelect) this.loadSnippetSelect.value = name;
                  if(this.deleteSnippetButton) this.deleteSnippetButton.disabled = (this.uiState !== 'lobby');
+                 // --- START: Added Refresh after loading code ---
+                 // Sometimes needed if editor was hidden or dimensions changed
+                 setTimeout(() => {
+                     if(editor?.refresh) {
+                         try { editor.refresh(); } catch(e) { console.error("Error refreshing editor after load:", e); }
+                     }
+                 }, 10); // Tiny delay
+                 // --- END: Added Refresh ---
              } else {
                   console.error("[Controls] CodeMirror editor (setValue) not available.");
                   this.updateLoadoutStatus("Editor not ready.", true);
@@ -2125,7 +2137,10 @@ class Controls {
          this.loadSnippetSelect.disabled = true;
          if (this.deleteSnippetButton) this.deleteSnippetButton.disabled = true;
 
+         // Store current value before clearing
+         const currentValue = this.loadSnippetSelect.value;
          while (this.loadSnippetSelect.options.length > 1) { this.loadSnippetSelect.remove(1); }
+
 
          try {
              const snippets = await apiCall('/api/snippets', 'GET');
@@ -2139,8 +2154,11 @@ class Controls {
                      this.loadSnippetSelect.appendChild(option);
                  });
 
+                 // Try to re-select the provided name, then the original value, then default
                  if (selectName && snippets.some(s => s.name === selectName)) {
                      this.loadSnippetSelect.value = selectName;
+                 } else if (currentValue && snippets.some(s => s.name === currentValue)){
+                      this.loadSnippetSelect.value = currentValue;
                  } else {
                      this.loadSnippetSelect.value = "";
                  }
@@ -2453,13 +2471,11 @@ console.log("History UI functions initialized (history.js).");
 /**
  * Manages the Loadout Builder overlay UI.
  * Handles selection of visual components, colors, code snippets, presets, robot name, config name,
- * saving/loading complete loadouts via API calls, and interacting with temporary storage
- * via the LocalStorageManager for snippets/lastConfig. Listens for snippet updates.
+ * saving/loading complete loadouts via API calls. Listens for snippet updates.
+ * Initiates background music playback on main action button clicks.
  */
 class LoadoutBuilder {
     constructor() {
-        // --- REMOVED LocalStorageManager ---
-
         // --- DOM Element References ---
         this.overlayElement = document.getElementById('loadout-builder-overlay');
         this.contentElement = document.getElementById('loadout-builder-content');
@@ -3056,6 +3072,15 @@ class LoadoutBuilder {
     /** Handles the Enter Lobby button click */
     async _handleEnterLobbyClick() {
         console.log("[Enter Lobby] Clicked.");
+
+        // --- START: Attempt Music Start ---
+        // Use global audioManager instance
+        if (typeof audioManager !== 'undefined' && audioManager.requestMusicStart) {
+            console.log("[Loadout Builder] Requesting music start on Enter Lobby click.");
+            audioManager.requestMusicStart(); // Call this BEFORE potential async ops or hiding
+        }
+        // --- END: Attempt Music Start ---
+
         this._syncInternalStateToUI(); // Sync before validating/saving
 
         const finalConfig = this.currentLoadout;
@@ -3099,16 +3124,17 @@ class LoadoutBuilder {
         }
         // --- End Save ---
 
-        this.hide();
+        this.hide(); // Hide builder AFTER attempting music start and save
 
         const selectedSnippetName = finalConfig.codeLoadoutName;
+        // Use global controls instance
         if (selectedSnippetName && typeof controls !== 'undefined' && controls.loadCodeSnippet) {
             console.log(`[Enter Lobby] Loading snippet '${selectedSnippetName}' into main editor.`);
             // Use the Controls method which handles API call and editor update
             controls.loadCodeSnippet(selectedSnippetName);
         } else {
             console.warn(`[Enter Lobby] Could not update main editor. Snippet: ${selectedSnippetName}, Controls: ${typeof controls}`);
-}
+        }
 
         // Update header icon (using global controls instance)
         if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
@@ -3118,9 +3144,11 @@ class LoadoutBuilder {
         // Connect network (using global network instance)
         // Note: Connection is likely already handled by onLoginSuccess now,
         // but this ensures controls state is updated correctly.
+        // Use global network instance
         if (typeof network !== 'undefined') {
              if (network.socket?.connected) {
                   console.log(`[Enter Lobby] Network connected. Setting Controls state.`);
+                   // Use global controls instance
                    if(typeof controls !== 'undefined') controls.setState('lobby'); // Ensure UI is in lobby state
              } else {
                   console.log(`[Enter Lobby] Network not connected, attempting connect (might be redundant).`);
@@ -3136,6 +3164,15 @@ class LoadoutBuilder {
     /** Handles the Quick Start button click */
     _handleQuickStartClick() {
         console.log("[Quick Start] Button clicked. Loading Quick Start defaults...");
+
+        // --- START: Attempt Music Start ---
+        // Use global audioManager instance
+        if (typeof audioManager !== 'undefined' && audioManager.requestMusicStart) {
+            console.log("[Loadout Builder] Requesting music start on Quick Start click.");
+            audioManager.requestMusicStart(); // Call this BEFORE potential async ops or hiding
+        }
+        // --- END: Attempt Music Start ---
+
         this.loadConfiguration(null); // Reset UI to defaults
 
         // TODO: Implement setting 'quick_start' preference via API
@@ -3143,17 +3180,19 @@ class LoadoutBuilder {
         console.log("[Quick Start] TODO: Implement setting 'quick_start' preference via API.");
         this.updateStatus("Quick Start selected (Preference not saved yet).");
 
-         this.hide(); // Hide builder
+         this.hide(); // Hide builder AFTER attempting music start
 
-         // Update header icon
+         // Update header icon (using global controls instance)
          if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
               controls.updatePlayerHeaderDisplay();
          }
 
          // Connect network / Update state (Similar logic as Enter Lobby)
+         // Use global network instance
          if (typeof network !== 'undefined') {
              if (network.socket?.connected) {
                  console.log(`[Quick Start] Network connected. Setting Controls state.`);
+                  // Use global controls instance
                   if(typeof controls !== 'undefined') controls.setState('lobby');
              } else {
                  console.log(`[Quick Start] Network not connected, attempting connect.`);
@@ -3201,10 +3240,6 @@ class LoadoutBuilder {
     }
 
 } // End LoadoutBuilder Class
-
-// Instantiate the builder globally and assign to window scope in main.js
-// Ensure this runs after the class definition
-// (No instantiation code here anymore)
 ```
 
 ## client/js/ui/editor.js
@@ -4225,18 +4260,13 @@ class AuthHandler {
     _onLoginSuccess() {
         console.log("[AuthHandler] _onLoginSuccess Actions Triggered");
 
-        // --- START: Request Music Start ---
-        // Attempt to start music after login (counts as user interaction context)
-        if (typeof audioManager !== 'undefined' && audioManager.requestMusicStart) {
-            console.log("[AuthHandler _onLoginSuccess] Requesting background music start...");
-            audioManager.requestMusicStart();
-        } else {
-             console.warn("[AuthHandler _onLoginSuccess] AudioManager or requestMusicStart not found.");
-        }
-        // --- END: Request Music Start ---
+        // --- REMOVED Music Start Request ---
+        // This is now handled by LoadoutBuilder action buttons or the main volume toggle.
+        // console.log("[AuthHandler _onLoginSuccess] Music start request removed from here.");
 
         // Show Loadout Builder immediately - It handles its own auth check/delay now
         console.log("[AuthHandler] Attempting to show Loadout Builder (will self-verify auth)...");
+        // Use global instance
         if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
             window.loadoutBuilderInstance.show(); // Call show, it does the rest
         } else {
@@ -4246,6 +4276,7 @@ class AuthHandler {
         }
 
         // Update header ICON via Controls
+        // Use global instance
         if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
             controls.updatePlayerHeaderDisplay();
         } else {
@@ -4253,12 +4284,14 @@ class AuthHandler {
         }
 
         // Connect WebSocket
+        // Use global instance
         if (typeof network !== 'undefined' && network.connect) {
              if (!network.socket || !network.socket.connected) {
                 console.log("[AuthHandler] Connecting WebSocket...");
                 network.connect();
              } else {
                 console.log("[AuthHandler] WebSocket already connected.");
+                 // Use global instance
                  if(typeof controls !== 'undefined') controls.setState('lobby');
              }
         } else {
@@ -4269,6 +4302,7 @@ class AuthHandler {
         // Attempt to refresh the main editor to fix potential rendering issues
         // Do this after a very short delay to allow the flex container to render
         setTimeout(() => {
+            // Use global instance
             if (typeof editor !== 'undefined' && editor?.refresh) {
                 console.log("[AuthHandler _onLoginSuccess] Refreshing main editor...");
                 try { editor.refresh(); } catch(e) { console.error("Error refreshing editor:", e); }
@@ -4278,6 +4312,7 @@ class AuthHandler {
 
         // --- START: Populate Controls Snippet Dropdown ---
         // Needs to happen AFTER login state is confirmed and UI is potentially visible
+        // Use global instance
         if (typeof controls !== 'undefined' && controls.populateCodeSnippetSelect) {
             console.log("[AuthHandler _onLoginSuccess] Populating main editor snippet dropdown...");
             // Using a small delay here too might be safer if controls initialization
@@ -4297,6 +4332,7 @@ class AuthHandler {
     _onLogoutSuccess() {
         console.log("[AuthHandler] _onLogoutSuccess Actions Triggered");
 
+        // Use global instances
         // Disconnect WebSocket
         if (typeof network !== 'undefined' && network.socket?.connected) {
             console.log("[AuthHandler] Disconnecting WebSocket on logout...");
@@ -5108,7 +5144,7 @@ class Network {
     </div> <!-- End .container -->
 
     <!-- START: Added Audio Element for Background Music -->
-    <audio id="background-music" loop preload="auto" src="/assets/audio/soundtrack.mp3"></audio>
+    <audio id="background-music" loop preload="auto" src="/assets/sounds/soundtrack.mp3"></audio>
 
     <!-- Scripts (Corrected Order) -->
     <script src="/socket.io/socket.io.js"></script>
@@ -6882,12 +6918,19 @@ class ServerRobotInterpreter {
             const playerData = playersDataMap.get(robot.id);
             const playerSocket = playerData ? playerData.socket : null; // Needed for init error reporting
 
-            // === START OF CHANGE: Access code via playerData.loadout.code ===
             const robotCode = playerData?.loadout?.code; // Safely access nested code
+
+            // --- START: Added Debug Logging ---
+            console.log(`[Interpreter Init] Preparing to compile for ${robot.id} (${playerData?.loadout?.name || 'Unknown'}). Code received:`);
+            console.log("---------------- CODE START ----------------");
+            // Log the actual code content, or a message if it's missing/undefined
+            console.log(robotCode !== null && robotCode !== undefined ? robotCode : '!!! CODE MISSING OR UNDEFINED !!!');
+            console.log("----------------- CODE END -----------------");
+            // --- END: Added Debug Logging ---
 
             if (!playerData || typeof robotCode !== 'string' || robotCode.trim() === '') {
                 const reason = !playerData ? 'No player data found' : (!robotCode ? 'Code missing in loadout' : 'Code is empty');
-                console.error(`[Interpreter] No valid code for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}). Reason: ${reason}. Disabling.`);
+                console.error(`[Interpreter Init] No valid code for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}). Reason: ${reason}. Disabling.`);
                 this.robotTickFunctions[robot.id] = null;
                 this.robotContexts[robot.id] = null;
                 // Optional: Notify player if applicable
@@ -6896,8 +6939,6 @@ class ServerRobotInterpreter {
                  }
                 return; // Skip this robot
             }
-            // === END OF CHANGE ===
-
 
             const sandbox = {
                 state: {},
@@ -6942,6 +6983,7 @@ class ServerRobotInterpreter {
                 Number: {
                     isFinite: Number.isFinite, isNaN: Number.isNaN, parseFloat: Number.parseFloat, parseInt: Number.parseInt
                 },
+                // Disable potentially harmful globals
                 setTimeout: undefined, setInterval: undefined, setImmediate: undefined,
                 clearTimeout: undefined, clearInterval: undefined, clearImmediate: undefined,
                 require: undefined, process: undefined, global: undefined, globalThis: undefined,
@@ -6951,26 +6993,28 @@ class ServerRobotInterpreter {
             this.robotContexts[robot.id] = vm.createContext(sandbox);
 
             try {
-                // === START OF CHANGE: Use robotCode variable ===
+                // Use the robotCode variable which contains the fetched code
                 const wrappedCode = `(function() { "use strict";\n${robotCode}\n});`;
-                // === END OF CHANGE ===
                 const script = new vm.Script(wrappedCode, {
                     filename: `robot_${robot.id}.js`,
                     displayErrors: true
                 });
 
-                this.robotTickFunctions[robot.id] = script.runInContext(this.robotContexts[robot.id], { timeout: 500 });
+                // Compile the script in the sandbox context
+                this.robotTickFunctions[robot.id] = script.runInContext(this.robotContexts[robot.id], { timeout: 500 }); // Added timeout for safety
 
+                // Validate that the compilation produced a callable function
                 if (typeof this.robotTickFunctions[robot.id] !== 'function') {
                      throw new Error("Compiled code did not produce a function. Ensure your code is wrapped correctly or is just statements.");
                 }
-                console.log(`[Interpreter] Compiled function for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'})`);
+                console.log(`[Interpreter Init] Successfully compiled function for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'})`);
 
             } catch (error) {
-                console.error(`[Interpreter] Error initializing/compiling function for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}):`, error.message);
+                console.error(`[Interpreter Init] Error initializing/compiling function for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}):`, error.message);
                 if (playerSocket?.connected) {
                     playerSocket.emit('codeError', { robotId: robot.id, message: `Initialization Error: ${error.message}` });
                 }
+                // Ensure cleanup on error
                 this.robotTickFunctions[robot.id] = null;
                 this.robotContexts[robot.id] = null;
             }
@@ -7000,10 +7044,15 @@ class ServerRobotInterpreter {
 
                 try {
                     // Execute the robot's compiled code function for this tick
-                    tickFunction.call(context.robot); // Pass the 'robot' API object as 'this' inside the function
+                    // Ensure context.robot exists before calling (it should, from sandbox creation)
+                    if (context && context.robot) {
+                        tickFunction.call(context.robot); // Pass the 'robot' API object as 'this' inside the function
+                    } else {
+                         console.error(`[Interpreter Tick] Missing context or context.robot for robot ${robot.id}. Cannot execute.`);
+                    }
 
                 } catch (error) {
-                    console.error(`[Interpreter] Runtime error for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}):`, error.message, error.stack);
+                    console.error(`[Interpreter Tick] Runtime error for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}):`, error.message, error.stack);
                     if (playerSocket?.connected) {
                         playerSocket.emit('codeError', { robotId: robot.id, message: `Runtime Error: ${error.message}` });
                     }
@@ -7026,6 +7075,7 @@ class ServerRobotInterpreter {
     /** Safely retrieves the ServerRobot instance for the currently executing robot. @private */
     getCurrentRobot() {
         if (!this.currentRobotId || !this.currentGameInstance) return null;
+        // Find the robot instance within the current game instance's robot list
         return this.currentGameInstance.robots.find(r => r.id === this.currentRobotId);
     }
 
@@ -7033,6 +7083,7 @@ class ServerRobotInterpreter {
     safeDrive(robotId, direction, speed) {
         if (robotId !== this.currentRobotId) return;
         const robot = this.getCurrentRobot();
+        // Check if robot exists and is active before calling method
         if (robot?.state === 'active' && typeof direction === 'number' && typeof speed === 'number') {
             robot.drive(direction, speed);
         }
@@ -7042,9 +7093,13 @@ class ServerRobotInterpreter {
     safeScan(robotId, direction, resolution) {
         if (robotId !== this.currentRobotId || !this.currentGameInstance) return null;
         const robot = this.getCurrentRobot();
+        // Check if robot exists and is active before calling method
         if (robot?.state === 'active' && typeof direction === 'number') {
             const res = (typeof resolution === 'number' && resolution > 0) ? resolution : 10;
-            return this.currentGameInstance.performScan(robot, direction, res);
+            // Ensure gameInstance has the performScan method
+            if (typeof this.currentGameInstance.performScan === 'function') {
+                return this.currentGameInstance.performScan(robot, direction, res);
+            }
         }
         return null;
     }
@@ -7054,9 +7109,11 @@ class ServerRobotInterpreter {
         if (robotId !== this.currentRobotId) return false;
         const robot = this.getCurrentRobot();
 
+        // Check if robot exists, is active, and gameInstance is set
         if (robot?.state === 'active' && this.currentGameInstance && typeof direction === 'number') {
-            const fireResult = robot.fire(direction, power);
+            const fireResult = robot.fire(direction, power); // fire() returns { success: bool, eventData: obj|null }
 
+            // If fire was successful and produced event data, trigger the event on GameInstance
             if (fireResult.success && fireResult.eventData && typeof this.currentGameInstance.addFireEvent === 'function') {
                 this.currentGameInstance.addFireEvent(fireResult.eventData);
             }
@@ -7068,9 +7125,9 @@ class ServerRobotInterpreter {
 
     /** Safely retrieves the current damage of the robot. */
     safeDamage(robotId) {
-        if (robotId !== this.currentRobotId) return 100;
+        if (robotId !== this.currentRobotId) return 100; // Return max damage if called improperly
         const robot = this.getCurrentRobot();
-        return robot ? robot.damage : 100;
+        return robot ? robot.damage : 100; // Return 100 if robot instance not found
     }
 
     /** Safely retrieves the robot's X coordinate. */
