@@ -253,18 +253,13 @@ class AuthHandler {
     _onLoginSuccess() {
         console.log("[AuthHandler] _onLoginSuccess Actions Triggered");
 
-        // --- START: Request Music Start ---
-        // Attempt to start music after login (counts as user interaction context)
-        if (typeof audioManager !== 'undefined' && audioManager.requestMusicStart) {
-            console.log("[AuthHandler _onLoginSuccess] Requesting background music start...");
-            audioManager.requestMusicStart();
-        } else {
-             console.warn("[AuthHandler _onLoginSuccess] AudioManager or requestMusicStart not found.");
-        }
-        // --- END: Request Music Start ---
+        // --- REMOVED Music Start Request ---
+        // This is now handled by LoadoutBuilder action buttons or the main volume toggle.
+        // console.log("[AuthHandler _onLoginSuccess] Music start request removed from here.");
 
         // Show Loadout Builder immediately - It handles its own auth check/delay now
         console.log("[AuthHandler] Attempting to show Loadout Builder (will self-verify auth)...");
+        // Use global instance
         if (typeof window.loadoutBuilderInstance !== 'undefined' && window.loadoutBuilderInstance?.show) {
             window.loadoutBuilderInstance.show(); // Call show, it does the rest
         } else {
@@ -274,6 +269,7 @@ class AuthHandler {
         }
 
         // Update header ICON via Controls
+        // Use global instance
         if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
             controls.updatePlayerHeaderDisplay();
         } else {
@@ -281,12 +277,14 @@ class AuthHandler {
         }
 
         // Connect WebSocket
+        // Use global instance
         if (typeof network !== 'undefined' && network.connect) {
              if (!network.socket || !network.socket.connected) {
                 console.log("[AuthHandler] Connecting WebSocket...");
                 network.connect();
              } else {
                 console.log("[AuthHandler] WebSocket already connected.");
+                 // Use global instance
                  if(typeof controls !== 'undefined') controls.setState('lobby');
              }
         } else {
@@ -297,6 +295,7 @@ class AuthHandler {
         // Attempt to refresh the main editor to fix potential rendering issues
         // Do this after a very short delay to allow the flex container to render
         setTimeout(() => {
+            // Use global instance
             if (typeof editor !== 'undefined' && editor?.refresh) {
                 console.log("[AuthHandler _onLoginSuccess] Refreshing main editor...");
                 try { editor.refresh(); } catch(e) { console.error("Error refreshing editor:", e); }
@@ -306,6 +305,7 @@ class AuthHandler {
 
         // --- START: Populate Controls Snippet Dropdown ---
         // Needs to happen AFTER login state is confirmed and UI is potentially visible
+        // Use global instance
         if (typeof controls !== 'undefined' && controls.populateCodeSnippetSelect) {
             console.log("[AuthHandler _onLoginSuccess] Populating main editor snippet dropdown...");
             // Using a small delay here too might be safer if controls initialization
@@ -325,6 +325,7 @@ class AuthHandler {
     _onLogoutSuccess() {
         console.log("[AuthHandler] _onLogoutSuccess Actions Triggered");
 
+        // Use global instances
         // Disconnect WebSocket
         if (typeof network !== 'undefined' && network.socket?.connected) {
             console.log("[AuthHandler] Disconnecting WebSocket on logout...");

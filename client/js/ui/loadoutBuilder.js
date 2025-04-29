@@ -3,13 +3,11 @@
 /**
  * Manages the Loadout Builder overlay UI.
  * Handles selection of visual components, colors, code snippets, presets, robot name, config name,
- * saving/loading complete loadouts via API calls, and interacting with temporary storage
- * via the LocalStorageManager for snippets/lastConfig. Listens for snippet updates.
+ * saving/loading complete loadouts via API calls. Listens for snippet updates.
+ * Initiates background music playback on main action button clicks.
  */
 class LoadoutBuilder {
     constructor() {
-        // --- REMOVED LocalStorageManager ---
-
         // --- DOM Element References ---
         this.overlayElement = document.getElementById('loadout-builder-overlay');
         this.contentElement = document.getElementById('loadout-builder-content');
@@ -606,6 +604,15 @@ class LoadoutBuilder {
     /** Handles the Enter Lobby button click */
     async _handleEnterLobbyClick() {
         console.log("[Enter Lobby] Clicked.");
+
+        // --- START: Attempt Music Start ---
+        // Use global audioManager instance
+        if (typeof audioManager !== 'undefined' && audioManager.requestMusicStart) {
+            console.log("[Loadout Builder] Requesting music start on Enter Lobby click.");
+            audioManager.requestMusicStart(); // Call this BEFORE potential async ops or hiding
+        }
+        // --- END: Attempt Music Start ---
+
         this._syncInternalStateToUI(); // Sync before validating/saving
 
         const finalConfig = this.currentLoadout;
@@ -649,16 +656,17 @@ class LoadoutBuilder {
         }
         // --- End Save ---
 
-        this.hide();
+        this.hide(); // Hide builder AFTER attempting music start and save
 
         const selectedSnippetName = finalConfig.codeLoadoutName;
+        // Use global controls instance
         if (selectedSnippetName && typeof controls !== 'undefined' && controls.loadCodeSnippet) {
             console.log(`[Enter Lobby] Loading snippet '${selectedSnippetName}' into main editor.`);
             // Use the Controls method which handles API call and editor update
             controls.loadCodeSnippet(selectedSnippetName);
         } else {
             console.warn(`[Enter Lobby] Could not update main editor. Snippet: ${selectedSnippetName}, Controls: ${typeof controls}`);
-}
+        }
 
         // Update header icon (using global controls instance)
         if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
@@ -668,9 +676,11 @@ class LoadoutBuilder {
         // Connect network (using global network instance)
         // Note: Connection is likely already handled by onLoginSuccess now,
         // but this ensures controls state is updated correctly.
+        // Use global network instance
         if (typeof network !== 'undefined') {
              if (network.socket?.connected) {
                   console.log(`[Enter Lobby] Network connected. Setting Controls state.`);
+                   // Use global controls instance
                    if(typeof controls !== 'undefined') controls.setState('lobby'); // Ensure UI is in lobby state
              } else {
                   console.log(`[Enter Lobby] Network not connected, attempting connect (might be redundant).`);
@@ -686,6 +696,15 @@ class LoadoutBuilder {
     /** Handles the Quick Start button click */
     _handleQuickStartClick() {
         console.log("[Quick Start] Button clicked. Loading Quick Start defaults...");
+
+        // --- START: Attempt Music Start ---
+        // Use global audioManager instance
+        if (typeof audioManager !== 'undefined' && audioManager.requestMusicStart) {
+            console.log("[Loadout Builder] Requesting music start on Quick Start click.");
+            audioManager.requestMusicStart(); // Call this BEFORE potential async ops or hiding
+        }
+        // --- END: Attempt Music Start ---
+
         this.loadConfiguration(null); // Reset UI to defaults
 
         // TODO: Implement setting 'quick_start' preference via API
@@ -693,17 +712,19 @@ class LoadoutBuilder {
         console.log("[Quick Start] TODO: Implement setting 'quick_start' preference via API.");
         this.updateStatus("Quick Start selected (Preference not saved yet).");
 
-         this.hide(); // Hide builder
+         this.hide(); // Hide builder AFTER attempting music start
 
-         // Update header icon
+         // Update header icon (using global controls instance)
          if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
               controls.updatePlayerHeaderDisplay();
          }
 
          // Connect network / Update state (Similar logic as Enter Lobby)
+         // Use global network instance
          if (typeof network !== 'undefined') {
              if (network.socket?.connected) {
                  console.log(`[Quick Start] Network connected. Setting Controls state.`);
+                  // Use global controls instance
                   if(typeof controls !== 'undefined') controls.setState('lobby');
              } else {
                  console.log(`[Quick Start] Network not connected, attempting connect.`);
@@ -751,7 +772,3 @@ class LoadoutBuilder {
     }
 
 } // End LoadoutBuilder Class
-
-// Instantiate the builder globally and assign to window scope in main.js
-// Ensure this runs after the class definition
-// (No instantiation code here anymore)
