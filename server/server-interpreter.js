@@ -29,12 +29,19 @@ class ServerRobotInterpreter {
             const playerData = playersDataMap.get(robot.id);
             const playerSocket = playerData ? playerData.socket : null; // Needed for init error reporting
 
-            // === START OF CHANGE: Access code via playerData.loadout.code ===
             const robotCode = playerData?.loadout?.code; // Safely access nested code
+
+            // --- START: Added Debug Logging ---
+            console.log(`[Interpreter Init] Preparing to compile for ${robot.id} (${playerData?.loadout?.name || 'Unknown'}). Code received:`);
+            console.log("---------------- CODE START ----------------");
+            // Log the actual code content, or a message if it's missing/undefined
+            console.log(robotCode !== null && robotCode !== undefined ? robotCode : '!!! CODE MISSING OR UNDEFINED !!!');
+            console.log("----------------- CODE END -----------------");
+            // --- END: Added Debug Logging ---
 
             if (!playerData || typeof robotCode !== 'string' || robotCode.trim() === '') {
                 const reason = !playerData ? 'No player data found' : (!robotCode ? 'Code missing in loadout' : 'Code is empty');
-                console.error(`[Interpreter] No valid code for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}). Reason: ${reason}. Disabling.`);
+                console.error(`[Interpreter Init] No valid code for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}). Reason: ${reason}. Disabling.`);
                 this.robotTickFunctions[robot.id] = null;
                 this.robotContexts[robot.id] = null;
                 // Optional: Notify player if applicable
@@ -43,8 +50,6 @@ class ServerRobotInterpreter {
                  }
                 return; // Skip this robot
             }
-            // === END OF CHANGE ===
-
 
             const sandbox = {
                 state: {},
@@ -89,6 +94,7 @@ class ServerRobotInterpreter {
                 Number: {
                     isFinite: Number.isFinite, isNaN: Number.isNaN, parseFloat: Number.parseFloat, parseInt: Number.parseInt
                 },
+                // Disable potentially harmful globals
                 setTimeout: undefined, setInterval: undefined, setImmediate: undefined,
                 clearTimeout: undefined, clearInterval: undefined, clearImmediate: undefined,
                 require: undefined, process: undefined, global: undefined, globalThis: undefined,
@@ -98,26 +104,28 @@ class ServerRobotInterpreter {
             this.robotContexts[robot.id] = vm.createContext(sandbox);
 
             try {
-                // === START OF CHANGE: Use robotCode variable ===
+                // Use the robotCode variable which contains the fetched code
                 const wrappedCode = `(function() { "use strict";\n${robotCode}\n});`;
-                // === END OF CHANGE ===
                 const script = new vm.Script(wrappedCode, {
                     filename: `robot_${robot.id}.js`,
                     displayErrors: true
                 });
 
-                this.robotTickFunctions[robot.id] = script.runInContext(this.robotContexts[robot.id], { timeout: 500 });
+                // Compile the script in the sandbox context
+                this.robotTickFunctions[robot.id] = script.runInContext(this.robotContexts[robot.id], { timeout: 500 }); // Added timeout for safety
 
+                // Validate that the compilation produced a callable function
                 if (typeof this.robotTickFunctions[robot.id] !== 'function') {
                      throw new Error("Compiled code did not produce a function. Ensure your code is wrapped correctly or is just statements.");
                 }
-                console.log(`[Interpreter] Compiled function for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'})`);
+                console.log(`[Interpreter Init] Successfully compiled function for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'})`);
 
             } catch (error) {
-                console.error(`[Interpreter] Error initializing/compiling function for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}):`, error.message);
+                console.error(`[Interpreter Init] Error initializing/compiling function for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}):`, error.message);
                 if (playerSocket?.connected) {
                     playerSocket.emit('codeError', { robotId: robot.id, message: `Initialization Error: ${error.message}` });
                 }
+                // Ensure cleanup on error
                 this.robotTickFunctions[robot.id] = null;
                 this.robotContexts[robot.id] = null;
             }
@@ -147,10 +155,15 @@ class ServerRobotInterpreter {
 
                 try {
                     // Execute the robot's compiled code function for this tick
-                    tickFunction.call(context.robot); // Pass the 'robot' API object as 'this' inside the function
+                    // Ensure context.robot exists before calling (it should, from sandbox creation)
+                    if (context && context.robot) {
+                        tickFunction.call(context.robot); // Pass the 'robot' API object as 'this' inside the function
+                    } else {
+                         console.error(`[Interpreter Tick] Missing context or context.robot for robot ${robot.id}. Cannot execute.`);
+                    }
 
                 } catch (error) {
-                    console.error(`[Interpreter] Runtime error for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}):`, error.message, error.stack);
+                    console.error(`[Interpreter Tick] Runtime error for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}):`, error.message, error.stack);
                     if (playerSocket?.connected) {
                         playerSocket.emit('codeError', { robotId: robot.id, message: `Runtime Error: ${error.message}` });
                     }
@@ -173,6 +186,7 @@ class ServerRobotInterpreter {
     /** Safely retrieves the ServerRobot instance for the currently executing robot. @private */
     getCurrentRobot() {
         if (!this.currentRobotId || !this.currentGameInstance) return null;
+        // Find the robot instance within the current game instance's robot list
         return this.currentGameInstance.robots.find(r => r.id === this.currentRobotId);
     }
 
@@ -180,6 +194,7 @@ class ServerRobotInterpreter {
     safeDrive(robotId, direction, speed) {
         if (robotId !== this.currentRobotId) return;
         const robot = this.getCurrentRobot();
+        // Check if robot exists and is active before calling method
         if (robot?.state === 'active' && typeof direction === 'number' && typeof speed === 'number') {
             robot.drive(direction, speed);
         }
@@ -189,9 +204,13 @@ class ServerRobotInterpreter {
     safeScan(robotId, direction, resolution) {
         if (robotId !== this.currentRobotId || !this.currentGameInstance) return null;
         const robot = this.getCurrentRobot();
+        // Check if robot exists and is active before calling method
         if (robot?.state === 'active' && typeof direction === 'number') {
             const res = (typeof resolution === 'number' && resolution > 0) ? resolution : 10;
-            return this.currentGameInstance.performScan(robot, direction, res);
+            // Ensure gameInstance has the performScan method
+            if (typeof this.currentGameInstance.performScan === 'function') {
+                return this.currentGameInstance.performScan(robot, direction, res);
+            }
         }
         return null;
     }
@@ -201,9 +220,11 @@ class ServerRobotInterpreter {
         if (robotId !== this.currentRobotId) return false;
         const robot = this.getCurrentRobot();
 
+        // Check if robot exists, is active, and gameInstance is set
         if (robot?.state === 'active' && this.currentGameInstance && typeof direction === 'number') {
-            const fireResult = robot.fire(direction, power);
+            const fireResult = robot.fire(direction, power); // fire() returns { success: bool, eventData: obj|null }
 
+            // If fire was successful and produced event data, trigger the event on GameInstance
             if (fireResult.success && fireResult.eventData && typeof this.currentGameInstance.addFireEvent === 'function') {
                 this.currentGameInstance.addFireEvent(fireResult.eventData);
             }
@@ -215,9 +236,9 @@ class ServerRobotInterpreter {
 
     /** Safely retrieves the current damage of the robot. */
     safeDamage(robotId) {
-        if (robotId !== this.currentRobotId) return 100;
+        if (robotId !== this.currentRobotId) return 100; // Return max damage if called improperly
         const robot = this.getCurrentRobot();
-        return robot ? robot.damage : 100;
+        return robot ? robot.damage : 100; // Return 100 if robot instance not found
     }
 
     /** Safely retrieves the robot's X coordinate. */
