@@ -94,11 +94,12 @@ class Arena { // File name remains Arena, class concept is Renderer
     // drawTriBot(ctx, robotData) { ... } -> REMOVED
 
 
-    // === START: Refactored drawRobots function ===
+    // === START: Enhanced Robot Drawing System ===
     /**
      * Main function to draw all robots based on data from Game class,
      * using the 'visuals' property for component types and colors.
      * Includes name and health bar. Checks visibility flag.
+     * Now supports an expanded set of variants for each robot component.
      */
     drawRobots() {
         const ctx = this.ctx;
@@ -134,95 +135,18 @@ class Arena { // File name remains Arena, class concept is Renderer
             ctx.translate(robotX, robotY);
             ctx.rotate(radians);
 
-            // --- Draw Robot Components (Layered, Placeholders) ---
+            // --- Draw Robot Components (Layered) ---
             ctx.lineWidth = 1; // Base line width
             ctx.strokeStyle = '#111'; // Base stroke color
 
             // 1. Draw Mobility (Bottom Layer)
-            ctx.fillStyle = '#555'; // Default mobility color
-            let treadWidth = baseRadius * 2.0;
-            let treadHeight = baseRadius * 0.6;
-            let wheelRadius = baseRadius * 0.5;
-            let hoverRadiusX = baseRadius * 1.2;
-            let hoverRadiusY = baseRadius * 0.8;
-            switch (mobilityType) {
-                case 'treads':
-                    ctx.fillRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight); // Top tread
-                    ctx.fillRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);  // Bottom tread
-                    ctx.strokeRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight);
-                    ctx.strokeRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);
-                    break;
-                case 'hover':
-                    ctx.save();
-                    ctx.fillStyle = 'rgba(100, 150, 255, 0.3)'; // Semi-transparent blue glow
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, hoverRadiusX * 1.2, hoverRadiusY * 1.2, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, hoverRadiusX, hoverRadiusY, 0, 0, Math.PI * 2);
-                    ctx.fillStyle = '#444'; ctx.fill(); // Darker base
-                    ctx.strokeStyle = '#88aaff'; ctx.lineWidth = 1; ctx.stroke();
-                    break;
-                case 'wheels': default:
-                    ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // Left wheel
-                    ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();  // Right wheel
-                    break;
-            }
+            this._drawMobility(ctx, mobilityType, baseRadius, chassisColor);
 
             // 2. Draw Chassis (Middle Layer)
-            ctx.fillStyle = chassisColor;
-            let chassisWidth, chassisHeight;
-            switch (chassisType) {
-                case 'heavy': chassisWidth = baseRadius * 2.4; chassisHeight = baseRadius * 1.6; break;
-                case 'light': chassisWidth = baseRadius * 1.7; chassisHeight = baseRadius * 1.2; break;
-                case 'medium': default: chassisWidth = baseRadius * 2.0; chassisHeight = baseRadius * 1.4; break;
-            }
-            // Draw slightly rounded rectangle for chassis
-            const borderRadius = 3;
-            ctx.beginPath();
-            ctx.moveTo(-chassisWidth / 2 + borderRadius, -chassisHeight / 2);
-            ctx.lineTo(chassisWidth / 2 - borderRadius, -chassisHeight / 2);
-            ctx.arcTo(chassisWidth / 2, -chassisHeight / 2, chassisWidth / 2, -chassisHeight / 2 + borderRadius, borderRadius);
-            ctx.lineTo(chassisWidth / 2, chassisHeight / 2 - borderRadius);
-            ctx.arcTo(chassisWidth / 2, chassisHeight / 2, chassisWidth / 2 - borderRadius, chassisHeight / 2, borderRadius);
-            ctx.lineTo(-chassisWidth / 2 + borderRadius, chassisHeight / 2);
-            ctx.arcTo(-chassisWidth / 2, chassisHeight / 2, -chassisWidth / 2, chassisHeight / 2 - borderRadius, borderRadius);
-            ctx.lineTo(-chassisWidth / 2, -chassisHeight / 2 + borderRadius);
-            ctx.arcTo(-chassisWidth / 2, -chassisHeight / 2, -chassisWidth / 2 + borderRadius, -chassisHeight / 2, borderRadius);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
+            this._drawChassis(ctx, chassisType, chassisColor, baseRadius);
 
-
-            // 3. Draw Turret (Top Layer) - Facing right (0 degrees in local coords)
-            ctx.fillStyle = turretColor;
-            ctx.strokeStyle = '#111'; // Reset stroke for turret
-            let turretBaseRadius, barrelLength, barrelWidth;
-            switch (turretType) {
-                case 'cannon':
-                    turretBaseRadius = baseRadius * 0.7; barrelLength = baseRadius * 1.5; barrelWidth = baseRadius * 0.4;
-                    // Wider base
-                    ctx.beginPath(); ctx.rect(-turretBaseRadius * 0.5, -turretBaseRadius * 0.8, turretBaseRadius, turretBaseRadius * 1.6); ctx.fill(); ctx.stroke();
-                    // Barrel
-                    ctx.fillRect(turretBaseRadius * 0.5, -barrelWidth / 2, barrelLength, barrelWidth); ctx.strokeRect(turretBaseRadius * 0.5, -barrelWidth / 2, barrelLength, barrelWidth);
-                    break;
-                case 'laser':
-                    turretBaseRadius = baseRadius * 0.5; barrelLength = baseRadius * 1.7; barrelWidth = baseRadius * 0.2;
-                    // Smaller base
-                    ctx.beginPath(); ctx.arc(0, 0, turretBaseRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                    // Thin barrel
-                    ctx.fillRect(turretBaseRadius*0.8, -barrelWidth / 2, barrelLength, barrelWidth); ctx.strokeRect(turretBaseRadius*0.8, -barrelWidth / 2, barrelLength, barrelWidth);
-                    break;
-                case 'standard': default:
-                    turretBaseRadius = baseRadius * 0.6; barrelLength = baseRadius * 1.3; barrelWidth = baseRadius * 0.3;
-                    // Standard round base
-                    ctx.beginPath(); ctx.arc(0, 0, turretBaseRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                    // Standard barrel
-                    ctx.fillRect(turretBaseRadius*0.8, -barrelWidth / 2, barrelLength, barrelWidth); ctx.strokeRect(turretBaseRadius*0.8, -barrelWidth / 2, barrelLength, barrelWidth);
-                    break;
-            }
-            // --- End Draw Robot Components ---
+            // 3. Draw Turret (Top Layer)
+            this._drawTurret(ctx, turretType, turretColor, baseRadius);
 
             ctx.restore(); // Restore rotation/translation
 
@@ -258,10 +182,545 @@ class Arena { // File name remains Arena, class concept is Renderer
             // Border
             ctx.strokeStyle = '#222222'; ctx.lineWidth = 0.5; ctx.strokeRect(barX, barY, barWidth, barHeight);
             // --- End Name/Health Bar ---
-
         }); // End forEach robot
     }
-    // === END: Refactored drawRobots function ===
+
+    /**
+     * Draws the mobility component of a robot
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {string} mobilityType - Type of mobility component
+     * @param {number} baseRadius - Base radius for scaling
+     * @param {string} chassisColor - Color of chassis for coordinate mobility elements
+     */
+    _drawMobility(ctx, mobilityType, baseRadius, chassisColor) {
+        ctx.fillStyle = '#555'; // Default mobility color
+        const darkAccent = this._darkenColor(chassisColor, 0.7);
+        
+        let treadWidth = baseRadius * 2.0;
+        let treadHeight = baseRadius * 0.6;
+        let wheelRadius = baseRadius * 0.5;
+        let hoverRadiusX = baseRadius * 1.2;
+        let hoverRadiusY = baseRadius * 0.8;
+        
+        switch (mobilityType) {
+            case 'treads':
+                // Main treads
+                ctx.fillStyle = darkAccent;
+                ctx.fillRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight); // Top tread
+                ctx.fillRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);  // Bottom tread
+                ctx.strokeRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight);
+                ctx.strokeRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);
+                
+                // Tread details - small rectangles to simulate treads
+                ctx.fillStyle = '#333';
+                const segmentWidth = 5;
+                const segmentGap = 4;
+                for (let x = -treadWidth/2 + 2; x < treadWidth/2 - 2; x += segmentGap) {
+                    // Top tread details
+                    ctx.fillRect(x, -treadHeight * 1.5 + 2, segmentWidth, treadHeight - 4);
+                    // Bottom tread details
+                    ctx.fillRect(x, treadHeight * 0.5 + 2, segmentWidth, treadHeight - 4);
+                }
+                break;
+                
+            case 'hover':
+                // Hover effect glow
+                ctx.save();
+                ctx.fillStyle = 'rgba(100, 150, 255, 0.3)'; // Semi-transparent blue glow
+                ctx.beginPath();
+                ctx.ellipse(0, 0, hoverRadiusX * 1.2, hoverRadiusY * 1.2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner glow
+                ctx.fillStyle = 'rgba(160, 190, 255, 0.2)';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, hoverRadiusX * 0.9, hoverRadiusY * 0.9, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                // Base hover pad
+                ctx.beginPath();
+                ctx.ellipse(0, 0, hoverRadiusX, hoverRadiusY, 0, 0, Math.PI * 2);
+                ctx.fillStyle = darkAccent;
+                ctx.fill();
+                ctx.strokeStyle = '#88aaff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // Hover vents
+                ctx.fillStyle = '#222';
+                ctx.beginPath();
+                ctx.ellipse(-hoverRadiusX * 0.4, 0, hoverRadiusX * 0.2, hoverRadiusY * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(hoverRadiusX * 0.4, 0, hoverRadiusX * 0.2, hoverRadiusY * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+                
+            case 'quad':
+                // Four wheels at corners
+                ctx.fillStyle = darkAccent;
+                const offsetX = baseRadius * 0.9;
+                const offsetY = baseRadius * 0.6;
+                
+                // Draw four wheels
+                ctx.beginPath(); ctx.arc(-offsetX, -offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(offsetX, -offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(-offsetX, offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(offsetX, offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                
+                // Wheel details
+                ctx.fillStyle = '#222';
+                ctx.beginPath(); ctx.arc(-offsetX, -offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(offsetX, -offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-offsetX, offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(offsetX, offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                break;
+                
+            case 'legs':
+                // Spider-like leg arrangement
+                ctx.fillStyle = darkAccent;
+                const legLength = baseRadius * 0.7;
+                const legWidth = baseRadius * 0.2;
+                
+                // Four legs with joints
+                // Front-right leg
+                ctx.save();
+                ctx.rotate(Math.PI/6);
+                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                ctx.translate(legLength, 0);
+                ctx.rotate(Math.PI/4);
+                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.restore();
+                
+                // Back-right leg
+                ctx.save();
+                ctx.rotate(-Math.PI/6);
+                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                ctx.translate(legLength, 0);
+                ctx.rotate(-Math.PI/4);
+                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.restore();
+                
+                // Front-left leg
+                ctx.save();
+                ctx.rotate(Math.PI*5/6);
+                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                ctx.translate(legLength, 0);
+                ctx.rotate(-Math.PI/4);
+                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.restore();
+                
+                // Back-left leg
+                ctx.save();
+                ctx.rotate(-Math.PI*5/6);
+                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                ctx.translate(legLength, 0);
+                ctx.rotate(Math.PI/4);
+                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.restore();
+                break;
+
+            case 'wheels': default:
+                // Standard two wheels
+                ctx.fillStyle = darkAccent;
+                
+                // Main wheels
+                ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // Left wheel
+                ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();  // Right wheel
+                
+                // Wheel hubs
+                ctx.fillStyle = '#222';
+                ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                break;
+        }
+    }
+
+    /**
+     * Draws the chassis component of a robot
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {string} chassisType - Type of chassis
+     * @param {string} chassisColor - Color of the chassis
+     * @param {number} baseRadius - Base radius for scaling
+     */
+    _drawChassis(ctx, chassisType, chassisColor, baseRadius) {
+        ctx.fillStyle = chassisColor;
+        
+        switch (chassisType) {
+            case 'heavy':
+                // Heavy armored chassis - more square, thicker
+                const heavyWidth = baseRadius * 2.4;
+                const heavyHeight = baseRadius * 1.6;
+                const heavyBorderRadius = 4;
+                
+                // Draw chassis body (rounded rectangle)
+                this._drawRoundedRect(ctx, -heavyWidth/2, -heavyHeight/2, heavyWidth, heavyHeight, heavyBorderRadius);
+                
+                // Draw armor plates/details
+                ctx.fillStyle = this._darkenColor(chassisColor, 0.8);
+                
+                // Top armor strip
+                this._drawRoundedRect(ctx, -heavyWidth/2 + 4, -heavyHeight/2 + 3, heavyWidth - 8, heavyHeight/4, 2);
+                
+                // Bottom armor strip
+                this._drawRoundedRect(ctx, -heavyWidth/2 + 4, heavyHeight/2 - heavyHeight/4 - 3, heavyWidth - 8, heavyHeight/4, 2);
+                
+                // Center detail
+                ctx.fillStyle = this._darkenColor(chassisColor, 0.6);
+                ctx.beginPath();
+                ctx.arc(0, 0, heavyHeight/4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+                
+            case 'light':
+                // Light agile chassis - streamlined, angular
+                const lightWidth = baseRadius * 1.7;
+                const lightHeight = baseRadius * 1.2;
+                
+                // Main chassis - pointy front
+                ctx.beginPath();
+                ctx.moveTo(lightWidth/2, 0); // Front point
+                ctx.lineTo(lightWidth/4, -lightHeight/2); // Top-right corner
+                ctx.lineTo(-lightWidth/2, -lightHeight/2); // Top-left corner
+                ctx.lineTo(-lightWidth/2, lightHeight/2); // Bottom-left corner
+                ctx.lineTo(lightWidth/4, lightHeight/2); // Bottom-right corner
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Detail lines
+                ctx.strokeStyle = this._darkenColor(chassisColor, 0.7);
+                ctx.beginPath();
+                ctx.moveTo(-lightWidth/3, -lightHeight/2);
+                ctx.lineTo(0, 0);
+                ctx.lineTo(-lightWidth/3, lightHeight/2);
+                ctx.stroke();
+                break;
+                
+            case 'hexagonal':
+                // Hex-shaped chassis
+                const hexWidth = baseRadius * 2.2;
+                const hexHeight = baseRadius * 1.5;
+                const hexSide = hexHeight / 2;
+                
+                // Draw hexagon
+                ctx.beginPath();
+                ctx.moveTo(hexWidth/2, 0); // Right point
+                ctx.lineTo(hexWidth/4, -hexSide); // Top-right
+                ctx.lineTo(-hexWidth/4, -hexSide); // Top-left
+                ctx.lineTo(-hexWidth/2, 0); // Left point
+                ctx.lineTo(-hexWidth/4, hexSide); // Bottom-left
+                ctx.lineTo(hexWidth/4, hexSide); // Bottom-right
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Hex detail
+                ctx.fillStyle = this._darkenColor(chassisColor, 0.85);
+                ctx.beginPath();
+                ctx.arc(0, 0, hexHeight/4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+                
+            case 'triangular':
+                // Triangle-shaped chassis
+                const triWidth = baseRadius * 2.2;
+                const triHeight = baseRadius * 1.8;
+                
+                // Draw Triangle
+                ctx.beginPath();
+                ctx.moveTo(triWidth/2, 0); // Point facing forward
+                ctx.lineTo(-triWidth/2, -triHeight/2); // Top-left
+                ctx.lineTo(-triWidth/2, triHeight/2); // Bottom-left
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Triangle details - smaller inner triangle
+                ctx.fillStyle = this._darkenColor(chassisColor, 0.8);
+                ctx.beginPath();
+                ctx.moveTo(triWidth/4, 0);
+                ctx.lineTo(-triWidth/3, -triHeight/3);
+                ctx.lineTo(-triWidth/3, triHeight/3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+
+            case 'medium': default:
+                // Standard rounded chassis
+                const mediumWidth = baseRadius * 2.0;
+                const mediumHeight = baseRadius * 1.4;
+                const mediumBorderRadius = 3;
+                
+                // Draw chassis body
+                this._drawRoundedRect(ctx, -mediumWidth/2, -mediumHeight/2, mediumWidth, mediumHeight, mediumBorderRadius);
+                
+                // Add detail lines
+                ctx.strokeStyle = this._darkenColor(chassisColor, 0.7);
+                ctx.beginPath();
+                ctx.moveTo(-mediumWidth/3, -mediumHeight/2);
+                ctx.lineTo(-mediumWidth/3, mediumHeight/2);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(mediumWidth/6, -mediumHeight/2);
+                ctx.lineTo(mediumWidth/6, mediumHeight/2);
+                ctx.stroke();
+                
+                // Reset stroke style
+                ctx.strokeStyle = '#111';
+                break;
+        }
+    }
+
+    /**
+     * Draws the turret component of a robot
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {string} turretType - Type of turret
+     * @param {string} turretColor - Color of the turret
+     * @param {number} baseRadius - Base radius for scaling
+     */
+    _drawTurret(ctx, turretType, turretColor, baseRadius) {
+        ctx.fillStyle = turretColor;
+        ctx.strokeStyle = '#111'; // Reset stroke for turret
+        
+        switch (turretType) {
+            case 'cannon':
+                // Heavy cannon turret
+                const cannonBaseRadius = baseRadius * 0.7; 
+                const cannonLength = baseRadius * 1.5; 
+                const cannonWidth = baseRadius * 0.4;
+                
+                // Rectangular turret base
+                ctx.beginPath(); 
+                ctx.rect(-cannonBaseRadius * 0.5, -cannonBaseRadius * 0.8, cannonBaseRadius, cannonBaseRadius * 1.6); 
+                ctx.fill(); 
+                ctx.stroke();
+                
+                // Cannon barrel
+                ctx.fillRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonLength, cannonWidth); 
+                ctx.strokeRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonLength, cannonWidth);
+                
+                // Barrel reinforcement
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
+                ctx.fillRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonWidth/2, cannonWidth);
+                ctx.strokeRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonWidth/2, cannonWidth);
+                
+                // Muzzle brake
+                ctx.fillStyle = this._darkenColor(turretColor, 0.6);
+                ctx.fillRect(cannonBaseRadius * 0.5 + cannonLength - cannonWidth/2, -cannonWidth/2 - cannonWidth/4, cannonWidth/2, cannonWidth * 1.5);
+                ctx.strokeRect(cannonBaseRadius * 0.5 + cannonLength - cannonWidth/2, -cannonWidth/2 - cannonWidth/4, cannonWidth/2, cannonWidth * 1.5);
+                break;
+                
+            case 'laser':
+                // High-tech laser turret
+                const laserBaseRadius = baseRadius * 0.5; 
+                const laserLength = baseRadius * 1.7; 
+                const laserWidth = baseRadius * 0.2;
+                
+                // Round turret base
+                ctx.beginPath(); 
+                ctx.arc(0, 0, laserBaseRadius, 0, Math.PI * 2); 
+                ctx.fill(); 
+                ctx.stroke();
+                
+                // Thin laser barrel
+                ctx.fillRect(laserBaseRadius*0.8, -laserWidth / 2, laserLength, laserWidth); 
+                ctx.strokeRect(laserBaseRadius*0.8, -laserWidth / 2, laserLength, laserWidth);
+                
+                // Energy coils around barrel
+                const coilCount = 3;
+                const coilSpacing = laserLength / (coilCount + 1);
+                const coilHeight = laserWidth * 2;
+                
+                ctx.fillStyle = this._lightenColor(turretColor, 1.3);
+                for (let i = 1; i <= coilCount; i++) {
+                    const coilX = laserBaseRadius*0.8 + i * coilSpacing;
+                    ctx.beginPath();
+                    ctx.rect(coilX - laserWidth/2, -coilHeight/2, laserWidth, coilHeight);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+                
+                // Emitter tip
+                ctx.fillStyle = '#88CCFF';
+                ctx.beginPath();
+                ctx.arc(laserBaseRadius*0.8 + laserLength, 0, laserWidth, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+                
+            case 'dual':
+                // Dual barrel turret
+                const dualBaseRadius = baseRadius * 0.6;
+                const dualLength = baseRadius * 1.2;
+                const dualWidth = baseRadius * 0.25;
+                const dualGap = dualWidth * 0.8;
+                
+                // Round base with detail
+                ctx.beginPath();
+                ctx.arc(0, 0, dualBaseRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Detail circle in center
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
+                ctx.beginPath();
+                ctx.arc(0, 0, dualBaseRadius * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Reset fill color
+                ctx.fillStyle = turretColor;
+                
+                // Upper barrel
+                ctx.fillRect(dualBaseRadius*0.8, -dualGap/2 - dualWidth, dualLength, dualWidth);
+                ctx.strokeRect(dualBaseRadius*0.8, -dualGap/2 - dualWidth, dualLength, dualWidth);
+                
+                // Lower barrel
+                ctx.fillRect(dualBaseRadius*0.8, dualGap/2, dualLength, dualWidth);
+                ctx.strokeRect(dualBaseRadius*0.8, dualGap/2, dualLength, dualWidth);
+                break;
+                
+            case 'missile':
+                // Missile launcher turret
+                const missileBaseRadius = baseRadius * 0.7;
+                const missileLength = baseRadius * 1.1;
+                const missileWidth = baseRadius * 1.0;
+                const missileCount = 3; // Visible missile tubes
+                
+                // Rectangular base
+                this._drawRoundedRect(ctx, -missileBaseRadius*0.7, -missileBaseRadius*0.7, missileBaseRadius*1.4, missileBaseRadius*1.4, 2);
+                
+                // Launcher box
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
+                this._drawRoundedRect(ctx, missileBaseRadius*0.6, -missileWidth/2, missileLength, missileWidth, 2);
+                
+                // Missile tubes
+                const tubeHeight = missileWidth / (missileCount + 1);
+                ctx.fillStyle = '#333';
+                
+                for (let i = 1; i <= missileCount; i++) {
+                    const tubeY = -missileWidth/2 + i * tubeHeight;
+                    this._drawRoundedRect(ctx, missileBaseRadius*0.7, tubeY - tubeHeight*0.4, missileLength*0.8, tubeHeight*0.8, 2);
+                }
+                break;
+
+            case 'standard': default:
+                // Standard turret with medium barrel
+                const stdBaseRadius = baseRadius * 0.6; 
+                const stdLength = baseRadius * 1.3; 
+                const stdWidth = baseRadius * 0.3;
+                
+                // Round turret base
+                ctx.beginPath(); 
+                ctx.arc(0, 0, stdBaseRadius, 0, Math.PI * 2); 
+                ctx.fill(); 
+                ctx.stroke();
+                
+                // Center detail
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
+                ctx.beginPath();
+                ctx.arc(0, 0, stdBaseRadius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Reset fill color for barrel
+                ctx.fillStyle = turretColor;
+                
+                // Standard barrel
+                ctx.fillRect(stdBaseRadius*0.8, -stdWidth / 2, stdLength, stdWidth); 
+                ctx.strokeRect(stdBaseRadius*0.8, -stdWidth / 2, stdLength, stdWidth);
+                
+                // Barrel detail
+                ctx.fillStyle = this._darkenColor(turretColor, 0.7);
+                ctx.fillRect(stdBaseRadius*0.8 + stdLength - stdWidth, -stdWidth / 2, stdWidth, stdWidth);
+                ctx.strokeRect(stdBaseRadius*0.8 + stdLength - stdWidth, -stdWidth / 2, stdWidth, stdWidth);
+                break;
+        }
+    }
+
+    /**
+     * Helper method to draw a rounded rectangle
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {number} x - X coordinate of top-left corner
+     * @param {number} y - Y coordinate of top-left corner
+     * @param {number} width - Width of rectangle
+     * @param {number} height - Height of rectangle
+     * @param {number} radius - Corner radius
+     */
+    _drawRoundedRect(ctx, x, y, width, height, radius) {
+        // Ensure radius is not too large for the rectangle
+        radius = Math.min(radius, Math.min(width / 2, height / 2));
+        
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.arcTo(x + width, y, x + width, y + radius, radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
+        ctx.lineTo(x + radius, y + height);
+        ctx.arcTo(x, y + height, x, y + height - radius, radius);
+        ctx.lineTo(x, y + radius);
+        ctx.arcTo(x, y, x + radius, y, radius);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    /**
+     * Helper method to darken a color
+     * @param {string} color - Hex color string
+     * @param {number} factor - Factor to darken by (0-1, where lower is darker)
+     * @returns {string} Darkened hex color
+     */
+    _darkenColor(color, factor) {
+        // Convert hex to RGB
+        let r = parseInt(color.substring(1, 3), 16);
+        let g = parseInt(color.substring(3, 5), 16);
+        let b = parseInt(color.substring(5, 7), 16);
+        
+        // Apply darkening factor
+        r = Math.max(0, Math.floor(r * factor));
+        g = Math.max(0, Math.floor(g * factor));
+        b = Math.max(0, Math.floor(b * factor));
+        
+        // Convert back to hex
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+
+    /**
+     * Helper method to lighten a color
+     * @param {string} color - Hex color string
+     * @param {number} factor - Factor to lighten by (>1 for lighter)
+     * @returns {string} Lightened hex color
+     */
+    _lightenColor(color, factor) {
+        // Convert hex to RGB
+        let r = parseInt(color.substring(1, 3), 16);
+        let g = parseInt(color.substring(3, 5), 16);
+        let b = parseInt(color.substring(5, 7), 16);
+        
+        // Apply lightening factor
+        r = Math.min(255, Math.floor(r * factor));
+        g = Math.min(255, Math.floor(g * factor));
+        b = Math.min(255, Math.floor(b * factor));
+        
+        // Convert back to hex
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+    // === END: Enhanced Robot Drawing System ===
 
 
     /** Draws missiles (No change needed) */

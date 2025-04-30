@@ -34,6 +34,21 @@ if (!sessionSecret) {
     }
 }
 
+// --- START: Define cookie options separately ---
+const cookieOptions = {
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week validity for the session cookie
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (requires HTTPS)
+    httpOnly: true,                  // Prevents client-side JS from reading the cookie
+    sameSite: 'lax'                  // Basic CSRF protection
+};
+
+// --- START: Perform the check HERE ---
+// Check the cookie options *before* creating the session middleware
+if (process.env.NODE_ENV !== 'production' && cookieOptions.secure) {
+    console.warn("Warning: Secure cookies enabled but NODE_ENV is not 'production'. Cookies may not work over HTTP.");
+}
+// --- END: Perform the check HERE ---
+
 const sessionMiddleware = session({
     store: new pgSession({
         pool: db.pool,                // Use the exported pool from db.js
@@ -43,12 +58,7 @@ const sessionMiddleware = session({
     secret: sessionSecret || 'default_insecure_secret_for_dev', // Use loaded secret or fallback
     resave: false,                     // Don't save session if unmodified
     saveUninitialized: false,          // Don't create session until something stored
-    cookie: {
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week validity for the session cookie
-        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (requires HTTPS)
-        httpOnly: true,                  // Prevents client-side JS from reading the cookie
-        sameSite: 'lax'                  // Basic CSRF protection
-    }
+    cookie: cookieOptions // --- Use the defined cookie options object ---
 });
 
 // --- Express Middleware ---
@@ -107,9 +117,11 @@ server.listen(PORT, () => {
   if (!process.env.SESSION_SECRET && process.env.NODE_ENV !== 'development') {
       console.warn("Reminder: SESSION_SECRET environment variable not set.");
   }
-  if (process.env.NODE_ENV !== 'production' && sessionMiddleware.options.cookie.secure) {
-       console.warn("Warning: Secure cookies enabled but NODE_ENV is not 'production'. Cookies may not work over HTTP.");
-  }
+
+  // --- START: Removed the problematic check from here ---
+  // The check is now performed earlier when cookieOptions are defined
+  // --- END: Removed the problematic check from here ---
+
   // Verify trust proxy setting after server start
   if (app.get('trust proxy')) {
     console.log(`Express 'trust proxy' setting is enabled (Value: ${app.get('trust proxy')}).`);

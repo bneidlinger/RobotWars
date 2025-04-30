@@ -1003,11 +1003,12 @@ class Arena { // File name remains Arena, class concept is Renderer
     // drawTriBot(ctx, robotData) { ... } -> REMOVED
 
 
-    // === START: Refactored drawRobots function ===
+    // === START: Enhanced Robot Drawing System ===
     /**
      * Main function to draw all robots based on data from Game class,
      * using the 'visuals' property for component types and colors.
      * Includes name and health bar. Checks visibility flag.
+     * Now supports an expanded set of variants for each robot component.
      */
     drawRobots() {
         const ctx = this.ctx;
@@ -1043,95 +1044,18 @@ class Arena { // File name remains Arena, class concept is Renderer
             ctx.translate(robotX, robotY);
             ctx.rotate(radians);
 
-            // --- Draw Robot Components (Layered, Placeholders) ---
+            // --- Draw Robot Components (Layered) ---
             ctx.lineWidth = 1; // Base line width
             ctx.strokeStyle = '#111'; // Base stroke color
 
             // 1. Draw Mobility (Bottom Layer)
-            ctx.fillStyle = '#555'; // Default mobility color
-            let treadWidth = baseRadius * 2.0;
-            let treadHeight = baseRadius * 0.6;
-            let wheelRadius = baseRadius * 0.5;
-            let hoverRadiusX = baseRadius * 1.2;
-            let hoverRadiusY = baseRadius * 0.8;
-            switch (mobilityType) {
-                case 'treads':
-                    ctx.fillRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight); // Top tread
-                    ctx.fillRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);  // Bottom tread
-                    ctx.strokeRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight);
-                    ctx.strokeRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);
-                    break;
-                case 'hover':
-                    ctx.save();
-                    ctx.fillStyle = 'rgba(100, 150, 255, 0.3)'; // Semi-transparent blue glow
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, hoverRadiusX * 1.2, hoverRadiusY * 1.2, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, hoverRadiusX, hoverRadiusY, 0, 0, Math.PI * 2);
-                    ctx.fillStyle = '#444'; ctx.fill(); // Darker base
-                    ctx.strokeStyle = '#88aaff'; ctx.lineWidth = 1; ctx.stroke();
-                    break;
-                case 'wheels': default:
-                    ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // Left wheel
-                    ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();  // Right wheel
-                    break;
-            }
+            this._drawMobility(ctx, mobilityType, baseRadius, chassisColor);
 
             // 2. Draw Chassis (Middle Layer)
-            ctx.fillStyle = chassisColor;
-            let chassisWidth, chassisHeight;
-            switch (chassisType) {
-                case 'heavy': chassisWidth = baseRadius * 2.4; chassisHeight = baseRadius * 1.6; break;
-                case 'light': chassisWidth = baseRadius * 1.7; chassisHeight = baseRadius * 1.2; break;
-                case 'medium': default: chassisWidth = baseRadius * 2.0; chassisHeight = baseRadius * 1.4; break;
-            }
-            // Draw slightly rounded rectangle for chassis
-            const borderRadius = 3;
-            ctx.beginPath();
-            ctx.moveTo(-chassisWidth / 2 + borderRadius, -chassisHeight / 2);
-            ctx.lineTo(chassisWidth / 2 - borderRadius, -chassisHeight / 2);
-            ctx.arcTo(chassisWidth / 2, -chassisHeight / 2, chassisWidth / 2, -chassisHeight / 2 + borderRadius, borderRadius);
-            ctx.lineTo(chassisWidth / 2, chassisHeight / 2 - borderRadius);
-            ctx.arcTo(chassisWidth / 2, chassisHeight / 2, chassisWidth / 2 - borderRadius, chassisHeight / 2, borderRadius);
-            ctx.lineTo(-chassisWidth / 2 + borderRadius, chassisHeight / 2);
-            ctx.arcTo(-chassisWidth / 2, chassisHeight / 2, -chassisWidth / 2, chassisHeight / 2 - borderRadius, borderRadius);
-            ctx.lineTo(-chassisWidth / 2, -chassisHeight / 2 + borderRadius);
-            ctx.arcTo(-chassisWidth / 2, -chassisHeight / 2, -chassisWidth / 2 + borderRadius, -chassisHeight / 2, borderRadius);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
+            this._drawChassis(ctx, chassisType, chassisColor, baseRadius);
 
-
-            // 3. Draw Turret (Top Layer) - Facing right (0 degrees in local coords)
-            ctx.fillStyle = turretColor;
-            ctx.strokeStyle = '#111'; // Reset stroke for turret
-            let turretBaseRadius, barrelLength, barrelWidth;
-            switch (turretType) {
-                case 'cannon':
-                    turretBaseRadius = baseRadius * 0.7; barrelLength = baseRadius * 1.5; barrelWidth = baseRadius * 0.4;
-                    // Wider base
-                    ctx.beginPath(); ctx.rect(-turretBaseRadius * 0.5, -turretBaseRadius * 0.8, turretBaseRadius, turretBaseRadius * 1.6); ctx.fill(); ctx.stroke();
-                    // Barrel
-                    ctx.fillRect(turretBaseRadius * 0.5, -barrelWidth / 2, barrelLength, barrelWidth); ctx.strokeRect(turretBaseRadius * 0.5, -barrelWidth / 2, barrelLength, barrelWidth);
-                    break;
-                case 'laser':
-                    turretBaseRadius = baseRadius * 0.5; barrelLength = baseRadius * 1.7; barrelWidth = baseRadius * 0.2;
-                    // Smaller base
-                    ctx.beginPath(); ctx.arc(0, 0, turretBaseRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                    // Thin barrel
-                    ctx.fillRect(turretBaseRadius*0.8, -barrelWidth / 2, barrelLength, barrelWidth); ctx.strokeRect(turretBaseRadius*0.8, -barrelWidth / 2, barrelLength, barrelWidth);
-                    break;
-                case 'standard': default:
-                    turretBaseRadius = baseRadius * 0.6; barrelLength = baseRadius * 1.3; barrelWidth = baseRadius * 0.3;
-                    // Standard round base
-                    ctx.beginPath(); ctx.arc(0, 0, turretBaseRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                    // Standard barrel
-                    ctx.fillRect(turretBaseRadius*0.8, -barrelWidth / 2, barrelLength, barrelWidth); ctx.strokeRect(turretBaseRadius*0.8, -barrelWidth / 2, barrelLength, barrelWidth);
-                    break;
-            }
-            // --- End Draw Robot Components ---
+            // 3. Draw Turret (Top Layer)
+            this._drawTurret(ctx, turretType, turretColor, baseRadius);
 
             ctx.restore(); // Restore rotation/translation
 
@@ -1167,10 +1091,545 @@ class Arena { // File name remains Arena, class concept is Renderer
             // Border
             ctx.strokeStyle = '#222222'; ctx.lineWidth = 0.5; ctx.strokeRect(barX, barY, barWidth, barHeight);
             // --- End Name/Health Bar ---
-
         }); // End forEach robot
     }
-    // === END: Refactored drawRobots function ===
+
+    /**
+     * Draws the mobility component of a robot
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {string} mobilityType - Type of mobility component
+     * @param {number} baseRadius - Base radius for scaling
+     * @param {string} chassisColor - Color of chassis for coordinate mobility elements
+     */
+    _drawMobility(ctx, mobilityType, baseRadius, chassisColor) {
+        ctx.fillStyle = '#555'; // Default mobility color
+        const darkAccent = this._darkenColor(chassisColor, 0.7);
+        
+        let treadWidth = baseRadius * 2.0;
+        let treadHeight = baseRadius * 0.6;
+        let wheelRadius = baseRadius * 0.5;
+        let hoverRadiusX = baseRadius * 1.2;
+        let hoverRadiusY = baseRadius * 0.8;
+        
+        switch (mobilityType) {
+            case 'treads':
+                // Main treads
+                ctx.fillStyle = darkAccent;
+                ctx.fillRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight); // Top tread
+                ctx.fillRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);  // Bottom tread
+                ctx.strokeRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight);
+                ctx.strokeRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);
+                
+                // Tread details - small rectangles to simulate treads
+                ctx.fillStyle = '#333';
+                const segmentWidth = 5;
+                const segmentGap = 4;
+                for (let x = -treadWidth/2 + 2; x < treadWidth/2 - 2; x += segmentGap) {
+                    // Top tread details
+                    ctx.fillRect(x, -treadHeight * 1.5 + 2, segmentWidth, treadHeight - 4);
+                    // Bottom tread details
+                    ctx.fillRect(x, treadHeight * 0.5 + 2, segmentWidth, treadHeight - 4);
+                }
+                break;
+                
+            case 'hover':
+                // Hover effect glow
+                ctx.save();
+                ctx.fillStyle = 'rgba(100, 150, 255, 0.3)'; // Semi-transparent blue glow
+                ctx.beginPath();
+                ctx.ellipse(0, 0, hoverRadiusX * 1.2, hoverRadiusY * 1.2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner glow
+                ctx.fillStyle = 'rgba(160, 190, 255, 0.2)';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, hoverRadiusX * 0.9, hoverRadiusY * 0.9, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                // Base hover pad
+                ctx.beginPath();
+                ctx.ellipse(0, 0, hoverRadiusX, hoverRadiusY, 0, 0, Math.PI * 2);
+                ctx.fillStyle = darkAccent;
+                ctx.fill();
+                ctx.strokeStyle = '#88aaff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // Hover vents
+                ctx.fillStyle = '#222';
+                ctx.beginPath();
+                ctx.ellipse(-hoverRadiusX * 0.4, 0, hoverRadiusX * 0.2, hoverRadiusY * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(hoverRadiusX * 0.4, 0, hoverRadiusX * 0.2, hoverRadiusY * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+                
+            case 'quad':
+                // Four wheels at corners
+                ctx.fillStyle = darkAccent;
+                const offsetX = baseRadius * 0.9;
+                const offsetY = baseRadius * 0.6;
+                
+                // Draw four wheels
+                ctx.beginPath(); ctx.arc(-offsetX, -offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(offsetX, -offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(-offsetX, offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(offsetX, offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                
+                // Wheel details
+                ctx.fillStyle = '#222';
+                ctx.beginPath(); ctx.arc(-offsetX, -offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(offsetX, -offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-offsetX, offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(offsetX, offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                break;
+                
+            case 'legs':
+                // Spider-like leg arrangement
+                ctx.fillStyle = darkAccent;
+                const legLength = baseRadius * 0.7;
+                const legWidth = baseRadius * 0.2;
+                
+                // Four legs with joints
+                // Front-right leg
+                ctx.save();
+                ctx.rotate(Math.PI/6);
+                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                ctx.translate(legLength, 0);
+                ctx.rotate(Math.PI/4);
+                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.restore();
+                
+                // Back-right leg
+                ctx.save();
+                ctx.rotate(-Math.PI/6);
+                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                ctx.translate(legLength, 0);
+                ctx.rotate(-Math.PI/4);
+                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.restore();
+                
+                // Front-left leg
+                ctx.save();
+                ctx.rotate(Math.PI*5/6);
+                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                ctx.translate(legLength, 0);
+                ctx.rotate(-Math.PI/4);
+                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.restore();
+                
+                // Back-left leg
+                ctx.save();
+                ctx.rotate(-Math.PI*5/6);
+                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                ctx.translate(legLength, 0);
+                ctx.rotate(Math.PI/4);
+                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.restore();
+                break;
+
+            case 'wheels': default:
+                // Standard two wheels
+                ctx.fillStyle = darkAccent;
+                
+                // Main wheels
+                ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // Left wheel
+                ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();  // Right wheel
+                
+                // Wheel hubs
+                ctx.fillStyle = '#222';
+                ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                break;
+        }
+    }
+
+    /**
+     * Draws the chassis component of a robot
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {string} chassisType - Type of chassis
+     * @param {string} chassisColor - Color of the chassis
+     * @param {number} baseRadius - Base radius for scaling
+     */
+    _drawChassis(ctx, chassisType, chassisColor, baseRadius) {
+        ctx.fillStyle = chassisColor;
+        
+        switch (chassisType) {
+            case 'heavy':
+                // Heavy armored chassis - more square, thicker
+                const heavyWidth = baseRadius * 2.4;
+                const heavyHeight = baseRadius * 1.6;
+                const heavyBorderRadius = 4;
+                
+                // Draw chassis body (rounded rectangle)
+                this._drawRoundedRect(ctx, -heavyWidth/2, -heavyHeight/2, heavyWidth, heavyHeight, heavyBorderRadius);
+                
+                // Draw armor plates/details
+                ctx.fillStyle = this._darkenColor(chassisColor, 0.8);
+                
+                // Top armor strip
+                this._drawRoundedRect(ctx, -heavyWidth/2 + 4, -heavyHeight/2 + 3, heavyWidth - 8, heavyHeight/4, 2);
+                
+                // Bottom armor strip
+                this._drawRoundedRect(ctx, -heavyWidth/2 + 4, heavyHeight/2 - heavyHeight/4 - 3, heavyWidth - 8, heavyHeight/4, 2);
+                
+                // Center detail
+                ctx.fillStyle = this._darkenColor(chassisColor, 0.6);
+                ctx.beginPath();
+                ctx.arc(0, 0, heavyHeight/4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+                
+            case 'light':
+                // Light agile chassis - streamlined, angular
+                const lightWidth = baseRadius * 1.7;
+                const lightHeight = baseRadius * 1.2;
+                
+                // Main chassis - pointy front
+                ctx.beginPath();
+                ctx.moveTo(lightWidth/2, 0); // Front point
+                ctx.lineTo(lightWidth/4, -lightHeight/2); // Top-right corner
+                ctx.lineTo(-lightWidth/2, -lightHeight/2); // Top-left corner
+                ctx.lineTo(-lightWidth/2, lightHeight/2); // Bottom-left corner
+                ctx.lineTo(lightWidth/4, lightHeight/2); // Bottom-right corner
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Detail lines
+                ctx.strokeStyle = this._darkenColor(chassisColor, 0.7);
+                ctx.beginPath();
+                ctx.moveTo(-lightWidth/3, -lightHeight/2);
+                ctx.lineTo(0, 0);
+                ctx.lineTo(-lightWidth/3, lightHeight/2);
+                ctx.stroke();
+                break;
+                
+            case 'hexagonal':
+                // Hex-shaped chassis
+                const hexWidth = baseRadius * 2.2;
+                const hexHeight = baseRadius * 1.5;
+                const hexSide = hexHeight / 2;
+                
+                // Draw hexagon
+                ctx.beginPath();
+                ctx.moveTo(hexWidth/2, 0); // Right point
+                ctx.lineTo(hexWidth/4, -hexSide); // Top-right
+                ctx.lineTo(-hexWidth/4, -hexSide); // Top-left
+                ctx.lineTo(-hexWidth/2, 0); // Left point
+                ctx.lineTo(-hexWidth/4, hexSide); // Bottom-left
+                ctx.lineTo(hexWidth/4, hexSide); // Bottom-right
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Hex detail
+                ctx.fillStyle = this._darkenColor(chassisColor, 0.85);
+                ctx.beginPath();
+                ctx.arc(0, 0, hexHeight/4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+                
+            case 'triangular':
+                // Triangle-shaped chassis
+                const triWidth = baseRadius * 2.2;
+                const triHeight = baseRadius * 1.8;
+                
+                // Draw Triangle
+                ctx.beginPath();
+                ctx.moveTo(triWidth/2, 0); // Point facing forward
+                ctx.lineTo(-triWidth/2, -triHeight/2); // Top-left
+                ctx.lineTo(-triWidth/2, triHeight/2); // Bottom-left
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Triangle details - smaller inner triangle
+                ctx.fillStyle = this._darkenColor(chassisColor, 0.8);
+                ctx.beginPath();
+                ctx.moveTo(triWidth/4, 0);
+                ctx.lineTo(-triWidth/3, -triHeight/3);
+                ctx.lineTo(-triWidth/3, triHeight/3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+
+            case 'medium': default:
+                // Standard rounded chassis
+                const mediumWidth = baseRadius * 2.0;
+                const mediumHeight = baseRadius * 1.4;
+                const mediumBorderRadius = 3;
+                
+                // Draw chassis body
+                this._drawRoundedRect(ctx, -mediumWidth/2, -mediumHeight/2, mediumWidth, mediumHeight, mediumBorderRadius);
+                
+                // Add detail lines
+                ctx.strokeStyle = this._darkenColor(chassisColor, 0.7);
+                ctx.beginPath();
+                ctx.moveTo(-mediumWidth/3, -mediumHeight/2);
+                ctx.lineTo(-mediumWidth/3, mediumHeight/2);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(mediumWidth/6, -mediumHeight/2);
+                ctx.lineTo(mediumWidth/6, mediumHeight/2);
+                ctx.stroke();
+                
+                // Reset stroke style
+                ctx.strokeStyle = '#111';
+                break;
+        }
+    }
+
+    /**
+     * Draws the turret component of a robot
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {string} turretType - Type of turret
+     * @param {string} turretColor - Color of the turret
+     * @param {number} baseRadius - Base radius for scaling
+     */
+    _drawTurret(ctx, turretType, turretColor, baseRadius) {
+        ctx.fillStyle = turretColor;
+        ctx.strokeStyle = '#111'; // Reset stroke for turret
+        
+        switch (turretType) {
+            case 'cannon':
+                // Heavy cannon turret
+                const cannonBaseRadius = baseRadius * 0.7; 
+                const cannonLength = baseRadius * 1.5; 
+                const cannonWidth = baseRadius * 0.4;
+                
+                // Rectangular turret base
+                ctx.beginPath(); 
+                ctx.rect(-cannonBaseRadius * 0.5, -cannonBaseRadius * 0.8, cannonBaseRadius, cannonBaseRadius * 1.6); 
+                ctx.fill(); 
+                ctx.stroke();
+                
+                // Cannon barrel
+                ctx.fillRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonLength, cannonWidth); 
+                ctx.strokeRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonLength, cannonWidth);
+                
+                // Barrel reinforcement
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
+                ctx.fillRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonWidth/2, cannonWidth);
+                ctx.strokeRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonWidth/2, cannonWidth);
+                
+                // Muzzle brake
+                ctx.fillStyle = this._darkenColor(turretColor, 0.6);
+                ctx.fillRect(cannonBaseRadius * 0.5 + cannonLength - cannonWidth/2, -cannonWidth/2 - cannonWidth/4, cannonWidth/2, cannonWidth * 1.5);
+                ctx.strokeRect(cannonBaseRadius * 0.5 + cannonLength - cannonWidth/2, -cannonWidth/2 - cannonWidth/4, cannonWidth/2, cannonWidth * 1.5);
+                break;
+                
+            case 'laser':
+                // High-tech laser turret
+                const laserBaseRadius = baseRadius * 0.5; 
+                const laserLength = baseRadius * 1.7; 
+                const laserWidth = baseRadius * 0.2;
+                
+                // Round turret base
+                ctx.beginPath(); 
+                ctx.arc(0, 0, laserBaseRadius, 0, Math.PI * 2); 
+                ctx.fill(); 
+                ctx.stroke();
+                
+                // Thin laser barrel
+                ctx.fillRect(laserBaseRadius*0.8, -laserWidth / 2, laserLength, laserWidth); 
+                ctx.strokeRect(laserBaseRadius*0.8, -laserWidth / 2, laserLength, laserWidth);
+                
+                // Energy coils around barrel
+                const coilCount = 3;
+                const coilSpacing = laserLength / (coilCount + 1);
+                const coilHeight = laserWidth * 2;
+                
+                ctx.fillStyle = this._lightenColor(turretColor, 1.3);
+                for (let i = 1; i <= coilCount; i++) {
+                    const coilX = laserBaseRadius*0.8 + i * coilSpacing;
+                    ctx.beginPath();
+                    ctx.rect(coilX - laserWidth/2, -coilHeight/2, laserWidth, coilHeight);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+                
+                // Emitter tip
+                ctx.fillStyle = '#88CCFF';
+                ctx.beginPath();
+                ctx.arc(laserBaseRadius*0.8 + laserLength, 0, laserWidth, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+                
+            case 'dual':
+                // Dual barrel turret
+                const dualBaseRadius = baseRadius * 0.6;
+                const dualLength = baseRadius * 1.2;
+                const dualWidth = baseRadius * 0.25;
+                const dualGap = dualWidth * 0.8;
+                
+                // Round base with detail
+                ctx.beginPath();
+                ctx.arc(0, 0, dualBaseRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Detail circle in center
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
+                ctx.beginPath();
+                ctx.arc(0, 0, dualBaseRadius * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Reset fill color
+                ctx.fillStyle = turretColor;
+                
+                // Upper barrel
+                ctx.fillRect(dualBaseRadius*0.8, -dualGap/2 - dualWidth, dualLength, dualWidth);
+                ctx.strokeRect(dualBaseRadius*0.8, -dualGap/2 - dualWidth, dualLength, dualWidth);
+                
+                // Lower barrel
+                ctx.fillRect(dualBaseRadius*0.8, dualGap/2, dualLength, dualWidth);
+                ctx.strokeRect(dualBaseRadius*0.8, dualGap/2, dualLength, dualWidth);
+                break;
+                
+            case 'missile':
+                // Missile launcher turret
+                const missileBaseRadius = baseRadius * 0.7;
+                const missileLength = baseRadius * 1.1;
+                const missileWidth = baseRadius * 1.0;
+                const missileCount = 3; // Visible missile tubes
+                
+                // Rectangular base
+                this._drawRoundedRect(ctx, -missileBaseRadius*0.7, -missileBaseRadius*0.7, missileBaseRadius*1.4, missileBaseRadius*1.4, 2);
+                
+                // Launcher box
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
+                this._drawRoundedRect(ctx, missileBaseRadius*0.6, -missileWidth/2, missileLength, missileWidth, 2);
+                
+                // Missile tubes
+                const tubeHeight = missileWidth / (missileCount + 1);
+                ctx.fillStyle = '#333';
+                
+                for (let i = 1; i <= missileCount; i++) {
+                    const tubeY = -missileWidth/2 + i * tubeHeight;
+                    this._drawRoundedRect(ctx, missileBaseRadius*0.7, tubeY - tubeHeight*0.4, missileLength*0.8, tubeHeight*0.8, 2);
+                }
+                break;
+
+            case 'standard': default:
+                // Standard turret with medium barrel
+                const stdBaseRadius = baseRadius * 0.6; 
+                const stdLength = baseRadius * 1.3; 
+                const stdWidth = baseRadius * 0.3;
+                
+                // Round turret base
+                ctx.beginPath(); 
+                ctx.arc(0, 0, stdBaseRadius, 0, Math.PI * 2); 
+                ctx.fill(); 
+                ctx.stroke();
+                
+                // Center detail
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
+                ctx.beginPath();
+                ctx.arc(0, 0, stdBaseRadius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Reset fill color for barrel
+                ctx.fillStyle = turretColor;
+                
+                // Standard barrel
+                ctx.fillRect(stdBaseRadius*0.8, -stdWidth / 2, stdLength, stdWidth); 
+                ctx.strokeRect(stdBaseRadius*0.8, -stdWidth / 2, stdLength, stdWidth);
+                
+                // Barrel detail
+                ctx.fillStyle = this._darkenColor(turretColor, 0.7);
+                ctx.fillRect(stdBaseRadius*0.8 + stdLength - stdWidth, -stdWidth / 2, stdWidth, stdWidth);
+                ctx.strokeRect(stdBaseRadius*0.8 + stdLength - stdWidth, -stdWidth / 2, stdWidth, stdWidth);
+                break;
+        }
+    }
+
+    /**
+     * Helper method to draw a rounded rectangle
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {number} x - X coordinate of top-left corner
+     * @param {number} y - Y coordinate of top-left corner
+     * @param {number} width - Width of rectangle
+     * @param {number} height - Height of rectangle
+     * @param {number} radius - Corner radius
+     */
+    _drawRoundedRect(ctx, x, y, width, height, radius) {
+        // Ensure radius is not too large for the rectangle
+        radius = Math.min(radius, Math.min(width / 2, height / 2));
+        
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.arcTo(x + width, y, x + width, y + radius, radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
+        ctx.lineTo(x + radius, y + height);
+        ctx.arcTo(x, y + height, x, y + height - radius, radius);
+        ctx.lineTo(x, y + radius);
+        ctx.arcTo(x, y, x + radius, y, radius);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    /**
+     * Helper method to darken a color
+     * @param {string} color - Hex color string
+     * @param {number} factor - Factor to darken by (0-1, where lower is darker)
+     * @returns {string} Darkened hex color
+     */
+    _darkenColor(color, factor) {
+        // Convert hex to RGB
+        let r = parseInt(color.substring(1, 3), 16);
+        let g = parseInt(color.substring(3, 5), 16);
+        let b = parseInt(color.substring(5, 7), 16);
+        
+        // Apply darkening factor
+        r = Math.max(0, Math.floor(r * factor));
+        g = Math.max(0, Math.floor(g * factor));
+        b = Math.max(0, Math.floor(b * factor));
+        
+        // Convert back to hex
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+
+    /**
+     * Helper method to lighten a color
+     * @param {string} color - Hex color string
+     * @param {number} factor - Factor to lighten by (>1 for lighter)
+     * @returns {string} Lightened hex color
+     */
+    _lightenColor(color, factor) {
+        // Convert hex to RGB
+        let r = parseInt(color.substring(1, 3), 16);
+        let g = parseInt(color.substring(3, 5), 16);
+        let b = parseInt(color.substring(5, 7), 16);
+        
+        // Apply lightening factor
+        r = Math.min(255, Math.floor(r * factor));
+        g = Math.min(255, Math.floor(g * factor));
+        b = Math.min(255, Math.floor(b * factor));
+        
+        // Convert back to hex
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+    // === END: Enhanced Robot Drawing System ===
 
 
     /** Draws missiles (No change needed) */
@@ -1841,6 +2300,7 @@ class Controls {
                     this.updateLoadoutStatus("Preparing loadout...");
 
                     // --- START: Prepare Loadout ---
+                    // Use context 'Ready Up'
                     const { loadoutData, error } = await this._prepareLoadoutData("Ready Up");
                     if (error) {
                          alert(error);
@@ -1931,6 +2391,7 @@ class Controls {
                 this.updateLoadoutStatus("Preparing test game...");
 
                 // --- START: Prepare Loadout ---
+                 // Use context 'Test Code'
                  const { loadoutData, error } = await this._prepareLoadoutData("Test Code");
                  if (error) {
                       alert(error);
@@ -1969,11 +2430,13 @@ class Controls {
 
     /**
      * Helper function to prepare loadout data for Ready Up or Test Code.
-     * Fetches the code for the currently selected snippet via API.
-     * Uses the robot name and visuals currently set in the LoadoutBuilder instance.
+     * Fetches code based on context:
+     * - 'Ready Up': Fetches code for the snippet linked in the Loadout Builder via API.
+     * - 'Test Code': Gets the code directly from the live CodeMirror editor.
+     * Uses the robot name and visuals currently set in the LoadoutBuilder instance for both contexts.
      * @private
      * @async
-     * @param {string} context - 'Ready Up' or 'Test Code' for logging/errors.
+     * @param {string} context - 'Ready Up' or 'Test Code' for logging/errors and determining code source.
      * @returns {Promise<{loadoutData: object|null, error: string|null}>}
      */
     async _prepareLoadoutData(context) {
@@ -1989,56 +2452,106 @@ class Controls {
         const { robotName, visuals, codeLoadoutName } = builderState;
         console.log(`[Controls._prepareLoadoutData] Builder state for prepare:`, JSON.parse(JSON.stringify(builderState))); // DEBUG: Log builder state
 
-        // --- Validation ---
+        // --- Validation (Applies to both contexts) ---
         if (!robotName || typeof robotName !== 'string' || robotName.trim().length === 0) {
              return { loadoutData: null, error: `(${context}) Please set a Robot Name in the Loadout Builder.` };
         }
         if (!visuals || typeof visuals !== 'object') { // Add basic visuals check
             return { loadoutData: null, error: `(${context}) Visual configuration is missing. Open the builder.` };
         }
-        if (!codeLoadoutName || typeof codeLoadoutName !== 'string' || codeLoadoutName.trim().length === 0) {
-             return { loadoutData: null, error: `(${context}) Please select a Code Snippet in the Loadout Builder.` };
-        }
         // --- End Validation ---
 
-        this.updateLoadoutStatus(`(${context}) Fetching code for "${codeLoadoutName}"...`);
-        try {
-             // --- Fetch the selected snippet's code ---
-             const encodedName = encodeURIComponent(codeLoadoutName);
-             const snippet = await apiCall(`/api/snippets/${encodedName}`, 'GET');
+        let codeToUse = null;
+        let error = null;
 
-             if (!snippet || typeof snippet.code !== 'string') {
-                  throw new Error(`API did not return valid code for snippet "${codeLoadoutName}".`);
-             }
+        // --- START: Context-based Code Retrieval ---
+        if (context === "Test Code") {
+            console.log("[Controls._prepareLoadoutData] Context is 'Test Code'. Getting code from editor.");
+            try {
+                // Ensure editor instance exists and get its value
+                if (typeof editor !== 'undefined' && typeof editor.getValue === 'function') {
+                     codeToUse = editor.getValue();
+                     if (typeof codeToUse !== 'string' || codeToUse.trim() === '') {
+                         error = `(${context}) Code editor is empty. Cannot run test.`;
+                         console.warn("[Controls._prepareLoadoutData] Editor is empty for Test Code.");
+                     } else {
+                         console.log("[Controls._prepareLoadoutData] Successfully retrieved code from live editor.");
+                         this.updateLoadoutStatus(`(${context}) Using code from editor.`);
+                     }
+                } else {
+                     error = `(${context}) Internal Error: Code editor instance not available.`;
+                     console.error("[Controls._prepareLoadoutData] CodeMirror editor instance not found!");
+                }
+            } catch (e) {
+                 error = `(${context}) Internal Error: Failed to get code from editor. ${e.message}`;
+                 console.error("[Controls._prepareLoadoutData] Error getting code from editor:", e);
+            }
 
-             // <<< START: ADDED DEBUG LOG >>>
-             console.log(`[Controls._prepareLoadoutData] Fetched Code Content for '${codeLoadoutName}':\n`, snippet.code);
-             // <<< END: ADDED DEBUG LOG >>>
+        } else if (context === "Ready Up") {
+            console.log("[Controls._prepareLoadoutData] Context is 'Ready Up'. Getting code via API.");
+            // Validation specific to 'Ready Up' (needs a selected snippet name)
+            if (!codeLoadoutName || typeof codeLoadoutName !== 'string' || codeLoadoutName.trim().length === 0) {
+                 return { loadoutData: null, error: `(${context}) Please select a Code Snippet in the Loadout Builder.` };
+            }
 
-             // --- Construct the final loadout data object ---
-             const loadoutData = {
-                 name: robotName.trim(), // Use the robot name from builder
-                 visuals: visuals,       // Use the visuals object from builder
-                 code: snippet.code      // Use the fetched code
-             };
+            this.updateLoadoutStatus(`(${context}) Fetching code for "${codeLoadoutName}"...`);
+            try {
+                 // --- Fetch the selected snippet's code ---
+                 const encodedName = encodeURIComponent(codeLoadoutName);
+                 const snippet = await apiCall(`/api/snippets/${encodedName}`, 'GET');
 
-             console.log(`[Controls._prepareLoadoutData] Successfully prepared data for ${context}:`, { name: loadoutData.name, visuals: '...', code: '...' });
-             this.updateLoadoutStatus(`(${context}) Loadout ready.`);
-             return { loadoutData: loadoutData, error: null };
+                 if (!snippet || typeof snippet.code !== 'string') {
+                      // This is an error condition for Ready Up
+                      error = `(${context}) API did not return valid code for snippet "${codeLoadoutName}". It might have been deleted. Check Loadout Builder.`;
+                      console.error(`[Controls._prepareLoadoutData] Invalid API response for snippet ${codeLoadoutName}:`, snippet);
+                 } else {
+                      codeToUse = snippet.code;
+                      console.log(`[Controls._prepareLoadoutData] Fetched Code Content for '${codeLoadoutName}'.`);
+                      this.updateLoadoutStatus(`(${context}) Fetched code for ${codeLoadoutName}.`);
+                 }
 
-        } catch (error) {
-             console.error(`[Controls._prepareLoadoutData] Error preparing loadout data for ${context}:`, error);
-             let userMessage = error.message || 'Unknown error.';
-             if (error.status === 404) {
-                 userMessage = `Selected code snippet "${codeLoadoutName}" not found. It might have been deleted. Check Loadout Builder.`;
-             } else if (error.status === 401) {
-                  userMessage = `Authentication error fetching code. Please log in again.`;
-             } else {
-                 userMessage = `Failed to fetch code for "${codeLoadoutName}": ${userMessage}`;
-             }
-             return { loadoutData: null, error: `(${context}) ${userMessage}` };
+            } catch (fetchError) {
+                 console.error(`[Controls._prepareLoadoutData] Error preparing loadout data for ${context}:`, fetchError);
+                 let userMessage = fetchError.message || 'Unknown error.';
+                 if (fetchError.status === 404) {
+                     userMessage = `Selected code snippet "${codeLoadoutName}" not found. It might have been deleted. Check Loadout Builder.`;
+                 } else if (fetchError.status === 401) {
+                      userMessage = `Authentication error fetching code. Please log in again.`;
+                 } else {
+                     userMessage = `Failed to fetch code for "${codeLoadoutName}": ${userMessage}`;
+                 }
+                 error = `(${context}) ${userMessage}`; // Assign to the outer error variable
+            }
+        } else {
+             // Unknown context
+             error = `(${context}) Internal Error: Unknown context passed to _prepareLoadoutData.`;
+             console.error(error);
         }
-    }
+        // --- END: Context-based Code Retrieval ---
+
+
+        // --- Final Check and Return ---
+        if (error) {
+             // An error occurred in either path
+             return { loadoutData: null, error: error };
+        }
+        if (codeToUse === null || typeof codeToUse !== 'string') {
+             // Should have been caught by specific error handling above, but as a fallback
+             return { loadoutData: null, error: `(${context}) Failed to obtain valid robot code.` };
+        }
+
+        // If we reach here, we have name, visuals, and codeToUse
+        const loadoutData = {
+             name: robotName.trim(),
+             visuals: visuals,
+             code: codeToUse // Use the code obtained based on the context
+        };
+
+        console.log(`[Controls._prepareLoadoutData] Successfully prepared data for ${context}:`, { name: loadoutData.name, visuals: '...', code: '...' });
+        this.updateLoadoutStatus(`(${context}) Loadout ready.`);
+        return { loadoutData: loadoutData, error: null };
+
+    } // <-- End _prepareLoadoutData
 
 
     // --- Code SNIPPET Management Methods (Using API) ---
@@ -2994,79 +3507,555 @@ class LoadoutBuilder {
         ctx.translate(centerX, centerY);
         // No rotation for static preview
 
-        // --- Draw Robot Components (Layered, matching Arena.js logic) ---
+        // --- Draw Robot Components (Enhanced versions matching Arena.js) ---
         ctx.lineWidth = 1 * scale;
         ctx.strokeStyle = '#111';
 
-        // 1. Mobility
-        ctx.fillStyle = '#555'; // Default mobility color
-        let treadWidth = baseRadius * 2.0; let treadHeight = baseRadius * 0.6;
-        let wheelRadius = baseRadius * 0.5;
-        let hoverRadiusX = baseRadius * 1.2; let hoverRadiusY = baseRadius * 0.8;
-        switch (visuals.mobility?.type) {
-            case 'treads':
-                ctx.fillRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight);
-                ctx.fillRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);
-                ctx.strokeRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight);
-                ctx.strokeRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);
-                break;
-            case 'hover':
-                 ctx.save(); ctx.fillStyle = 'rgba(100, 150, 255, 0.3)';
-                 ctx.beginPath(); ctx.ellipse(0, 0, hoverRadiusX * 1.2, hoverRadiusY * 1.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-                 ctx.beginPath(); ctx.ellipse(0, 0, hoverRadiusX, hoverRadiusY, 0, 0, Math.PI * 2);
-                 ctx.fillStyle = '#444'; ctx.fill(); ctx.strokeStyle = '#88aaff'; ctx.lineWidth = 1 * scale; ctx.stroke();
-                break;
-            case 'wheels': default:
-                ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                break;
-        }
-
-        // 2. Chassis
-        ctx.fillStyle = visuals.chassis?.color || '#aaaaaa';
-        let chassisWidth, chassisHeight;
-        switch (visuals.chassis?.type) {
-            case 'heavy': chassisWidth = baseRadius * 2.4; chassisHeight = baseRadius * 1.6; break;
-            case 'light': chassisWidth = baseRadius * 1.7; chassisHeight = baseRadius * 1.2; break;
-            case 'medium': default: chassisWidth = baseRadius * 2.0; chassisHeight = baseRadius * 1.4; break;
-        }
-        const borderRadius = 3 * scale;
-        ctx.beginPath();
-        ctx.moveTo(-chassisWidth / 2 + borderRadius, -chassisHeight / 2);
-        ctx.lineTo(chassisWidth / 2 - borderRadius, -chassisHeight / 2);
-        ctx.arcTo(chassisWidth / 2, -chassisHeight / 2, chassisWidth / 2, -chassisHeight / 2 + borderRadius, borderRadius);
-        ctx.lineTo(chassisWidth / 2, chassisHeight / 2 - borderRadius);
-        ctx.arcTo(chassisWidth / 2, chassisHeight / 2, chassisWidth / 2 - borderRadius, chassisHeight / 2, borderRadius);
-        ctx.lineTo(-chassisWidth / 2 + borderRadius, chassisHeight / 2);
-        ctx.arcTo(-chassisWidth / 2, chassisHeight / 2, -chassisWidth / 2, chassisHeight / 2 - borderRadius, borderRadius);
-        ctx.lineTo(-chassisWidth / 2, -chassisHeight / 2 + borderRadius);
-        ctx.arcTo(-chassisWidth / 2, -chassisHeight / 2, -chassisWidth / 2 + borderRadius, -chassisHeight / 2, borderRadius);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-
-        // 3. Turret (Facing right)
-        ctx.fillStyle = visuals.turret?.color || '#ffffff';
-        ctx.strokeStyle = '#111'; // Reset stroke for turret
-        let turretBaseRadius, barrelLength, barrelWidth;
-        switch (visuals.turret?.type) {
-            case 'cannon':
-                turretBaseRadius = baseRadius * 0.7; barrelLength = baseRadius * 1.5; barrelWidth = baseRadius * 0.4;
-                ctx.beginPath(); ctx.rect(-turretBaseRadius * 0.5, -turretBaseRadius * 0.8, turretBaseRadius, turretBaseRadius * 1.6); ctx.fill(); ctx.stroke();
-                ctx.fillRect(turretBaseRadius * 0.5, -barrelWidth / 2, barrelLength, barrelWidth); ctx.strokeRect(turretBaseRadius * 0.5, -barrelWidth / 2, barrelLength, barrelWidth);
-                break;
-            case 'laser':
-                turretBaseRadius = baseRadius * 0.5; barrelLength = baseRadius * 1.7; barrelWidth = baseRadius * 0.2;
-                ctx.beginPath(); ctx.arc(0, 0, turretBaseRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                ctx.fillRect(turretBaseRadius*0.8, -barrelWidth / 2, barrelLength, barrelWidth); ctx.strokeRect(turretBaseRadius*0.8, -barrelWidth / 2, barrelLength, barrelWidth);
-                break;
-            case 'standard': default:
-                turretBaseRadius = baseRadius * 0.6; barrelLength = baseRadius * 1.3; barrelWidth = baseRadius * 0.3;
-                ctx.beginPath(); ctx.arc(0, 0, turretBaseRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                ctx.fillRect(turretBaseRadius*0.8, -barrelWidth / 2, barrelLength, barrelWidth); ctx.strokeRect(turretBaseRadius*0.8, -barrelWidth / 2, barrelLength, barrelWidth);
-                break;
-        }
-        // --- End Draw Robot Components ---
+        // Draw the bot using similar helper methods as in Arena.js
+        this._drawMobility(ctx, visuals.mobility?.type || 'wheels', baseRadius, visuals.chassis?.color || '#aaaaaa', scale);
+        this._drawChassis(ctx, visuals.chassis?.type || 'medium', visuals.chassis?.color || '#aaaaaa', baseRadius, scale);
+        this._drawTurret(ctx, visuals.turret?.type || 'standard', visuals.turret?.color || '#ffffff', baseRadius, scale);
 
         ctx.restore(); // Restore translation
+    }
+
+    /**
+     * Draws the mobility component of a robot for the preview
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {string} mobilityType - Type of mobility component
+     * @param {number} baseRadius - Base radius for scaling
+     * @param {string} chassisColor - Color of chassis for coordinate mobility elements
+     * @param {number} scale - Scale factor for preview
+     */
+    _drawMobility(ctx, mobilityType, baseRadius, chassisColor, scale) {
+        ctx.fillStyle = '#555'; // Default mobility color
+        const darkAccent = this._darkenColor(chassisColor, 0.7);
+        
+        let treadWidth = baseRadius * 2.0;
+        let treadHeight = baseRadius * 0.6;
+        let wheelRadius = baseRadius * 0.5;
+        let hoverRadiusX = baseRadius * 1.2;
+        let hoverRadiusY = baseRadius * 0.8;
+        
+        switch (mobilityType) {
+            case 'treads':
+                // Main treads
+                ctx.fillStyle = darkAccent;
+                ctx.fillRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight); // Top tread
+                ctx.fillRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);  // Bottom tread
+                ctx.strokeRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight);
+                ctx.strokeRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);
+                
+                // Tread details - small rectangles to simulate treads
+                ctx.fillStyle = '#333';
+                const segmentWidth = 5 * scale;
+                const segmentGap = 4 * scale;
+                for (let x = -treadWidth/2 + 2*scale; x < treadWidth/2 - 2*scale; x += segmentGap) {
+                    // Top tread details
+                    ctx.fillRect(x, -treadHeight * 1.5 + 2*scale, segmentWidth, treadHeight - 4*scale);
+                    // Bottom tread details
+                    ctx.fillRect(x, treadHeight * 0.5 + 2*scale, segmentWidth, treadHeight - 4*scale);
+                }
+                break;
+                
+            case 'hover':
+                // Hover effect glow
+                ctx.save();
+                ctx.fillStyle = 'rgba(100, 150, 255, 0.3)'; // Semi-transparent blue glow
+                ctx.beginPath();
+                ctx.ellipse(0, 0, hoverRadiusX * 1.2, hoverRadiusY * 1.2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner glow
+                ctx.fillStyle = 'rgba(160, 190, 255, 0.2)';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, hoverRadiusX * 0.9, hoverRadiusY * 0.9, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                // Base hover pad
+                ctx.beginPath();
+                ctx.ellipse(0, 0, hoverRadiusX, hoverRadiusY, 0, 0, Math.PI * 2);
+                ctx.fillStyle = darkAccent;
+                ctx.fill();
+                ctx.strokeStyle = '#88aaff';
+                ctx.lineWidth = 1 * scale;
+                ctx.stroke();
+                
+                // Hover vents
+                ctx.fillStyle = '#222';
+                ctx.beginPath();
+                ctx.ellipse(-hoverRadiusX * 0.4, 0, hoverRadiusX * 0.2, hoverRadiusY * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(hoverRadiusX * 0.4, 0, hoverRadiusX * 0.2, hoverRadiusY * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+                
+            case 'quad':
+                // Four wheels at corners
+                ctx.fillStyle = darkAccent;
+                const offsetX = baseRadius * 0.9;
+                const offsetY = baseRadius * 0.6;
+                
+                // Draw four wheels
+                ctx.beginPath(); ctx.arc(-offsetX, -offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(offsetX, -offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(-offsetX, offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(offsetX, offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                
+                // Wheel details
+                ctx.fillStyle = '#222';
+                ctx.beginPath(); ctx.arc(-offsetX, -offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(offsetX, -offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-offsetX, offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(offsetX, offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                break;
+                
+            case 'legs':
+                // Spider-like leg arrangement
+                ctx.fillStyle = darkAccent;
+                const legLength = baseRadius * 0.7;
+                const legWidth = baseRadius * 0.2;
+                
+                // Four legs with joints
+                // Front-right leg
+                ctx.save();
+                ctx.rotate(Math.PI/6);
+                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                ctx.translate(legLength, 0);
+                ctx.rotate(Math.PI/4);
+                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.restore();
+                
+                // Back-right leg
+                ctx.save();
+                ctx.rotate(-Math.PI/6);
+                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                ctx.translate(legLength, 0);
+                ctx.rotate(-Math.PI/4);
+                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.restore();
+                
+                // Front-left leg
+                ctx.save();
+                ctx.rotate(Math.PI*5/6);
+                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                ctx.translate(legLength, 0);
+                ctx.rotate(-Math.PI/4);
+                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.restore();
+                
+                // Back-left leg
+                ctx.save();
+                ctx.rotate(-Math.PI*5/6);
+                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                ctx.translate(legLength, 0);
+                ctx.rotate(Math.PI/4);
+                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                ctx.restore();
+                break;
+
+            case 'wheels': default:
+                // Standard two wheels
+                ctx.fillStyle = darkAccent;
+                
+                // Main wheels
+                ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // Left wheel
+                ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();  // Right wheel
+                
+                // Wheel hubs
+                ctx.fillStyle = '#222';
+                ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                break;
+        }
+    }
+
+    /**
+     * Draws the chassis component of a robot for the preview
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {string} chassisType - Type of chassis
+     * @param {string} chassisColor - Color of the chassis
+     * @param {number} baseRadius - Base radius for scaling
+     * @param {number} scale - Scale factor for preview
+     */
+    _drawChassis(ctx, chassisType, chassisColor, baseRadius, scale) {
+        ctx.fillStyle = chassisColor;
+        
+        switch (chassisType) {
+            case 'heavy':
+                // Heavy armored chassis - more square, thicker
+                const heavyWidth = baseRadius * 2.4;
+                const heavyHeight = baseRadius * 1.6;
+                const heavyBorderRadius = 4 * scale;
+                
+                // Draw chassis body (rounded rectangle)
+                this._drawRoundedRect(ctx, -heavyWidth/2, -heavyHeight/2, heavyWidth, heavyHeight, heavyBorderRadius);
+                
+                // Draw armor plates/details
+                ctx.fillStyle = this._darkenColor(chassisColor, 0.8);
+                
+                // Top armor strip
+                this._drawRoundedRect(ctx, -heavyWidth/2 + 4*scale, -heavyHeight/2 + 3*scale, heavyWidth - 8*scale, heavyHeight/4, 2*scale);
+                
+                // Bottom armor strip
+                this._drawRoundedRect(ctx, -heavyWidth/2 + 4*scale, heavyHeight/2 - heavyHeight/4 - 3*scale, heavyWidth - 8*scale, heavyHeight/4, 2*scale);
+                
+                // Center detail
+                ctx.fillStyle = this._darkenColor(chassisColor, 0.6);
+                ctx.beginPath();
+                ctx.arc(0, 0, heavyHeight/4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+                
+            case 'light':
+                // Light agile chassis - streamlined, angular
+                const lightWidth = baseRadius * 1.7;
+                const lightHeight = baseRadius * 1.2;
+                
+                // Main chassis - pointy front
+                ctx.beginPath();
+                ctx.moveTo(lightWidth/2, 0); // Front point
+                ctx.lineTo(lightWidth/4, -lightHeight/2); // Top-right corner
+                ctx.lineTo(-lightWidth/2, -lightHeight/2); // Top-left corner
+                ctx.lineTo(-lightWidth/2, lightHeight/2); // Bottom-left corner
+                ctx.lineTo(lightWidth/4, lightHeight/2); // Bottom-right corner
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Detail lines
+                ctx.strokeStyle = this._darkenColor(chassisColor, 0.7);
+                ctx.beginPath();
+                ctx.moveTo(-lightWidth/3, -lightHeight/2);
+                ctx.lineTo(0, 0);
+                ctx.lineTo(-lightWidth/3, lightHeight/2);
+                ctx.stroke();
+                break;
+                
+            case 'hexagonal':
+                // Hex-shaped chassis
+                const hexWidth = baseRadius * 2.2;
+                const hexHeight = baseRadius * 1.5;
+                const hexSide = hexHeight / 2;
+                
+                // Draw hexagon
+                ctx.beginPath();
+                ctx.moveTo(hexWidth/2, 0); // Right point
+                ctx.lineTo(hexWidth/4, -hexSide); // Top-right
+                ctx.lineTo(-hexWidth/4, -hexSide); // Top-left
+                ctx.lineTo(-hexWidth/2, 0); // Left point
+                ctx.lineTo(-hexWidth/4, hexSide); // Bottom-left
+                ctx.lineTo(hexWidth/4, hexSide); // Bottom-right
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Hex detail
+                ctx.fillStyle = this._darkenColor(chassisColor, 0.85);
+                ctx.beginPath();
+                ctx.arc(0, 0, hexHeight/4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+                
+            case 'triangular':
+                // Triangle-shaped chassis
+                const triWidth = baseRadius * 2.2;
+                const triHeight = baseRadius * 1.8;
+                
+                // Draw Triangle
+                ctx.beginPath();
+                ctx.moveTo(triWidth/2, 0); // Point facing forward
+                ctx.lineTo(-triWidth/2, -triHeight/2); // Top-left
+                ctx.lineTo(-triWidth/2, triHeight/2); // Bottom-left
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Triangle details - smaller inner triangle
+                ctx.fillStyle = this._darkenColor(chassisColor, 0.8);
+                ctx.beginPath();
+                ctx.moveTo(triWidth/4, 0);
+                ctx.lineTo(-triWidth/3, -triHeight/3);
+                ctx.lineTo(-triWidth/3, triHeight/3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+
+            case 'medium': default:
+                // Standard rounded chassis
+                const mediumWidth = baseRadius * 2.0;
+                const mediumHeight = baseRadius * 1.4;
+                const mediumBorderRadius = 3 * scale;
+                
+                // Draw chassis body
+                this._drawRoundedRect(ctx, -mediumWidth/2, -mediumHeight/2, mediumWidth, mediumHeight, mediumBorderRadius);
+                
+                // Add detail lines
+                ctx.strokeStyle = this._darkenColor(chassisColor, 0.7);
+                ctx.beginPath();
+                ctx.moveTo(-mediumWidth/3, -mediumHeight/2);
+                ctx.lineTo(-mediumWidth/3, mediumHeight/2);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(mediumWidth/6, -mediumHeight/2);
+                ctx.lineTo(mediumWidth/6, mediumHeight/2);
+                ctx.stroke();
+                
+                // Reset stroke style
+                ctx.strokeStyle = '#111';
+                break;
+        }
+    }
+
+    /**
+     * Draws the turret component of a robot for the preview
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {string} turretType - Type of turret
+     * @param {string} turretColor - Color of the turret
+     * @param {number} baseRadius - Base radius for scaling
+     * @param {number} scale - Scale factor for preview
+     */
+    _drawTurret(ctx, turretType, turretColor, baseRadius, scale) {
+        ctx.fillStyle = turretColor;
+        ctx.strokeStyle = '#111'; // Reset stroke for turret
+        
+        switch (turretType) {
+            case 'cannon':
+                // Heavy cannon turret
+                const cannonBaseRadius = baseRadius * 0.7; 
+                const cannonLength = baseRadius * 1.5; 
+                const cannonWidth = baseRadius * 0.4;
+                
+                // Rectangular turret base
+                ctx.beginPath(); 
+                ctx.rect(-cannonBaseRadius * 0.5, -cannonBaseRadius * 0.8, cannonBaseRadius, cannonBaseRadius * 1.6); 
+                ctx.fill(); 
+                ctx.stroke();
+                
+                // Cannon barrel
+                ctx.fillRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonLength, cannonWidth); 
+                ctx.strokeRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonLength, cannonWidth);
+                
+                // Barrel reinforcement
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
+                ctx.fillRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonWidth/2, cannonWidth);
+                ctx.strokeRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonWidth/2, cannonWidth);
+                
+                // Muzzle brake
+                ctx.fillStyle = this._darkenColor(turretColor, 0.6);
+                ctx.fillRect(cannonBaseRadius * 0.5 + cannonLength - cannonWidth/2, -cannonWidth/2 - cannonWidth/4, cannonWidth/2, cannonWidth * 1.5);
+                ctx.strokeRect(cannonBaseRadius * 0.5 + cannonLength - cannonWidth/2, -cannonWidth/2 - cannonWidth/4, cannonWidth/2, cannonWidth * 1.5);
+                break;
+                
+            case 'laser':
+                // High-tech laser turret
+                const laserBaseRadius = baseRadius * 0.5; 
+                const laserLength = baseRadius * 1.7; 
+                const laserWidth = baseRadius * 0.2;
+                
+                // Round turret base
+                ctx.beginPath(); 
+                ctx.arc(0, 0, laserBaseRadius, 0, Math.PI * 2); 
+                ctx.fill(); 
+                ctx.stroke();
+                
+                // Thin laser barrel
+                ctx.fillRect(laserBaseRadius*0.8, -laserWidth / 2, laserLength, laserWidth); 
+                ctx.strokeRect(laserBaseRadius*0.8, -laserWidth / 2, laserLength, laserWidth);
+                
+                // Energy coils around barrel
+                const coilCount = 3;
+                const coilSpacing = laserLength / (coilCount + 1);
+                const coilHeight = laserWidth * 2;
+                
+                ctx.fillStyle = this._lightenColor(turretColor, 1.3);
+                for (let i = 1; i <= coilCount; i++) {
+                    const coilX = laserBaseRadius*0.8 + i * coilSpacing;
+                    ctx.beginPath();
+                    ctx.rect(coilX - laserWidth/2, -coilHeight/2, laserWidth, coilHeight);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+                
+                // Emitter tip
+                ctx.fillStyle = '#88CCFF';
+                ctx.beginPath();
+                ctx.arc(laserBaseRadius*0.8 + laserLength, 0, laserWidth, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+                
+            case 'dual':
+                // Dual barrel turret
+                const dualBaseRadius = baseRadius * 0.6;
+                const dualLength = baseRadius * 1.2;
+                const dualWidth = baseRadius * 0.25;
+                const dualGap = dualWidth * 0.8;
+                
+                // Round base with detail
+                ctx.beginPath();
+                ctx.arc(0, 0, dualBaseRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Detail circle in center
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
+                ctx.beginPath();
+                ctx.arc(0, 0, dualBaseRadius * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Reset fill color
+                ctx.fillStyle = turretColor;
+                
+                // Upper barrel
+                ctx.fillRect(dualBaseRadius*0.8, -dualGap/2 - dualWidth, dualLength, dualWidth);
+                ctx.strokeRect(dualBaseRadius*0.8, -dualGap/2 - dualWidth, dualLength, dualWidth);
+                
+                // Lower barrel
+                ctx.fillRect(dualBaseRadius*0.8, dualGap/2, dualLength, dualWidth);
+                ctx.strokeRect(dualBaseRadius*0.8, dualGap/2, dualLength, dualWidth);
+                break;
+                
+            case 'missile':
+                // Missile launcher turret
+                const missileBaseRadius = baseRadius * 0.7;
+                const missileLength = baseRadius * 1.1;
+                const missileWidth = baseRadius * 1.0;
+                const missileCount = 3; // Visible missile tubes
+                
+                // Rectangular base
+                this._drawRoundedRect(ctx, -missileBaseRadius*0.7, -missileBaseRadius*0.7, missileBaseRadius*1.4, missileBaseRadius*1.4, 2*scale);
+                
+                // Launcher box
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
+                this._drawRoundedRect(ctx, missileBaseRadius*0.6, -missileWidth/2, missileLength, missileWidth, 2*scale);
+                
+                // Missile tubes
+                const tubeHeight = missileWidth / (missileCount + 1);
+                ctx.fillStyle = '#333';
+                
+                for (let i = 1; i <= missileCount; i++) {
+                    const tubeY = -missileWidth/2 + i * tubeHeight;
+                    this._drawRoundedRect(ctx, missileBaseRadius*0.7, tubeY - tubeHeight*0.4, missileLength*0.8, tubeHeight*0.8, 2*scale);
+                }
+                break;
+
+            case 'standard': default:
+                // Standard turret with medium barrel
+                const stdBaseRadius = baseRadius * 0.6; 
+                const stdLength = baseRadius * 1.3; 
+                const stdWidth = baseRadius * 0.3;
+                
+                // Round turret base
+                ctx.beginPath(); 
+                ctx.arc(0, 0, stdBaseRadius, 0, Math.PI * 2); 
+                ctx.fill(); 
+                ctx.stroke();
+                
+                // Center detail
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
+                ctx.beginPath();
+                ctx.arc(0, 0, stdBaseRadius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Reset fill color for barrel
+                ctx.fillStyle = turretColor;
+                
+                // Standard barrel
+                ctx.fillRect(stdBaseRadius*0.8, -stdWidth / 2, stdLength, stdWidth); 
+                ctx.strokeRect(stdBaseRadius*0.8, -stdWidth / 2, stdLength, stdWidth);
+                
+                // Barrel detail
+                ctx.fillStyle = this._darkenColor(turretColor, 0.7);
+                ctx.fillRect(stdBaseRadius*0.8 + stdLength - stdWidth, -stdWidth / 2, stdWidth, stdWidth);
+                ctx.strokeRect(stdBaseRadius*0.8 + stdLength - stdWidth, -stdWidth / 2, stdWidth, stdWidth);
+                break;
+        }
+    }
+
+    /**
+     * Helper method to draw a rounded rectangle
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {number} x - X coordinate of top-left corner
+     * @param {number} y - Y coordinate of top-left corner
+     * @param {number} width - Width of rectangle
+     * @param {number} height - Height of rectangle
+     * @param {number} radius - Corner radius
+     */
+    _drawRoundedRect(ctx, x, y, width, height, radius) {
+        // Ensure radius is not too large for the rectangle
+        radius = Math.min(radius, Math.min(width / 2, height / 2));
+        
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.arcTo(x + width, y, x + width, y + radius, radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
+        ctx.lineTo(x + radius, y + height);
+        ctx.arcTo(x, y + height, x, y + height - radius, radius);
+        ctx.lineTo(x, y + radius);
+        ctx.arcTo(x, y, x + radius, y, radius);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    /**
+     * Helper method to darken a color
+     * @param {string} color - Hex color string
+     * @param {number} factor - Factor to darken by (0-1, where lower is darker)
+     * @returns {string} Darkened hex color
+     */
+    _darkenColor(color, factor) {
+        // Convert hex to RGB
+        let r = parseInt(color.substring(1, 3), 16);
+        let g = parseInt(color.substring(3, 5), 16);
+        let b = parseInt(color.substring(5, 7), 16);
+        
+        // Apply darkening factor
+        r = Math.max(0, Math.floor(r * factor));
+        g = Math.max(0, Math.floor(g * factor));
+        b = Math.max(0, Math.floor(b * factor));
+        
+        // Convert back to hex
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+
+    /**
+     * Helper method to lighten a color
+     * @param {string} color - Hex color string
+     * @param {number} factor - Factor to lighten by (>1 for lighter)
+     * @returns {string} Lightened hex color
+     */
+    _lightenColor(color, factor) {
+        // Convert hex to RGB
+        let r = parseInt(color.substring(1, 3), 16);
+        let g = parseInt(color.substring(3, 5), 16);
+        let b = parseInt(color.substring(5, 7), 16);
+        
+        // Apply lightening factor
+        r = Math.min(255, Math.floor(r * factor));
+        g = Math.min(255, Math.floor(g * factor));
+        b = Math.min(255, Math.floor(b * factor));
+        
+        // Convert back to hex
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     }
 
     /** Handles the Enter Lobby button click */
@@ -4950,6 +5939,8 @@ class Network {
                                  <option value="tank">Tank Bot</option>
                                  <option value="spike">Spike Bot</option>
                                  <option value="tri">Tri Bot</option>
+                                 <option value="spider">Spider Bot</option>
+                                 <option value="rover">Rover Bot</option>
                              </select>
                          </div>
                      </div>
@@ -4963,6 +5954,8 @@ class Network {
                                 <option value="standard">Standard</option>
                                 <option value="cannon">Cannon</option>
                                 <option value="laser">Laser</option>
+                                <option value="dual">Dual Barrel</option>
+                                <option value="missile">Missile Launcher</option>
                             </select>
                             <input type="color" id="turret-color-input" value="#ff0000">
 
@@ -4971,6 +5964,8 @@ class Network {
                                 <option value="light">Light</option>
                                 <option value="medium">Medium</option>
                                 <option value="heavy">Heavy</option>
+                                <option value="hexagonal">Hexagonal</option>
+                                <option value="triangular">Triangular</option>
                             </select>
                             <input type="color" id="chassis-color-input" value="#cccccc">
 
@@ -4979,6 +5974,8 @@ class Network {
                                 <option value="wheels">Wheels</option>
                                 <option value="treads">Treads</option>
                                 <option value="hover">Hover</option>
+                                <option value="quad">Quad Wheels</option>
+                                <option value="legs">Spider Legs</option>
                             </select>
                             <span><!-- Placeholder for color if needed --></span>
                         </div>
@@ -6142,7 +7139,812 @@ const defaultSnippets = [
         name: 'Aggressive Bot',
         code: `// Aggressive Bot (using state object)\n// Seeks out enemies and fires continuously\n\n// Initialize state ONCE\nif (typeof state.targetDirection === 'undefined') {\n    state.targetDirection = null;\n    state.searchDirection = 0;\n    state.searchMode = true;\n    state.timeSinceScan = 0;\n    console.log('Aggressive Bot Initialized');\n}\n\nstate.timeSinceScan++;\n\n// If we have a target, track and fire\nif (!state.searchMode && state.targetDirection !== null) {\n    if (state.timeSinceScan > 5) {\n        // scanResult is correctly scoped here with 'const'\n        const scanResult = robot.scan(state.targetDirection, 15);\n        state.timeSinceScan = 0;\n\n        if (scanResult) {\n            state.targetDirection = scanResult.direction;\n        } else {\n            console.log('Aggro Bot lost target, returning to search.');\n            state.searchMode = true;\n            state.targetDirection = null;\n        }\n    }\n    if (state.targetDirection !== null) {\n        robot.drive(state.targetDirection, 4);\n        robot.fire(state.targetDirection, 3);\n    }\n\n} else { // In search mode\n    if (state.timeSinceScan > 2) {\n        state.searchDirection = (state.searchDirection + 15) % 360;\n        // scanResult is correctly scoped here with 'const'\n        const scanResult = robot.scan(state.searchDirection, 30);\n        state.timeSinceScan = 0;\n\n        if (scanResult) {\n            console.log('Aggro Bot found target!');\n            state.targetDirection = scanResult.direction;\n            state.searchMode = false;\n            robot.drive(state.targetDirection, 4);\n            robot.fire(state.targetDirection, 3);\n        } else {\n            robot.drive(state.searchDirection, 1);\n        }\n    } else {\n         robot.drive(state.searchDirection, 1);\n    }\n}`
     }
-    // Add more default snippets here if needed
+    {
+    name: 'Spider Bot',
+    code: `// Spider Bot AI - Ambush Tactician
+// This bot uses a multi-phase strategy:
+// 1. Patrol - move to walls and along them
+// 2. Observe - scan widely for enemies
+// 3. Ambush - when enemy spotted, close distance and attack with precision
+
+// Initialize state values ONCE
+if (typeof state.phase === 'undefined') {
+    // Main state tracking
+    state.phase = 'patrol';  // 'patrol', 'observe', 'ambush'
+    state.patrolDirection = Math.floor(Math.random() * 4) * 90; // Random initial direction
+    state.observeCounter = 0;
+    state.scanAngle = 0;
+    state.targetInfo = null;
+    state.lastDamage = 0;
+    state.wallProximity = false;
+    state.stuckCounter = 0;
+    state.lastX = null;
+    state.lastY = null;
+    state.changeDirectionCounter = 0;
+
+    // Advanced targeting
+    state.targetHistory = [];
+    state.missCounter = 0;
+    state.hitCounter = 0;
+
+    console.log("Spider Bot initialized in patrol phase.");
+}
+
+// --- UTILITY FUNCTIONS ---
+
+// Track if we're stuck by checking position changes
+function checkIfStuck() {
+    if (state.lastX === null) {
+        state.lastX = robot.getX();
+        state.lastY = robot.getY();
+        return false;
+    }
+
+    const currentX = robot.getX();
+    const currentY = robot.getY();
+    const distance = Math.sqrt(Math.pow(currentX - state.lastX, 2) + Math.pow(currentY - state.lastY, 2));
+
+    state.lastX = currentX;
+    state.lastY = currentY;
+
+    // If barely moving, increment stuck counter
+    if (distance < 0.5) {
+        state.stuckCounter++;
+        if (state.stuckCounter > 5) {
+            state.stuckCounter = 0;
+            return true;
+        }
+    } else {
+        state.stuckCounter = 0;
+    }
+
+    return false;
+}
+
+// Calculate distance to arena edge in specific direction
+function distanceToWall(direction) {
+    const angleRad = direction * Math.PI / 180;
+    const x = robot.getX();
+    const y = robot.getY();
+
+    // Calculate distances to walls based on direction
+    let distX, distY;
+    if (Math.cos(angleRad) > 0) {
+        distX = (900 - 15) - x; // Right wall (arena width minus robot radius)
+    } else {
+        distX = x - 15; // Left wall (considering robot radius)
+    }
+
+    if (Math.sin(angleRad) > 0) {
+        distY = y - 15; // Bottom wall (considering robot radius and inverted Y)
+    } else {
+        distY = (900 - 15) - y; // Top wall (arena height minus robot radius)
+    }
+
+    // Adjust for angle
+    const cosAbs = Math.abs(Math.cos(angleRad));
+    const sinAbs = Math.abs(Math.sin(angleRad));
+
+    if (cosAbs < 0.001) return distY / sinAbs;
+    if (sinAbs < 0.001) return distX / cosAbs;
+
+    return Math.min(distX / cosAbs, distY / sinAbs);
+}
+
+// Predict enemy position based on movement history
+function predictTargetPosition() {
+    if (!state.targetInfo || state.targetHistory.length < 3) return state.targetInfo;
+
+    // Calculate average velocity from history
+    let sumDx = 0;
+    let sumDy = 0;
+
+    for (let i = 1; i < state.targetHistory.length; i++) {
+        const prev = state.targetHistory[i-1];
+        const curr = state.targetHistory[i];
+        sumDx += curr.x - prev.x;
+        sumDy += curr.y - prev.y;
+    }
+
+    const avgDx = sumDx / (state.targetHistory.length - 1);
+    const avgDy = sumDy / (state.targetHistory.length - 1);
+
+    // Predict position with lead time based on distance
+    const leadTime = state.targetInfo.distance / 15; // Adjust factor based on missile speed
+
+    const predicted = {
+        x: state.targetInfo.x + avgDx * leadTime,
+        y: state.targetInfo.y + avgDy * leadTime,
+        distance: state.targetInfo.distance // Will recalculate
+    };
+
+    // Recalculate direction and distance to predicted position
+    const myX = robot.getX();
+    const myY = robot.getY();
+    const dx = predicted.x - myX;
+    const dy = myY - predicted.y; // Y is inverted in canvas coordinates
+
+    predicted.direction = Math.atan2(dy, dx) * 180 / Math.PI;
+    predicted.direction = (predicted.direction + 360) % 360; // Normalize
+
+    predicted.distance = Math.sqrt(dx*dx + dy*dy);
+
+    return predicted;
+}
+
+// --- PHASE HANDLERS ---
+
+// Patrol mode - move along walls to find good ambush positions
+function handlePatrol() {
+    const isStuck = checkIfStuck();
+    state.changeDirectionCounter++;
+
+    // Scan while moving
+    const scanDir = (state.patrolDirection + 45) % 360;
+    const scanResult = robot.scan(scanDir, 90);
+
+    // If enemy found, switch to ambush
+    if (scanResult) {
+        state.targetInfo = scanResult;
+        state.targetInfo.x = robot.getX() + Math.cos(scanResult.direction * Math.PI / 180) * scanResult.distance;
+        state.targetInfo.y = robot.getY() - Math.sin(scanResult.direction * Math.PI / 180) * scanResult.distance;
+        state.targetHistory = [{ x: state.targetInfo.x, y: state.targetInfo.y, time: Date.now() }];
+        state.phase = 'ambush';
+        console.log(\`Spider found prey at distance \${scanResult.distance.toFixed(0)}! Switching to ambush mode.\`);
+        return;
+    }
+
+    // Check distance to wall in current direction
+    const wallDist = distanceToWall(state.patrolDirection);
+
+    // Decision logic for patrol
+    if (isStuck || state.changeDirectionCounter > 60 || (state.wallProximity && wallDist > 200)) {
+        // Turn roughly 90 degrees when stuck, been going too long in one direction, or lost wall contact
+        const turnAmount = 90 + (Math.random() * 20 - 10);
+        state.patrolDirection = (state.patrolDirection + turnAmount) % 360;
+        state.wallProximity = false;
+        state.changeDirectionCounter = 0;
+        console.log(\`Spider changing patrol direction to \${state.patrolDirection.toFixed(0)}°\`);
+    }
+    else if (wallDist < 50 && !state.wallProximity) {
+        // Found a wall, align with it
+        state.wallProximity = true;
+        // Turn to move along the wall (roughly 90 degrees)
+        state.patrolDirection = (state.patrolDirection + 90) % 360;
+        console.log(\`Spider found wall. Aligning to move along it: \${state.patrolDirection.toFixed(0)}°\`);
+    }
+
+    // If we've been patrolling for a while, switch to observe mode
+    if (Math.random() < 0.005) { // Small chance each tick
+        state.phase = 'observe';
+        state.observeCounter = 0;
+        console.log("Spider entering observation mode...");
+        return;
+    }
+
+    // Move in patrol direction
+    robot.drive(state.patrolDirection, 2); // Slower movement for better control
+}
+
+// Observe mode - scan extensively around for enemies
+function handleObserve() {
+    // Increment counter and rotate scan angle
+    state.observeCounter++;
+    state.scanAngle = (state.scanAngle + 15) % 360;
+
+    // Do a wide scan
+    const scanResult = robot.scan(state.scanAngle, 30);
+
+    // If enemy found, switch to ambush
+    if (scanResult) {
+        state.targetInfo = scanResult;
+        state.targetInfo.x = robot.getX() + Math.cos(scanResult.direction * Math.PI / 180) * scanResult.distance;
+        state.targetInfo.y = robot.getY() - Math.sin(scanResult.direction * Math.PI / 180) * scanResult.distance;
+        state.targetHistory = [{ x: state.targetInfo.x, y: state.targetInfo.y, time: Date.now() }];
+        state.phase = 'ambush';
+        console.log(\`Spider spotted prey at distance \${scanResult.distance.toFixed(0)}! Entering ambush mode.\`);
+        return;
+    }
+
+    // After complete 360° scan or timeout, switch back to patrol
+    if (state.observeCounter >= 24) { // 24 * 15° = 360°
+        state.phase = 'patrol';
+        console.log("Observation complete. Returning to patrol pattern.");
+        return;
+    }
+
+    // Rotate in place while scanning
+    robot.drive(state.scanAngle, 0.5);
+}
+
+// Ambush mode - attack target with precision
+function handleAmbush() {
+    // Verify target still exists with narrow scan in last known direction
+    const scanResolution = 20;
+    const scanResult = robot.scan(state.targetInfo.direction, scanResolution);
+
+    if (scanResult) {
+        // Update target information
+        state.targetInfo = scanResult;
+        state.targetInfo.x = robot.getX() + Math.cos(scanResult.direction * Math.PI / 180) * scanResult.distance;
+        state.targetInfo.y = robot.getY() - Math.sin(scanResult.direction * Math.PI / 180) * scanResult.distance;
+
+        // Update target history for prediction
+        state.targetHistory.push({
+            x: state.targetInfo.x,
+            y: state.targetInfo.y,
+            time: Date.now()
+        });
+
+        // Keep history at manageable size
+        if (state.targetHistory.length > 5) {
+            state.targetHistory.shift();
+        }
+
+        // Get predicted target position if we have enough history
+        let firingDirection = scanResult.direction;
+        if (state.targetHistory.length >= 3) {
+            const predicted = predictTargetPosition();
+            firingDirection = predicted.direction;
+        }
+
+        // Approach or maintain optimal attack distance
+        const optimalDistance = 150;
+        const approachSpeed = scanResult.distance > optimalDistance ? 3 :
+                              scanResult.distance < optimalDistance / 2 ? -3 : 0;
+
+        // Move toward target while adjusting distance
+        robot.drive(scanResult.direction, approachSpeed);
+
+        // Fire at predicted position with adaptive power based on distance
+        const firePower = scanResult.distance < 100 ? 3 :
+                          scanResult.distance < 300 ? 2 : 1;
+        const fireResult = robot.fire(firingDirection, firePower);
+
+        // Track hits and misses for future improvement
+        if (fireResult) {
+            // TODO: In a more advanced version, we could track time to hit
+            state.hitCounter++;
+        } else {
+            state.missCounter++;
+        }
+    } else {
+        // Lost target, expand search briefly
+        state.targetInfo.direction = (state.targetInfo.direction + (Math.random() * 40 - 20)) % 360;
+        const widerScanResult = robot.scan(state.targetInfo.direction, scanResolution * 2);
+
+        if (widerScanResult) {
+            // Found again with wider scan
+            state.targetInfo = widerScanResult;
+            state.targetInfo.x = robot.getX() + Math.cos(widerScanResult.direction * Math.PI / 180) * widerScanResult.distance;
+            state.targetInfo.y = robot.getY() - Math.sin(widerScanResult.direction * Math.PI / 180) * widerScanResult.distance;
+            console.log("Spider reacquired target with wider scan!");
+        } else {
+            // Target truly lost, switch back to observe mode
+            console.log("Target lost. Switching to observation mode.");
+            state.phase = 'observe';
+            state.observeCounter = 0;
+            state.targetInfo = null;
+            return;
+        }
+    }
+}
+
+// Check for damage and respond
+function handleDamage() {
+    if (robot.damage() > state.lastDamage) {
+        const damageAmount = robot.damage() - state.lastDamage;
+        state.lastDamage = robot.damage();
+
+        // Heavy damage response
+        if (damageAmount > 10) {
+            console.log(\`Spider took significant damage (\${damageAmount.toFixed(1)}). Taking evasive action!\`);
+            // Randomly choose between doubling down (if in ambush) or retreating
+            if (state.phase === 'ambush' && state.targetInfo && Math.random() < 0.6) {
+                // Double down - attack more aggressively
+                console.log("Spider aggressively countering attack!");
+            } else {
+                // Retreat and reset phase
+                const retreatDirection = (robot.getDirection() + 180) % 360;
+                robot.drive(retreatDirection, 5);
+                state.phase = 'patrol';
+                state.patrolDirection = retreatDirection;
+                return true; // Signal retreat handled
+            }
+        }
+    }
+
+    // Update damage tracking regardless
+    state.lastDamage = robot.damage();
+    return false;
+}
+
+// --- MAIN LOOP EXECUTION ---
+
+// First check for damage response
+const retreating = handleDamage();
+if (!retreating) {
+    // Execute current phase logic if not retreating
+    switch (state.phase) {
+        case 'patrol':
+            handlePatrol();
+            break;
+        case 'observe':
+            handleObserve();
+            break;
+        case 'ambush':
+            handleAmbush();
+            break;
+        default:
+            // Failsafe - reset to patrol
+            state.phase = 'patrol';
+            console.log("Invalid phase detected. Resetting to patrol.");
+            handlePatrol();
+    }
+}`
+},
+{
+    name: 'Rover Bot',
+    code: `// Rover Bot AI - Exploration Strategist
+// A methodical bot that explores the arena in a grid pattern,
+// mapping out sectors and engaging enemies with calculated precision.
+
+// Initialize state values ONCE
+if (typeof state.initialized === 'undefined') {
+    // Core state tracking
+    state.initialized = true;
+    state.mode = 'explore';  // 'explore', 'engage', 'retreat'
+    state.lastDamage = 0;
+    state.moveSpeed = 3;
+
+    // Position tracking
+    state.lastX = robot.getX();
+    state.lastY = robot.getY();
+    state.stuckCounter = 0;
+
+    // Grid-based exploration
+    state.gridSize = 150;
+    state.currentQuadrant = { x: 0, y: 0 };
+    state.visitedQuadrants = {};
+    state.explorationDirection = Math.floor(Math.random() * 4) * 90;
+    state.destinationQuadrant = null;
+
+    // Combat tracking
+    state.targetInfo = null;
+    state.targetLastSeen = 0;
+    state.scanDirection = 0;
+    state.engagementStartDamage = 0;
+    state.firePattern = 0;
+    state.targetHistory = [];
+
+    // Calculate initial quadrant
+    updateCurrentQuadrant();
+
+    console.log("Rover Bot initialized. Beginning grid exploration protocol.");
+}
+
+// --- UTILITY FUNCTIONS ---
+
+// Update the current grid quadrant based on position
+function updateCurrentQuadrant() {
+    const x = robot.getX();
+    const y = robot.getY();
+
+    state.currentQuadrant = {
+        x: Math.floor(x / state.gridSize),
+        y: Math.floor(y / state.gridSize)
+    };
+
+    // Mark current quadrant as visited
+    const quadKey = \`\${state.currentQuadrant.x},\${state.currentQuadrant.y}\`;
+    state.visitedQuadrants[quadKey] = (state.visitedQuadrants[quadKey] || 0) + 1;
+}
+
+// Check if the robot is stuck by monitoring position changes
+function checkIfStuck() {
+    const x = robot.getX();
+    const y = robot.getY();
+
+    const distance = Math.sqrt(Math.pow(x - state.lastX, 2) + Math.pow(y - state.lastY, 2));
+
+    state.lastX = x;
+    state.lastY = y;
+
+    // If barely moving, increment stuck counter
+    if (distance < 1) {
+        state.stuckCounter++;
+        if (state.stuckCounter > 5) {
+            state.stuckCounter = 0;
+            return true;
+        }
+    } else {
+        // Reset counter if moving properly
+        state.stuckCounter = Math.max(0, state.stuckCounter - 1);
+    }
+
+    return false;
+}
+
+// Find least visited adjacent quadrant for exploration
+function findNextExplorationTarget() {
+    const current = state.currentQuadrant;
+    const adjacentQuadrants = [
+        { x: current.x + 1, y: current.y },
+        { x: current.x - 1, y: current.y },
+        { x: current.x, y: current.y + 1 },
+        { x: current.x, y: current.y - 1 }
+    ];
+
+    // Filter out quadrants outside the arena
+    const validQuadrants = adjacentQuadrants.filter(q =>
+        q.x >= 0 && q.x < 900/state.gridSize &&
+        q.y >= 0 && q.y < 900/state.gridSize
+    );
+
+    // Find the least visited quadrant
+    let leastVisited = validQuadrants[0];
+    let leastVisitCount = Infinity;
+
+    for (const q of validQuadrants) {
+        const quadKey = \`\${q.x},\${q.y}\`;
+        const visitCount = state.visitedQuadrants[quadKey] || 0;
+
+        if (visitCount < leastVisitCount) {
+            leastVisited = q;
+            leastVisitCount = visitCount;
+        }
+    }
+
+    return leastVisited;
+}
+
+// Calculate center coordinates of a quadrant
+function quadrantCenter(quadrant) {
+    return {
+        x: (quadrant.x * state.gridSize) + (state.gridSize / 2),
+        y: (quadrant.y * state.gridSize) + (state.gridSize / 2)
+    };
+}
+
+// Calculate direction to a point
+function directionTo(targetX, targetY) {
+    const dx = targetX - robot.getX();
+    const dy = robot.getY() - targetY; // Y is inverted in canvas
+
+    let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    if (angle < 0) angle += 360;
+
+    return angle;
+}
+
+// Calculate distance to a point
+function distanceTo(targetX, targetY) {
+    const dx = targetX - robot.getX();
+    const dy = targetY - robot.getY();
+    return Math.sqrt(dx*dx + dy*dy);
+}
+
+// Predict target position based on movement history
+function predictTargetPosition() {
+    if (!state.targetInfo || state.targetHistory.length < 3) {
+        return state.targetInfo;
+    }
+
+    // Calculate average velocity vector
+    let totalDx = 0;
+    let totalDy = 0;
+    const historyCount = state.targetHistory.length - 1;
+
+    for (let i = 1; i < state.targetHistory.length; i++) {
+        const prev = state.targetHistory[i-1];
+        const curr = state.targetHistory[i];
+        totalDx += curr.x - prev.x;
+        totalDy += curr.y - prev.y;
+    }
+
+    const avgVx = totalDx / historyCount;
+    const avgVy = totalDy / historyCount;
+
+    // Adjust prediction based on target distance
+    const predictionFactor = state.targetInfo.distance / 120;
+
+    // Predict future position
+    const predictedX = state.targetInfo.x + (avgVx * predictionFactor);
+    const predictedY = state.targetInfo.y + (avgVy * predictionFactor);
+
+    // Calculate direction to the predicted position
+    const predictedDirection = directionTo(predictedX, predictedY);
+
+    return {
+        direction: predictedDirection,
+        distance: distanceTo(predictedX, predictedY),
+        x: predictedX,
+        y: predictedY
+    };
+}
+
+// --- MODE HANDLERS ---
+
+// Exploration mode - grid-based searching
+function handleExplore() {
+    // First check if we're stuck
+    if (checkIfStuck()) {
+        console.log("Rover detection: Navigation obstacle. Changing direction.");
+        state.explorationDirection = (state.explorationDirection + 90 + Math.floor(Math.random() * 180)) % 360;
+        robot.drive(state.explorationDirection, state.moveSpeed);
+        return;
+    }
+
+    // Update our current quadrant position
+    updateCurrentQuadrant();
+
+    // Wide scan while exploring
+    state.scanDirection = (state.scanDirection + 45) % 360;
+    const scanResult = robot.scan(state.scanDirection, 60);
+
+    // If enemy found, switch to engage mode
+    if (scanResult) {
+        console.log(\`Rover detected target at range \${scanResult.distance.toFixed(0)}. Initiating engagement protocol.\`);
+        state.mode = 'engage';
+        state.targetInfo = scanResult;
+
+        // Calculate absolute target position for tracking
+        const angleRad = scanResult.direction * Math.PI / 180;
+        state.targetInfo.x = robot.getX() + Math.cos(angleRad) * scanResult.distance;
+        state.targetInfo.y = robot.getY() - Math.sin(angleRad) * scanResult.distance;
+
+        // Reset target history
+        state.targetHistory = [{
+            x: state.targetInfo.x,
+            y: state.targetInfo.y,
+            time: Date.now()
+        }];
+
+        state.engagementStartDamage = robot.damage();
+        return;
+    }
+
+    // If we have a destination quadrant, check if we've reached it
+    if (state.destinationQuadrant) {
+        const center = quadrantCenter(state.destinationQuadrant);
+        const distance = distanceTo(center.x, center.y);
+
+        if (distance < 20) {
+            // Reached destination quadrant
+            console.log(\`Rover has reached quadrant (\${state.destinationQuadrant.x},\${state.destinationQuadrant.y}). Continuing exploration.\`);
+            state.destinationQuadrant = null;
+        } else {
+            // Continue moving to destination
+            const direction = directionTo(center.x, center.y);
+            robot.drive(direction, state.moveSpeed);
+            return;
+        }
+    }
+
+    // Select new destination if needed
+    if (!state.destinationQuadrant) {
+        state.destinationQuadrant = findNextExplorationTarget();
+        console.log(\`Rover plotting course to quadrant (\${state.destinationQuadrant.x},\${state.destinationQuadrant.y}).\`);
+
+        const center = quadrantCenter(state.destinationQuadrant);
+        state.explorationDirection = directionTo(center.x, center.y);
+    }
+
+    // Move toward destination quadrant
+    robot.drive(state.explorationDirection, state.moveSpeed);
+}
+
+// Engagement mode - combat with target
+function handleEngage() {
+    const now = Date.now();
+    const targetAge = now - state.targetLastSeen;
+
+    // Try to locate the target
+    let scanResolution = 15;
+    let targetDirection = state.targetInfo ? state.targetInfo.direction : state.scanDirection;
+
+    // Scan with priority in last known direction, but widen search if target aging
+    if (targetAge > 1000) {
+        scanResolution = Math.min(45, 15 + Math.floor(targetAge / 200));
+        // Also scan in more directions if target getting old
+        if (targetAge > 2000) {
+            state.scanDirection = (state.scanDirection + 60) % 360;
+            targetDirection = state.scanDirection;
+        }
+    }
+
+    const scanResult = robot.scan(targetDirection, scanResolution);
+
+    if (scanResult) {
+        // Target found
+        state.targetInfo = scanResult;
+        state.targetLastSeen = now;
+
+        // Calculate absolute position
+        const angleRad = scanResult.direction * Math.PI / 180;
+        state.targetInfo.x = robot.getX() + Math.cos(angleRad) * scanResult.distance;
+        state.targetInfo.y = robot.getY() - Math.sin(angleRad) * scanResult.distance;
+
+        // Update target history
+        state.targetHistory.push({
+            x: state.targetInfo.x,
+            y: state.targetInfo.y,
+            time: now
+        });
+
+        // Keep history manageable
+        if (state.targetHistory.length > 6) {
+            state.targetHistory.shift();
+        }
+
+        // Determine optimal engagement distance based on damage taken
+        const damageTaken = robot.damage() - state.engagementStartDamage;
+        let optimalDistance;
+
+        if (damageTaken > 20) {
+            // Taking significant damage, keep distance
+            optimalDistance = 250;
+            state.moveSpeed = 4; // Move faster when under threat
+        } else {
+            // Normal engagement
+            optimalDistance = 175;
+            state.moveSpeed = 3;
+        }
+
+        // Get predicted target position
+        const predicted = predictTargetPosition();
+
+        // Movement logic - maintain optimal distance
+        const targetDistance = scanResult.distance;
+        const moveDirection = scanResult.direction;
+
+        let moveSpeed;
+        if (targetDistance > optimalDistance + 30) {
+            // Too far, move closer
+            moveSpeed = state.moveSpeed;
+        } else if (targetDistance < optimalDistance - 30) {
+            // Too close, back away
+            moveSpeed = -state.moveSpeed;
+        } else {
+            // At good distance, strafe
+            moveSpeed = 0.5;
+            // Orbit the target
+            const strafeDirection = (scanResult.direction + 90) % 360;
+            robot.drive(strafeDirection, moveSpeed);
+            // Don't continue with the approach code
+            moveSpeed = 0;
+        }
+
+        if (moveSpeed !== 0) {
+            // Direct approach/retreat
+            robot.drive(moveDirection, moveSpeed);
+        }
+
+        // Fire with pattern variation for unpredictability
+        state.firePattern = (state.firePattern + 1) % 3;
+        let fireDirection;
+
+        if (state.firePattern === 0 || state.targetHistory.length < 3) {
+            // Direct fire
+            fireDirection = scanResult.direction;
+        } else {
+            // Predictive fire
+            fireDirection = predicted.direction;
+        }
+
+        // Adjust power based on distance
+        const firePower = targetDistance < 100 ? 3 :
+                          targetDistance < 250 ? 2 : 1;
+
+        robot.fire(fireDirection, firePower);
+
+    } else {
+        // Target not found in scan
+
+        // If target is definitely lost, return to explore mode
+        if (targetAge > 3000 || !state.targetInfo) {
+            console.log("Rover has lost target contact. Returning to exploration protocol.");
+            state.mode = 'explore';
+            state.targetInfo = null;
+            return;
+        }
+
+        // Otherwise move toward last known position while widening search
+        if (state.targetInfo) {
+            robot.drive(state.targetInfo.direction, state.moveSpeed * 0.5);
+        } else {
+            // Default to spinning in place if truly lost
+            robot.drive(state.scanDirection, 0);
+        }
+    }
+}
+
+// Retreat mode - get to safety after taking damage
+function handleRetreat() {
+    // Only stay in retreat mode for a short time
+    if (state.retreatTimer <= 0) {
+        console.log("Rover retreat complete. Returning to exploration.");
+        state.mode = 'explore';
+        return;
+    }
+
+    state.retreatTimer--;
+
+    // Continue moving in retreat direction
+    robot.drive(state.retreatDirection, state.moveSpeed);
+
+    // Scan behind to see if being followed
+    const backScanDir = (state.retreatDirection + 180) % 360;
+    const scanResult = robot.scan(backScanDir, 30);
+
+    if (scanResult) {
+        // Target following - fire backwards to deter
+        robot.fire(scanResult.direction, 1);
+    }
+}
+
+// --- DAMAGE HANDLER ---
+
+// Check for damage and react
+function handleDamage() {
+    const currentDamage = robot.damage();
+    const damageIncrease = currentDamage - state.lastDamage;
+
+    if (damageIncrease > 0) {
+        // Update last damage
+        state.lastDamage = currentDamage;
+
+        // Significant damage taken
+        if (damageIncrease > 15) {
+            console.log(\`Rover alert: Sustained significant damage (\${damageIncrease.toFixed(1)}). Initiating tactical retreat.\`);
+
+            // Set retreat direction away from current heading
+            state.retreatDirection = (robot.getDirection() + 180) % 360;
+            state.retreatTimer = 30; // Retreat for 30 ticks
+            state.mode = 'retreat';
+            return true;
+        }
+        // Moderate damage
+        else if (damageIncrease > 5 && state.mode === 'engage') {
+            // Modify engagement strategy but don't retreat
+            console.log(\`Rover damage report: Taking fire (\${damageIncrease.toFixed(1)}). Adjusting engagement pattern.\`);
+
+            // Increase movement speed and strafe more
+            state.moveSpeed = 4;
+        }
+    } else {
+        // Update last damage tracking regardless
+        state.lastDamage = currentDamage;
+    }
+
+    return false;
+}
+
+// --- MAIN EXECUTION ---
+
+// Check for damage first - may change mode
+const isRetreating = handleDamage();
+
+if (!isRetreating) {
+    // Handle current mode
+    switch (state.mode) {
+        case 'explore':
+            handleExplore();
+            break;
+        case 'engage':
+            handleEngage();
+            break;
+        case 'retreat':
+            handleRetreat();
+            break;
+        default:
+            // Fallback if somehow in invalid mode
+            console.log("Rover error: Invalid mode detected. Resetting to explore.");
+            state.mode = 'explore';
+            handleExplore();
+    }
+}`
+}
 ];
 // --- END DEFAULT SNIPPETS ---
 
