@@ -338,11 +338,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
+    <!-- Engine -->
     <script src="js/engine/arena.js"></script>
-     <script src="js/engine/interpreter.js"></script>
-    <script src="js/engine/game.js"></script>
-    <script src="js/engine/audio.js"></script> <!-- Defines AudioManager -->
-    <!-- <script src="js/utils/storage.js"></script> -->
+    <script src="js/engine/interpreter.js"></script>
+    <script src="js/engine/collision.js"></script> <!-- <<< MOVED HERE (Before game.js) -->
+    <script src="js/engine/game.js"></script>      <!-- Game.js can now use CollisionSystem -->
+    <script src="js/engine/audio.js"></script>
+    <!-- UI/SERVER -->
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
     <script src="js/ui/loadoutBuilder.js"></script> <!-- Defines LoadoutBuilder -->
