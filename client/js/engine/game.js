@@ -1,282 +1,284 @@
 // client/js/engine/game.js
 
-/**
- * Client-side Game class for Robot Wars.
- * Manages the connection to the server, receives game state,
- * renders the game arena, handles robot destruction visuals & sounds, // <-- Updated description
- * processes sound events (fire, hit), and manages game lifecycle/spectating.
- * Does NOT run the simulation locally.
- */
+const MUZZLE_FLASH_DURATION_MS = 150; // How long flashes last (in milliseconds)
+
 class Game {
     /**
-     * Creates a Game instance.
-     * @param {string} arenaId - The ID of the HTML canvas element used for the arena.
+     * Manages the client-side game state, rendering loop, and interactions.
+     * @param {string} canvasId - The ID of the HTML canvas element for the arena.
      */
-    constructor(arenaId) {
-        try {
-            this.renderer = new Arena(arenaId); // Use Arena class as the renderer
-        } catch (error) {
-            console.error("Failed to initialize Arena/Renderer:", error);
-            alert(`Critical Error: Could not initialize game graphics.\n${error.message}`);
-            this.renderer = null;
+    constructor(canvasId) {
+        // Renderer for the arena, robots, effects
+        this.renderer = new Arena(canvasId); // Use Arena class for rendering
+
+        // Interpreter for running local robot code (currently not used for gameplay logic)
+        this.interpreter = new RobotInterpreter();
+
+        // Collision system (currently not used client-side for primary logic)
+        this.collisionSystem = new CollisionSystem(this);
+
+        // Game State Data (populated by server updates)
+        this.robots = [];           // Array of robot data objects {id, x, y, direction, damage, isAlive, name, visuals}
+        this.missiles = [];         // Array of missile data objects {id, x, y, radius, ownerId, direction}
+        this.activeExplosions = []; // Array for explosion effects {x, y, maxRadius, startTime, duration, colorSequence}
+        this.activeFlashes = [];    // Array for muzzle flash effects {id, x, y, direction, type, startTime, duration}
+
+        // Game Context
+        this.gameId = null;         // ID of the current game
+        this.gameName = null;       // Display name of the current game
+        this.playerId = null;       // This client's robot ID in the current game
+        this.isRunning = false;     // Is the game loop active?
+        this.lastGameStateTime = 0; // Timestamp of the last received state update
+        this.isSpectating = false;  // Is the client spectating?
+        this.spectatingGameId = null; // ID of the game being spectated
+
+        // Helper map for quick lookup of robot data (especially visuals) by ID
+        this.robotDataMap = new Map();
+
+        console.log("Client Game engine initialized.");
+    }
+
+    /** Sets the client's player ID for the current game */
+    setPlayerId(id) {
+        this.playerId = id;
+        console.log(`[Game] Player ID set to: ${id}`);
+    }
+
+    /** Handles starting spectating a game */
+    handleSpectateStart(data) {
+        console.log(`[Game] Starting spectate mode for game: ${data.gameName} (ID: ${data.gameId})`);
+        this.gameId = null; // Not playing in this game
+        this.playerId = null; // Not a player in this game
+        this.spectatingGameId = data.gameId;
+        this.spectatingGameName = data.gameName || data.gameId;
+        this.isSpectating = true;
+        this.isRunning = false; // Not running own game logic
+        this.robots = []; // Clear local state
+        this.missiles = [];
+        this.activeExplosions = [];
+        this.activeFlashes = [];
+        this.robotDataMap.clear();
+
+        if (window.controls) window.controls.setState('spectating');
+        if (window.dashboard?.updateStats) window.dashboard.updateStats([], { gameName: this.spectatingGameName });
+
+        requestAnimationFrame(this.gameLoop.bind(this)); // Start rendering loop for spectating
+    }
+
+    /** Handles stopping spectating a game */
+    handleSpectateEnd(data) {
+        console.log(`[Game] Ending spectate mode for game: ${data.gameId}`);
+        if (this.spectatingGameId === data.gameId) {
+            this.isSpectating = false;
+            this.spectatingGameId = null;
+            this.spectatingGameName = null;
+            this.activeFlashes = []; // Clear flashes
+            // Transition back to lobby state
+            if (window.controls) window.controls.setState('lobby');
+            if (window.dashboard?.updateStats) window.dashboard.updateStats([], {}); // Clear stats
+        }
+    }
+
+    /** Placeholder for handling robot destruction event (e.g., special effect) */
+    handleRobotDestroyed(data) {
+        console.log(`[Game] Robot ${data.robotId} destroyed at (${data.x.toFixed(0)}, ${data.y.toFixed(0)}) due to ${data.cause}.`);
+        // Could trigger a larger, longer-lasting explosion effect here
+        this.createExplosion(data.x, data.y, 5); // Trigger a large explosion on destruction
+    }
+
+    /** Initializes the game state when a match starts */
+    handleGameStart(data) {
+        console.log(`[Game] Starting game: ${data.gameName} (ID: ${data.gameId}), Test: ${data.isTestGame}`);
+        this.gameId = data.gameId;
+        this.gameName = data.gameName;
+        this.isRunning = true;
+        this.isSpectating = false; // Ensure not spectating
+        this.robots = []; // Clear previous game data
+        this.missiles = [];
+        this.activeExplosions = [];
+        this.activeFlashes = []; // Clear flashes
+        this.robotDataMap.clear(); // Clear map
+
+        // Initial population of robotDataMap for visual lookup
+        // The 'players' array in gameStart contains initial info {id, name, visuals}
+        if (data.players && Array.isArray(data.players)) {
+            data.players.forEach(p => {
+                if (p.id && p.visuals) { // Make sure ID and visuals exist
+                    // Store the initial data; subsequent updates will overwrite/update this map
+                    this.robotDataMap.set(p.id, { id: p.id, name: p.name, visuals: p.visuals });
+                    console.log(`[Game Start] Stored initial data for robot ${p.id} (${p.name})`);
+                } else {
+                     console.warn(`[Game Start] Incomplete player data received for ID ${p.id}:`, p);
+                }
+            });
+        } else {
+             console.warn("[Game Start] No initial player data received in gameStart event.");
         }
 
-        // Local game state representation
-        this.robots = {}; // Key: robotId, Value: client-side robot data object
-        this.missiles = []; // Array of missile data objects
-        this.activeExplosions = []; // Array for explosion animation data
+        // Update UI state
+        if (window.controls) window.controls.setState('playing');
+        if (window.dashboard?.updateStats) window.dashboard.updateStats([], { gameName: this.gameName }); // Clear stats initially, show title
+        if (this.renderer?.redrawArenaBackground) this.renderer.redrawArenaBackground(); // Clear scorch marks
 
-        // Client game flow state
-        this.running = false;
-        this.animationFrame = null;
-        this.myPlayerId = null;
-        this.lastServerState = null;
+        // Start the rendering loop
+        requestAnimationFrame(this.gameLoop.bind(this));
+    }
+
+    /** Cleans up game state when a match ends */
+    handleGameOver(data) {
+        console.log(`[Game] Game Over: ${data.gameId}. Winner: ${data.winnerName}. Reason: ${data.reason}`);
+        this.isRunning = false;
         this.gameId = null;
         this.gameName = null;
+        this.activeFlashes = []; // Clear flashes on game over
+        this.robotDataMap.clear(); // Clear robot data map
 
-        // Ensure AudioManager is available globally (initialized in main.js)
-        this.audioManager = window.audioManager;
-        if (!this.audioManager) {
-             console.warn("AudioManager not found on window. Sound effects will be disabled.");
-        }
-    }
-
-    setPlayerId(id) {
-        this.myPlayerId = id;
-        console.log("My Player ID assigned:", this.myPlayerId);
+        // Update UI state
+        if (window.controls) window.controls.setState('lobby');
+        // Dashboard update will happen naturally as gameStateUpdate sends empty robot array
     }
 
     /**
-     * Updates local game state based on data from the server, including processing sound events.
-     * @param {object} gameState - The game state object sent by the server.
+     * Updates the client-side game state based on data received from the server.
+     * @param {object} gameState - The game state object from the server.
      */
     updateFromServer(gameState) {
-        if (!gameState || gameState.gameId !== this.gameId) return;
+        // Ignore updates if the client isn't in an active game or spectating mode
+        if (!this.isRunning && !this.isSpectating) return;
 
-        this.lastServerState = gameState;
-        this.gameName = gameState.gameName || this.gameName || gameState.gameId;
+        // Ignore updates for a different game unless spectating that specific game
+        const relevantGameId = this.isSpectating ? this.spectatingGameId : this.gameId;
+        if (!relevantGameId || gameState.gameId !== relevantGameId) {
+            // console.warn(`[Game] Ignoring state update for wrong game ID. Expected: ${relevantGameId}, Got: ${gameState.gameId}`);
+            return;
+        }
 
-        // --- Update Robots ---
-        const currentRobotIds = new Set();
-        if (gameState.robots) {
-            gameState.robots.forEach(serverRobotData => {
-                const robotId = serverRobotData.id;
-                currentRobotIds.add(robotId);
-                let clientRobotData = this.robots[robotId] || { id: robotId };
-                this.robots[robotId] = clientRobotData;
+        this.lastGameStateTime = gameState.timestamp || Date.now(); // Use server time if available
 
-                // Update basic properties
-                Object.assign(clientRobotData, {
-                    x: serverRobotData.x,
-                    y: serverRobotData.y,
-                    direction: serverRobotData.direction,
-                    damage: serverRobotData.damage,
-                    color: serverRobotData.color,
-                    appearance: serverRobotData.appearance || 'default',
-                    name: serverRobotData.name || 'Unknown',
-                    radius: 15,
-                });
+        // Update core game objects
+        this.robots = gameState.robots;
+        this.missiles = gameState.missiles; // Missiles now have direction
 
-                // Preserve local destruction state if set
-                if (clientRobotData.isDestroyed === undefined) clientRobotData.isDestroyed = !serverRobotData.isAlive;
-                clientRobotData.visible = !clientRobotData.isDestroyed ? serverRobotData.isAlive : false;
+        // --- Update robot data map (crucial for looking up visuals) ---
+        this.robotDataMap.clear(); // Clear previous frame's map
+        this.robots.forEach(robot => {
+            // Store the entire robot data object received from the server
+            // This ensures we have the latest visuals, name, etc.
+            this.robotDataMap.set(robot.id, robot);
+        });
+        // --- End robot data map update ---
+
+        // Process new explosions received from the server state
+        if (gameState.explosions && Array.isArray(gameState.explosions)) {
+            gameState.explosions.forEach(explosionData => {
+                // Create the visual effect locally
+                this.createExplosion(explosionData.x, explosionData.y, explosionData.size);
+                 // Add scorch marks based on server-side explosion events
+                 if (this.renderer?.addScorchMark) {
+                    // Scale scorch radius based on explosion size
+                    const scorchRadius = Math.max(5, explosionData.size * 8); // Adjust multiplier as needed
+                    this.renderer.addScorchMark(explosionData.x, explosionData.y, scorchRadius);
+                 }
             });
         }
-        // Remove/hide robots no longer in server state
-        for (const robotId in this.robots) {
-            if (!currentRobotIds.has(robotId) && !this.robots[robotId].isDestroyed) {
-                this.robots[robotId].visible = false;
-            }
-        }
-        if (this.renderer) this.renderer.robots = Object.values(this.robots);
 
-        // --- Update Missiles ---
-        this.missiles = gameState.missiles ? gameState.missiles.map(m => ({ ...m })) : [];
+        // --- Process Fire Events for Muzzle Flashes ---
+        if (gameState.fireEvents && Array.isArray(gameState.fireEvents)) {
+            gameState.fireEvents.forEach(event => {
+                // Look up the firing robot's data from our map
+                const ownerData = this.robotDataMap.get(event.ownerId);
+                // Determine the turret type from the robot's visual data
+                const turretType = ownerData?.visuals?.turret?.type || 'standard'; // Default if visuals missing
 
-        // START CHANGE: Process Sound Events ---
-        // Fire Events
-        if (this.audioManager && gameState.fireEvents && gameState.fireEvents.length > 0) {
-            // Play one sound per batch for now to avoid cacophony, maybe refine later
-            this.audioManager.playSound('fire');
-            // Potential refinement: Play sound only if owner is visible? Or play based on distance?
-            // gameState.fireEvents.forEach(event => {
-            //     // Example: Play sound only for your own fires?
-            //     // if (event.ownerId === this.myPlayerId) {
-            //     //    this.audioManager.playSound('fire');
-            //     // }
-            // });
+                // Create a new flash object to be rendered
+                this.activeFlashes.push({
+                    id: `f-${event.ownerId}-${Date.now()}`, // Unique ID for the flash
+                    x: event.x,                             // Position where missile spawns
+                    y: event.y,
+                    direction: event.direction,             // Direction flash should point
+                    type: turretType,                       // Type determines visual style
+                    startTime: Date.now(),                  // Start time for duration calculation
+                    duration: MUZZLE_FLASH_DURATION_MS      // How long the flash lasts
+                });
+            });
         }
-        // Hit Events
-        if (this.audioManager && gameState.hitEvents && gameState.hitEvents.length > 0) {
-             // Play one sound per batch
-             this.audioManager.playSound('hit');
-            // Potential refinement: Play sound only if *you* were hit or hit someone?
-            // gameState.hitEvents.forEach(event => {
-                // Example: Check if targetId is this player
-                // if (event.targetId === this.myPlayerId) {
-                //     this.audioManager.playSound('hit');
-                // }
-            // });
-        }
-        // END CHANGE ---
+        // --- End Fire Event Processing ---
 
-        // --- Update Dashboard UI ---
+
+        // Update the dashboard UI
         if (window.dashboard?.updateStats) {
-             window.dashboard.updateStats(Object.values(this.robots), { gameName: this.gameName });
+            const currentContextName = this.isSpectating ? this.spectatingGameName : this.gameName;
+            window.dashboard.updateStats(this.robots, { gameName: currentContextName });
+        }
+
+        // Make the latest robot data available to the renderer
+        if(this.renderer) {
+            this.renderer.robots = this.robots;
         }
     }
 
-    /**
-     * Handles the 'robotDestroyed' event: marks robot, triggers visuals and explosion sound.
-     * @param {object} data - Data from server: { robotId, x, y, cause }
-     */
-    handleRobotDestroyed(data) {
-        console.log(`[Game] Received robotDestroyed: ID=${data.robotId}, Pos=(${data.x}, ${data.y}), Cause=${data.cause}`);
-        const robotData = this.robots[data.robotId];
-        if (robotData) {
-            robotData.isDestroyed = true;
-            robotData.visible = false;
-        } else {
-            console.warn(`[Game] Received robotDestroyed for unknown ID: ${data.robotId}`);
-        }
 
-        // Trigger visual explosion effect
-        this.addExplosionEffect(data.x, data.y, data.cause === 'selfDestruct' ? 5 : 3);
+    /** Creates a local explosion effect object */
+    createExplosion(x, y, power = 1) {
+        const baseRadius = 10;
+        const maxRadius = baseRadius * (2 + power * 1.5); // Scale radius with power
+        const duration = 300 + power * 100; // Duration scales with power
 
-        // Trigger scorch mark
-        if (this.renderer?.addScorchMark) {
-            this.renderer.addScorchMark(data.x, data.y, 40);
-        }
+        // Different color sequences based on power for more visual variety
+        const colorSequence = power >= 3 ? ['#FFFFFF', '#FFA500', '#FF4500', '#8B0000', '#2c2c2c'] : // High power
+                              power >= 2 ? ['#FFFFE0', '#FFD700', '#FFA500', '#FF0000', '#333333'] : // Medium power
+                                           ['#FFFACD', '#FFF000', '#FFA500', '#444444'];              // Low power
 
-        // START CHANGE: Play explosion sound
-        if (this.audioManager) {
-            this.audioManager.playSound('explode');
-        }
-        // END CHANGE
-    }
-
-    /** Helper to add explosion data to the active list */
-    addExplosionEffect(x, y, sizeMultiplier = 1) {
         this.activeExplosions.push({
-            id: Date.now() + Math.random(),
-            x: x, y: y,
+            x: x,
+            y: y,
+            maxRadius: maxRadius,
             startTime: Date.now(),
-            duration: 800, // ms
-            maxRadius: 40 + (sizeMultiplier - 1) * 20,
-            colorSequence: ['#FFFF99', '#FFA500', '#FF4500', '#8B0000', '#666666'],
+            duration: duration,
+            colorSequence: colorSequence
         });
     }
 
-    /** Main client-side rendering loop. */
-    clientRenderLoop() {
-        if (!this.running) return;
-        if (!this.renderer) { this.stop(); return; }
 
-        // Renderer draws background, robots, missiles, and effects
-        this.renderer.draw(this.missiles, this.activeExplosions);
+    /** The main rendering loop */
+    gameLoop() {
+        // Stop the loop if the game isn't running or spectating
+        if (!this.isRunning && !this.isSpectating) return;
 
-        this.animationFrame = requestAnimationFrame(this.clientRenderLoop.bind(this));
-    }
+        const now = Date.now();
 
-    /** Starts the client-side rendering loop. */
-    startRenderLoop() {
-        if (this.running || !this.renderer) return;
-        console.log("Starting client render loop...");
-        this.running = true;
-        this.clientRenderLoop();
-    }
+        // --- Update and remove expired flashes ---
+        // Filter out flashes whose duration has passed
+        this.activeFlashes = this.activeFlashes.filter(flash => now < flash.startTime + flash.duration);
+        // --- End flash update ---
 
-    /** Stops the client-side rendering loop. */
-    stop() {
-        if (!this.running) return;
-        console.log("Stopping client render loop.");
-        this.running = false;
-        if (this.animationFrame) cancelAnimationFrame(this.animationFrame);
-        this.animationFrame = null;
-    }
+        // Update and remove expired explosions (existing logic)
+        this.activeExplosions = this.activeExplosions.filter(exp => now < exp.startTime + exp.duration);
 
-    /** Clears local game state and resets renderer/dashboard */
-    clearLocalState() {
-        console.log("Clearing local game state...");
-        this.activeExplosions = [];
-        this.robots = {};
-        this.missiles = [];
-        this.lastServerState = null;
-        this.gameId = null;
-        this.gameName = null;
-
+        // Tell the renderer to draw the current state
         if (this.renderer) {
-            this.renderer.robots = [];
-            // Scorch marks persist until next background redraw
-            this.renderer.clear(); // Draw background/grid immediately
+            // Pass all relevant game objects and effects to the renderer's draw method
+            this.renderer.draw(this.missiles, this.activeExplosions, this.activeFlashes); // <<< Pass flashes
         }
-        if (window.dashboard?.updateStats) {
-            window.dashboard.updateStats([], {});
+
+        // Request the next animation frame to continue the loop
+        if (this.isRunning || this.isSpectating) {
+            requestAnimationFrame(this.gameLoop.bind(this));
         }
     }
 
-    // --- Game Lifecycle & Spectator Handlers ---
-
-    handleGameStart(data) {
-        console.log("Game Start signal received:", data);
-        this.stop();
-        this.clearLocalState();
-        this.gameId = data.gameId;
-        this.gameName = data.gameName || data.gameId;
-
-        // Initialize robots map
-        if (data.players) {
-             data.players.forEach(p => {
-                 this.robots[p.id] = { ...p, x:0, y:0, direction:0, damage:0, color:'#ccc', isAlive: true, isDestroyed: false, visible: true, radius: 15 };
-             });
-             if (this.renderer) this.renderer.robots = Object.values(this.robots);
-        }
-        // Redraw background to clear old scorch marks
-        if (this.renderer?.redrawArenaBackground) this.renderer.redrawArenaBackground();
-
-        this.startRenderLoop();
-        if (controls?.setState) controls.setState('playing');
-        if (window.updateLobbyStatus) window.updateLobbyStatus(`${data.isTestGame ? 'Testing Code:' : 'Playing Game:'} ${this.gameName}`);
+    /** Stops the game loop and interpreter */
+    stop() {
+        console.log("[Game] Stopping game loop.");
+        this.isRunning = false;
+        this.interpreter.stop(); // Stop the interpreter if it was running code locally
     }
 
-    handleGameOver(data) {
-        console.log("Game Over signal received (as player):", data);
-        this.stop(); // Stop rendering loop
-
-        let winnerDisplayName = data.winnerName || (data.winnerId ? `ID: ${data.winnerId.substring(0, 6)}...` : 'None');
-        const endedGameName = this.gameName || data.gameId;
-        alert(`Game '${endedGameName}' Over! ${data.reason || 'Match ended.'} Winner: ${winnerDisplayName}`);
-
-        if (controls?.setState) controls.setState('lobby');
-        const prompt = data.wasTestGame ? 'Test Complete. Ready Up or Test Again!' : 'Game Over. Ready Up for another match!';
-        if (window.updateLobbyStatus) window.updateLobbyStatus(prompt);
-
-        this.clearLocalState(); // Clear state AFTER showing alert
+    /** Placeholder for client-side scan logic (if needed, usually server handles scans) */
+    performScan(robot, direction, resolution) {
+        // Client-side scan logic is typically not authoritative.
+        // Scans are usually performed server-side.
+        console.warn("[Game] performScan called on client - Scans are server-authoritative.");
+        return null;
     }
-
-    handleSpectateStart(spectateData) {
-        console.log("Starting spectate mode for game:", spectateData);
-        this.stop();
-        this.clearLocalState();
-        this.gameId = spectateData.gameId;
-        this.gameName = spectateData.gameName || spectateData.gameId;
-        if (this.renderer?.redrawArenaBackground) this.renderer.redrawArenaBackground();
-        if (controls?.setState) controls.setState('spectating');
-        if (window.updateLobbyStatus) window.updateLobbyStatus(`Spectating Game: ${this.gameName}`);
-        this.startRenderLoop();
-    }
-
-    handleSpectateEnd(gameOverData) {
-        console.log("Spectate mode ended:", gameOverData);
-        this.stop();
-        if (controls?.setState) controls.setState('lobby');
-        if (window.updateLobbyStatus) window.updateLobbyStatus('Returned to Lobby. Ready Up!');
-
-        let winnerDisplayName = gameOverData.winnerName || (gameOverData.winnerId ? `ID: ${gameOverData.winnerId.substring(0, 6)}...` : 'None');
-        const endedGameName = this.gameName || gameOverData.gameId;
-        alert(`Spectated game '${endedGameName}' finished!\nWinner: ${winnerDisplayName}. (${gameOverData.reason || 'Match ended.'})`);
-
-        this.clearLocalState();
-    }
-
-} // End Game Class
+}
