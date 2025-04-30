@@ -31,6 +31,7 @@ class Game {
         this.lastGameStateTime = 0; // Timestamp of the last received state update
         this.isSpectating = false;  // Is the client spectating?
         this.spectatingGameId = null; // ID of the game being spectated
+        this.spectatingGameName = null; // Name of the game being spectated
 
         // Helper map for quick lookup of robot data (especially visuals) by ID
         this.robotDataMap = new Map();
@@ -62,7 +63,8 @@ class Game {
         if (window.controls) window.controls.setState('spectating');
         if (window.dashboard?.updateStats) window.dashboard.updateStats([], { gameName: this.spectatingGameName });
 
-        requestAnimationFrame(this.gameLoop.bind(this)); // Start rendering loop for spectating
+        // Start rendering loop for spectating if not already running
+        requestAnimationFrame(this.gameLoop.bind(this));
     }
 
     /** Handles stopping spectating a game */
@@ -76,14 +78,16 @@ class Game {
             // Transition back to lobby state
             if (window.controls) window.controls.setState('lobby');
             if (window.dashboard?.updateStats) window.dashboard.updateStats([], {}); // Clear stats
+            // The gameLoop will stop itself as isSpectating is now false
         }
     }
 
-    /** Placeholder for handling robot destruction event (e.g., special effect) */
+    /** Handles robot destruction event (visual effect trigger) */
     handleRobotDestroyed(data) {
         console.log(`[Game] Robot ${data.robotId} destroyed at (${data.x.toFixed(0)}, ${data.y.toFixed(0)}) due to ${data.cause}.`);
-        // Could trigger a larger, longer-lasting explosion effect here
+        // Trigger a larger, longer-lasting explosion effect here visually
         this.createExplosion(data.x, data.y, 5); // Trigger a large explosion on destruction
+        // Sound for destruction is handled by the general explosion sound trigger below
     }
 
     /** Initializes the game state when a match starts */
@@ -100,11 +104,9 @@ class Game {
         this.robotDataMap.clear(); // Clear map
 
         // Initial population of robotDataMap for visual lookup
-        // The 'players' array in gameStart contains initial info {id, name, visuals}
         if (data.players && Array.isArray(data.players)) {
             data.players.forEach(p => {
-                if (p.id && p.visuals) { // Make sure ID and visuals exist
-                    // Store the initial data; subsequent updates will overwrite/update this map
+                if (p.id && p.visuals) {
                     this.robotDataMap.set(p.id, { id: p.id, name: p.name, visuals: p.visuals });
                     console.log(`[Game Start] Stored initial data for robot ${p.id} (${p.name})`);
                 } else {
@@ -127,7 +129,7 @@ class Game {
     /** Cleans up game state when a match ends */
     handleGameOver(data) {
         console.log(`[Game] Game Over: ${data.gameId}. Winner: ${data.winnerName}. Reason: ${data.reason}`);
-        this.isRunning = false;
+        this.isRunning = false; // Stop the game loop flag
         this.gameId = null;
         this.gameName = null;
         this.activeFlashes = []; // Clear flashes on game over
@@ -135,7 +137,8 @@ class Game {
 
         // Update UI state
         if (window.controls) window.controls.setState('lobby');
-        // Dashboard update will happen naturally as gameStateUpdate sends empty robot array
+        // Dashboard update will happen naturally as gameStateUpdate sends empty robot array soon
+        // The gameLoop will stop itself as isRunning is now false
     }
 
     /**
@@ -149,7 +152,6 @@ class Game {
         // Ignore updates for a different game unless spectating that specific game
         const relevantGameId = this.isSpectating ? this.spectatingGameId : this.gameId;
         if (!relevantGameId || gameState.gameId !== relevantGameId) {
-            // console.warn(`[Game] Ignoring state update for wrong game ID. Expected: ${relevantGameId}, Got: ${gameState.gameId}`);
             return;
         }
 
@@ -163,46 +165,67 @@ class Game {
         this.robotDataMap.clear(); // Clear previous frame's map
         this.robots.forEach(robot => {
             // Store the entire robot data object received from the server
-            // This ensures we have the latest visuals, name, etc.
             this.robotDataMap.set(robot.id, robot);
         });
         // --- End robot data map update ---
 
-        // Process new explosions received from the server state
+        // --- Process Explosions (Visuals + Sound) ---
         if (gameState.explosions && Array.isArray(gameState.explosions)) {
             gameState.explosions.forEach(explosionData => {
                 // Create the visual effect locally
                 this.createExplosion(explosionData.x, explosionData.y, explosionData.size);
-                 // Add scorch marks based on server-side explosion events
+                // Add scorch marks
                  if (this.renderer?.addScorchMark) {
-                    // Scale scorch radius based on explosion size
-                    const scorchRadius = Math.max(5, explosionData.size * 8); // Adjust multiplier as needed
+                    const scorchRadius = Math.max(5, explosionData.size * 8);
                     this.renderer.addScorchMark(explosionData.x, explosionData.y, scorchRadius);
                  }
+                 // --- ADD SOUND CALL for EXPLOSIONS ---
+                 if (window.audioManager) {
+                     window.audioManager.playSound('explode'); // Play explosion sound
+                 }
+                 // --- END SOUND CALL for EXPLOSIONS ---
             });
         }
 
-        // --- Process Fire Events for Muzzle Flashes ---
+        // --- Process Fire Events (Visuals + Sound) ---
         if (gameState.fireEvents && Array.isArray(gameState.fireEvents)) {
             gameState.fireEvents.forEach(event => {
-                // Look up the firing robot's data from our map
                 const ownerData = this.robotDataMap.get(event.ownerId);
-                // Determine the turret type from the robot's visual data
-                const turretType = ownerData?.visuals?.turret?.type || 'standard'; // Default if visuals missing
+                const turretType = ownerData?.visuals?.turret?.type || 'standard';
 
-                // Create a new flash object to be rendered
+                // Create visual muzzle flash
                 this.activeFlashes.push({
-                    id: `f-${event.ownerId}-${Date.now()}`, // Unique ID for the flash
-                    x: event.x,                             // Position where missile spawns
+                    id: `f-${event.ownerId}-${Date.now()}`,
+                    x: event.x,
                     y: event.y,
-                    direction: event.direction,             // Direction flash should point
-                    type: turretType,                       // Type determines visual style
-                    startTime: Date.now(),                  // Start time for duration calculation
-                    duration: MUZZLE_FLASH_DURATION_MS      // How long the flash lasts
+                    direction: event.direction,
+                    type: turretType,
+                    startTime: Date.now(),
+                    duration: MUZZLE_FLASH_DURATION_MS
                 });
+                // --- ADD SOUND CALL for FIRING ---
+                if (window.audioManager) {
+                    // Potential future enhancement: different sound per turret type
+                    // const soundKey = turretType === 'laser' ? 'fire_laser' : 'fire';
+                    // window.audioManager.playSound(soundKey);
+                    window.audioManager.playSound('fire'); // Play fire sound
+                }
+                // --- END SOUND CALL for FIRING ---
             });
         }
-        // --- End Fire Event Processing ---
+
+        // --- Process Hit Events (Sound Only for now) ---
+        if (gameState.hitEvents && Array.isArray(gameState.hitEvents)) {
+            gameState.hitEvents.forEach(event => {
+                // --- ADD SOUND CALL for HITS ---
+                 if (window.audioManager) {
+                     window.audioManager.playSound('hit'); // Play hit sound
+                 }
+                 // --- END SOUND CALL for HITS ---
+                 // TODO: Could potentially add visual hit sparks here later
+            });
+        }
+        // --- End Hit Event Processing ---
 
 
         // Update the dashboard UI
@@ -243,14 +266,15 @@ class Game {
     /** The main rendering loop */
     gameLoop() {
         // Stop the loop if the game isn't running or spectating
-        if (!this.isRunning && !this.isSpectating) return;
+        if (!this.isRunning && !this.isSpectating) {
+             // console.log("[GameLoop] Stopping (not running or spectating)."); // Optional log
+             return;
+        }
 
         const now = Date.now();
 
         // --- Update and remove expired flashes ---
-        // Filter out flashes whose duration has passed
         this.activeFlashes = this.activeFlashes.filter(flash => now < flash.startTime + flash.duration);
-        // --- End flash update ---
 
         // Update and remove expired explosions (existing logic)
         this.activeExplosions = this.activeExplosions.filter(exp => now < exp.startTime + exp.duration);
@@ -258,10 +282,10 @@ class Game {
         // Tell the renderer to draw the current state
         if (this.renderer) {
             // Pass all relevant game objects and effects to the renderer's draw method
-            this.renderer.draw(this.missiles, this.activeExplosions, this.activeFlashes); // <<< Pass flashes
+            this.renderer.draw(this.missiles, this.activeExplosions, this.activeFlashes); // Pass flashes
         }
 
-        // Request the next animation frame to continue the loop
+        // Request the next animation frame to continue the loop ONLY if still running/spectating
         if (this.isRunning || this.isSpectating) {
             requestAnimationFrame(this.gameLoop.bind(this));
         }
@@ -270,14 +294,12 @@ class Game {
     /** Stops the game loop and interpreter */
     stop() {
         console.log("[Game] Stopping game loop.");
-        this.isRunning = false;
+        this.isRunning = false; // Set flag to stop the loop
         this.interpreter.stop(); // Stop the interpreter if it was running code locally
     }
 
     /** Placeholder for client-side scan logic (if needed, usually server handles scans) */
     performScan(robot, direction, resolution) {
-        // Client-side scan logic is typically not authoritative.
-        // Scans are usually performed server-side.
         console.warn("[Game] performScan called on client - Scans are server-authoritative.");
         return null;
     }
