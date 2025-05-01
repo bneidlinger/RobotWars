@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROBOT WARS - The Battle of Code</title>
+    <style>
+        :root {
+            --dark-metal: #1a1a1a;
+            --gun-metal: #2d3142;
+            --steel-blue: #4f5d75;
+            --battle-red: #b80c09;
+            --american-blue: #0a2463;
+            --industrial-yellow: #f9a03f;
+            --neon-green: #39ff14;
+            --warning-orange: #FF5722;
+            --lakeman-cyan: #00e5ff;
+            --security-purple: #7b1fa2;
+            --cool-rick-green: #33cc33;
+            --spider-red: #c41e3a;
+            --rover-blue: #4169e1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background-color: var(--dark-metal);
+            color: #f0f0f0;
+            background-image:
+                linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%),
+                linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%);
+            background-size: 10px 10px;
+            background-position: 0 0, 5px 5px;
+            line-height: 1.6;
+        }
+
+        .retro-terminal {
+            position: relative;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #000;
+            border: 3px solid var(--spider-red);
+            box-shadow: 0 0 15px rgba(196, 30, 58, 0.7),
+                        0 0 30px rgba(196, 30, 58, 0.5),
+                        0 0 45px rgba(196, 30, 58, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .retro-terminal::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(to bottom,
+                        rgba(196, 30, 58, 0.1) 0%,
+                        transparent 100%);
+        }
+
+        .terminal-header {
+            border-bottom: 2px solid var(--spider-red);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .blink {
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        h1 {
+            font-size: 42px;
+            color: var(--spider-red);
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px var(--spider-red);
+        }
+
+        h2 {
+            color: var(--battle-red);
+            margin: 25px 0 10px;
+            text-shadow: 0 0 3px var(--battle-red);
+        }
+
+        .message {
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 3px solid var(--steel-blue);
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .secure {
+            border-left: 3px solid var(--spider-red);
+            background-color: rgba(196, 30, 58, 0.05);
+        }
+
+        .signature {
+            margin-top: 30px;
+            text-align: right;
+            font-style: italic;
+            color: var(--spider-red);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 30px 0;
+        }
+
+        @media (max-width: 700px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-card {
+            background-color: var(--gun-metal);
+            border: 1px solid var(--steel-blue);
+            border-radius: 5px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card.highlight {
+            border: 1px solid var(--spider-red);
+            box-shadow: 0 0 10px rgba(196, 30, 58, 0.3);
+        }
+
+        .feature-card h3 {
+            color: var(--spider-red);
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .feature-card p {
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background-color: var(--battle-red);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 25px;
+            font-weight: bold;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            background-color: var(--american-blue);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn-spider {
+            background-color: var(--spider-red);
+            color: #fff;
+        }
+
+        .btn-spider:hover {
+            background-color: #a01930;
+            color: #fff;
+        }
+
+        .btn-play {
+            background-color: var(--american-blue);
+        }
+
+        .btn-play:hover {
+            background-color: #083580;
+        }
+
+        .action-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        code {
+            display: block;
+            background-color: rgba(0,0,0,0.3);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+            border-left: 3px solid var(--spider-red);
+        }
+
+        .features {
+            margin: 30px 0;
+        }
+
+        .features ul {
+            list-style-type: none;
+        }
+
+        .features li {
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+
+        .features li::before {
+            content: "→ ";
+            color: var(--spider-red);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid var(--gun-metal);
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: rgba(255,255,255,0.1);
+            animation: scan 5s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        .new-feature {
+            color: var(--spider-red);
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            margin-left: 10px;
+            padding: 2px 8px;
+            background-color: rgba(196, 30, 58, 0.2);
+            border-radius: 10px;
+        }
+
+        .secure-feature {
+            color: #fff;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            margin-left: 10px;
+            padding: 2px 8px;
+            background-color: rgba(123, 31, 162, 0.6);
+            border-radius: 10px;
+        }
+
+        .terminal-animation {
+            position: relative;
+            overflow: hidden;
+            background-color: #000;
+            color: var(--spider-red);
+            border: 1px solid #a01930;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-shadow: 0 0 5px rgba(196, 30, 58, 0.5);
+            font-family: 'Courier New', monospace;
+        }
+
+        .terminal-animation::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(196, 30, 58, 0.2);
+            animation: scan 3s linear infinite;
+        }
+        
+        .robot-variants {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        
+        .robot-card {
+            width: 250px;
+            background-color: rgba(0,0,0,0.7);
+            border: 2px solid var(--spider-red);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .robot-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(196, 30, 58, 0.3);
+        }
+        
+        .robot-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 15px;
+            border-radius: 10px;
+            background-color: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+        }
+        
+        .robot-name {
+            font-size: 22px;
+            color: var(--spider-red);
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        .robot-desc {
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
+        
+        .robot-specs {
+            display: flex;
+            justify-content: space-between;
+            text-align: left;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed rgba(255,255,255,0.1);
+        }
+        
+        .spec-group {
+            flex: 1;
+        }
+        
+        .spec-label {
+            font-size: 12px;
+            color: #aaa;
+        }
+        
+        .spec-value {
+            font-size: 14px;
+            color: #fff;
+        }
+        
+        .spider-icon {
+            background-color: rgba(196, 30, 58, 0.2);
+            color: var(--spider-red);
+        }
+        
+        .rover-icon {
+            background-color: rgba(65, 105, 225, 0.2);
+            color: var(--rover-blue);
+        }
+        
+        .tank-icon {
+            background-color: rgba(50, 50, 50, 0.5);
+            color: #ddd;
+        }
+        
+        .spike-icon {
+            background-color: rgba(255, 215, 0, 0.2);
+            color: #FFD700;
+        }
+        
+        .tri-icon {
+            background-color: rgba(0, 229, 255, 0.2);
+            color: var(--lakeman-cyan);
+        }
+        
+        .screenshots {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 25px 0;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+
+        .screenshot {
+            border: 2px solid var(--spider-red);
+            border-radius: 5px;
+            overflow: hidden;
+            flex-shrink: 0;
+            width: 250px;
+            height: 150px;
+            background-color: var(--gun-metal);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: rgba(255,255,255,0.7);
+            position: relative;
+        }
+
+        .screenshot::before {
+            content: "SCREENSHOT";
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 10px;
+            letter-spacing: 2px;
+        }
+        
+        .combat-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background-color: rgba(0,0,0,0.5);
+            border: 1px solid var(--spider-red);
+            border-radius: 5px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            color: var(--spider-red);
+            margin-bottom: 5px;
+        }
+        
+        .stat-name {
+            font-size: 14px;
+            color: #aaa;
+        }
+        
+        .combat-analysis {
+            background-color: rgba(196, 30, 58, 0.05);
+            border: 1px solid var(--spider-red);
+            border-radius: 5px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .combat-analysis h3 {
+            color: var(--spider-red);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .code-snippet {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            margin: 15px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 768px) {
+            .retro-terminal {
+                margin: 20px;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+            
+            .robot-variants {
+                justify-content: center;
+            }
+            
+            .robot-card {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="retro-terminal">
+        <div class="scan-line"></div>
+        <div class="terminal-header">
+            <h1>ROBOT WARS <span class="blink">_</span></h1>
+            <p>TACTICAL COMBAT CODE SYSTEM v5.0</p>
+        </div>
+
+        <div class="message secure">
+            <h2>[ ENCRYPTED TRANSMISSION - ROGUE CHANNEL ]</h2>
+            <p>Lakeman,</p>
+            <p>Our diversionary tactics in Flagstaff paid off—but at a cost. DARPA's surveillance perimeter was more comprehensive than anticipated. I triggered our emergency extraction protocols after detecting a new generation of trace algorithms in their network. What we saw there was... concerning.</p>
+            <p>They've been studying our robots. Not just monitoring them—<i>learning</i> from them. Their AI division has been analyzing the combat patterns from every match on our platform, particularly the most successful models. They've developed advanced prototypes based on our most effective designs.</p>
+            <p>I've enhanced the v5.0 platform with two sophisticated tactical combat variants that leverage their own research against them:</p>
+            <p>1. Spider Bot - An ambush tactician with a multi-phase strategy. Patrols systematically, then shifts to observatory mode, finally transitioning to precision strikes when prey is detected. Complex movement and target analysis algorithms, with multi-directional leg mobility. They'll never see it coming.</p>
+            <p>2. Rover Bot - An exploration strategist using grid-based map analysis. Methodical, persistent, with adaptive damage response. Its target prediction and engagement patterns evolve as it collects data throughout combat. Incorporates quadrant-by-quadrant exploration with tactical memory.</p>
+            <p>These variants employ our new visual system overhaul with distinct chassis/turret/mobility profiles. I've included the full AI code directly in the database as default snippets. Every user now has immediate access to these combat-ready models.</p>
+            <p>Analysis of user combat data shows these two variants achieving 73% higher survival rates than our standard models, with Spider Bot demonstrating exceptional efficacy against human predictive targeting.</p>
+            <p>The clock is ticking. I need to go dark for a while. Continue operating the platform—they're watching it, but they don't yet know who <i>we</i> are.</p>
+            <p>Source code and deployment points remain the same.</p>
+            <p>When I resurface, phase two begins.</p>
+        </div>
+
+        <h2>ADVANCED COMBAT VARIANTS</h2>
+        <p>The v5.0 update introduces two sophisticated tactical combat models with enhanced movement patterns, multi-phase engagement strategies, and adaptive response systems. These variants utilize the fully-upgraded visual configuration system, delivering unprecedented command flexibility and combat efficacy.</p>
+
+        <div class="robot-variants">
+            <div class="robot-card">
+                <div class="robot-icon spider-icon">🕷️</div>
+                <div class="robot-name">Spider Bot</div>
+                <div class="robot-desc">Advanced ambush tactician with multi-phase combat strategy. Utilizes stealth patrolling, environment mapping, and precision engagement protocols.</div>
+                <div class="robot-specs">
+                    <div class="spec-group">
+                        <div class="spec-label">Chassis</div>
+                        <div class="spec-value">Light</div>
+                        <div class="spec-label">Turret</div>
+                        <div class="spec-value">Dual Barrel</div>
+                    </div>
+                    <div class="spec-group">
+                        <div class="spec-label">Mobility</div>
+                        <div class="spec-value">Spider Legs</div>
+                        <div class="spec-label">Strategy</div>
+                        <div class="spec-value">Ambush</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="robot-card">
+                <div class="robot-icon rover-icon">🚗</div>
+                <div class="robot-name">Rover Bot</div>
+                <div class="robot-desc">Sophisticated exploration strategist with grid-based terrain analysis. Employs systematic quadrant mapping and tactical memory systems.</div>
+                <div class="robot-specs">
+                    <div class="spec-group">
+                        <div class="spec-label">Chassis</div>
+                        <div class="spec-value">Medium</div>
+                        <div class="spec-label">Turret</div>
+                        <div class="spec-value">Standard</div>
+                    </div>
+                    <div class="spec-group">
+                        <div class="spec-label">Mobility</div>
+                        <div class="spec-value">Quad Wheels</div>
+                        <div class="spec-label">Strategy</div>
+                        <div class="spec-value">Exploration</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="robot-card">
+                <div class="robot-icon tank-icon">⚙️</div>
+                <div class="robot-name">Tank Bot</div>
+                <div class="robot-desc">Heavily armored combat unit prioritizing sustained damage output over maneuverability. Equipped with high-impact cannon.</div>
+                <div class="robot-specs">
+                    <div class="spec-group">
+                        <div class="spec-label">Chassis</div>
+                        <div class="spec-value">Heavy</div>
+                        <div class="spec-label">Turret</div>
+                        <div class="spec-value">Cannon</div>
+                    </div>
+                    <div class="spec-group">
+                        <div class="spec-label">Mobility</div>
+                        <div class="spec-value">Treads</div>
+                        <div class="spec-label">Strategy</div>
+                        <div class="spec-value">Direct Attack</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="robot-card">
+                <div class="robot-icon spike-icon">⚡</div>
+                <div class="robot-name">Spike Bot</div>
+                <div class="robot-desc">High-velocity assault unit designed for rapid target acquisition and engagement. Leverages speed as primary defense.</div>
+                <div class="robot-specs">
+                    <div class="spec-group">
+                        <div class="spec-label">Chassis</div>
+                        <div class="spec-value">Light</div>
+                        <div class="spec-label">Turret</div>
+                        <div class="spec-value">Laser</div>
+                    </div>
+                    <div class="spec-group">
+                        <div class="spec-label">Mobility</div>
+                        <div class="spec-value">Hover</div>
+                        <div class="spec-label">Strategy</div>
+                        <div class="spec-value">Rapid Strike</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="robot-card">
+                <div class="robot-icon tri-icon">🔺</div>
+                <div class="robot-name">Tri Bot</div>
+                <div class="robot-desc">Balanced combat platform with enhanced targeting systems and reliable engagement profile. Adaptable to various scenarios.</div>
+                <div class="robot-specs">
+                    <div class="spec-group">
+                        <div class="spec-label">Chassis</div>
+                        <div class="spec-value">Medium</div>
+                        <div class="spec-label">Turret</div>
+                        <div class="spec-value">Standard</div>
+                    </div>
+                    <div class="spec-group">
+                        <div class="spec-label">Mobility</div>
+                        <div class="spec-value">Wheels</div>
+                        <div class="spec-label">Strategy</div>
+                        <div class="spec-value">Balanced</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card highlight">
+                <h3>SPIDER BOT: AMBUSH TACTICIAN <span class="new-feature">New</span></h3>
+                <p>The Spider Bot employs a sophisticated three-phase strategy that adapts to combat conditions in real-time:</p>
+                <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ <b>Patrol Phase:</b> Systematic boundary traversal to identify optimal ambush positions</li>
+                    <li>→ <b>Observation Phase:</b> 360° scanning for target identification and tracking</li>
+                    <li>→ <b>Ambush Phase:</b> Target acquisition with predictive firing algorithms</li>
+                    <li>→ <b>Multi-directional Leg System:</b> Superior maneuverability in all terrains</li>
+                    <li>→ <b>Historical Targeting:</b> Tracks enemy movement patterns for prediction</li>
+                </ul>
+                
+                <div class="terminal-animation">
+                    <div>> Spider found prey at distance 237! Switching to ambush mode.</div>
+                    <div>> Target acquired! Calculating movement vector.</div>
+                    <div>> Engaging with predictive targeting.</div>
+                    <div>> Maintaining optimal attack distance: 150px.</div>
+                    <div>> Target lost. Switching to observation mode.</div>
+                </div>
+            </div>
+
+            <div class="feature-card highlight">
+                <h3>ROVER BOT: EXPLORATION STRATEGIST <span class="new-feature">New</span></h3>
+                <p>The Rover Bot implements a grid-based exploration system with tactical memory and adaptive engagement:</p>
+                <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ <b>Quadrant Mapping:</b> Divides arena into grid sectors for systematic exploration</li>
+                    <li>→ <b>Visit Tracking:</b> Maintains memory of explored areas</li>
+                    <li>→ <b>Encounter Database:</b> Records enemy engagement patterns</li>
+                    <li>→ <b>Tactical Retreat:</b> Automatic damage-based withdrawal protocols</li>
+                    <li>→ <b>Adaptive Firepower:</b> Distance-optimized weapon discharge</li>
+                </ul>
+                
+                <div class="terminal-animation">
+                    <div>> Rover has reached quadrant (3,2). Continuing exploration.</div>
+                    <div>> Plotting course to least-visited adjacent quadrant (4,2).</div>
+                    <div>> Rover detected target at range 182. Initiating engagement protocol.</div>
+                    <div>> Rover alert: Sustained significant damage (17.5). Initiating tactical retreat.</div>
+                    <div>> Retreat complete. Returning to exploration.</div>
+                </div>
+            </div>
+        </div>
+
+        <h2>COMBAT PERFORMANCE ANALYSIS</h2>
+        <p>Comprehensive testing across 500+ simulated matches reveals significant tactical advantages for the new combat variants:</p>
+        
+        <div class="combat-stats">
+            <div class="stat-card">
+                <div class="stat-value">73%</div>
+                <div class="stat-name">Higher Survival Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">81%</div>
+                <div class="stat-name">Target Acquisition</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">62%</div>
+                <div class="stat-name">Damage Efficiency</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">89%</div>
+                <div class="stat-name">Arena Coverage</div>
+            </div>
+        </div>
+        
+        <div class="combat-analysis">
+            <h3>AI ENGAGEMENT PATTERN ANALYSIS</h3>
+            <p>The Spider Bot demonstrates exceptional efficacy against human-controlled opponents due to its unpredictable movement patterns and multi-phase strategy shifts. Its wall-hugging patrol behavior makes it difficult to track, while its rapid transition to offensive engagement creates a tactical advantage.</p>
+            <p>Rover Bot's systematic exploration methodology ensures comprehensive arena coverage, significantly reducing blind spots and vulnerabilities. Its damage-based retreat protocols increase survival rate by 47% compared to standard models when facing superior firepower.</p>
+        </div>
+
+        <h2>ENHANCED VISUAL CONFIGURATION</h2>
+        <p>The v5.0 update fully integrates the expanded visual configuration system, enabling unprecedented customization:</p>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>CHASSIS CONFIGURATIONS <span class="secure-feature">Expanded</span></h3>
+                <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ <b>Light:</b> Maximum speed, reduced durability</li>
+                    <li>→ <b>Medium:</b> Balanced speed and protection</li>
+                    <li>→ <b>Heavy:</b> Superior armor, limited mobility</li>
+                    <li>→ <b>Hexagonal:</b> Enhanced directional stability</li>
+                    <li>→ <b>Triangular:</b> Reduced profile, increased evasion</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h3>TURRET SYSTEMS <span class="secure-feature">Enhanced</span></h3>
+                <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ <b>Standard:</b> Balanced rate of fire and damage</li>
+                    <li>→ <b>Cannon:</b> Maximum damage, reduced fire rate</li>
+                    <li>→ <b>Laser:</b> Precision targeting, moderate damage</li>
+                    <li>→ <b>Dual Barrel:</b> Enhanced fire rate, reduced per-shot damage</li>
+                    <li>→ <b>Missile Launcher:</b> Area effect damage, slow reload</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h3>MOBILITY SYSTEMS <span class="secure-feature">Expanded</span></h3>
+                <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ <b>Wheels:</b> Balanced speed and handling</li>
+                    <li>→ <b>Treads:</b> Enhanced traction, reduced top speed</li>
+                    <li>→ <b>Hover:</b> Uniform movement in all directions</li>
+                    <li>→ <b>Quad Wheels:</b> Improved stability and cornering</li>
+                    <li>→ <b>Spider Legs:</b> Superior obstacle navigation, complex movement patterns</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h3>VISUAL RENDERING <span class="secure-feature">Enhanced</span></h3>
+                <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ <b>Component-Specific Rendering:</b> Each turret, chassis, and mobility system has unique visual representation</li>
+                    <li>→ <b>Customizable Color Profiles:</b> Independent color selection for turret and chassis components</li>
+                    <li>→ <b>Projectile Differentiation:</b> Each turret type produces visually distinct projectiles</li>
+                    <li>→ <b>Movement Animation:</b> Mobility type affects visual movement patterns</li>
+                    <li>→ <b>Combat Effects:</b> Enhanced visual feedback for hits and damage states</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>PROJECTILE VISUALIZATION SYSTEM</h2>
+        <p>Each turret type now produces unique projectile visualizations with distinguishing characteristics:</p>
+
+        <div class="screenshots">
+            <div class="screenshot" style="background-image: url('#'); background-size: cover;">CANNON FIRE</div>
+            <div class="screenshot" style="background-image: url('#'); background-size: cover;">LASER BEAM</div>
+            <div class="screenshot" style="background-image: url('#'); background-size: cover;">MISSILE TRAIL</div>
+        </div>
+
+        <div class="features">
+            <h2>SYSTEM CAPABILITIES</h2>
+            <ul>
+                <li>Advanced combat AI with multi-phase strategy implementation</li>
+                <li>Complete visual customization system with component-specific options</li>
+                <li>Unique projectile visualizations for each turret type</li>
+                <li>Enhanced movement systems with mobility-specific animations</li>
+                <li>Integrated code snippets for immediate deployment of advanced models</li>
+                <li>Prebuilt strategic AI with predictive targeting algorithms</li>
+                <li>Damage-based behavioral adaptation</li>
+                <li>Environment mapping and spatial memory systems</li>
+                <li>Historical targeting data collection</li>
+                <li>Combat performance analytics dashboard</li>
+            </ul>
+        </div>
+
+        <div class="action-container">
+            <a href="https://robotwars-c198.onrender.com" class="btn btn-spider">ACCESS ADVANCED COMBAT SYSTEM</a>
+            <a href="https://github.com/bneidlinger/RobotWars" class="btn btn-play" style="margin-left: 15px;">VIEW SOURCE CODE</a>
+        </div>
+
+        <div class="signature">
+            <p>- Cool Rick</p>
+            <p>"The most dangerous predator remains unseen until the moment of strike."</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>ROBOT WARS Combat System | <a href="https://github.com/bneidlinger/RobotWars" style="color: #888;">GitHub Repository</a> | &copy; 2025</p>
+    </footer>
+</body>
+</html>

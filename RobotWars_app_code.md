@@ -2,30 +2,6 @@
 
 ## package.json
 
-```code
-{
-  "name": "robot-wars",
-  "version": "1.0.0",
-  "description": "Online Robot Wars Game",
-  "main": "server/index.js",
-  "scripts": {
-    "start": "node server/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "dependencies": {
-    "bcrypt": "^5.1.1",
-    "connect-pg-simple": "^10.0.0",
-    "dotenv": "^16.5.0",
-    "express": "^4.21.2",
-    "express-session": "^1.18.1",
-    "pg": "^8.15.1",
-    "socket.io": "^4.8.1"
-  },
-  "author": "",
-  "license": "ISC"
-}
-```
-
 ## client/css/main.css
 
 ```code
@@ -320,245 +296,7 @@ input#loadout-name-input, input#builder-player-name {
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-}
-/* Use slightly larger gap for non-arena columns */
-.devtools-column, .info-lobby-column { gap: 12px; }
-
-
-/* --- Arena Column Content Styling --- */
-/* API Help */
-.api-help {
-    background-color: #333;
-    padding: 8px 12px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    flex-shrink: 0;
-    max-height: 140px;
-    overflow-y: auto;
-    border: 1px solid #444;
-}
-.api-help h4 {
-    font-family: 'VT323', monospace;
-    font-size: 1.0rem;
-    margin-bottom: 5px;
-    color: #aaa;
-    padding-bottom: 3px;
-    border-bottom: 1px solid #555;
-}
-.api-help ul { list-style-position: inside; padding-left: 5px; margin:0; }
-.api-help li { margin-bottom: 4px; font-size: 0.9rem; }
-.api-help code {
-    font-family: 'VT323', monospace;
-    background-color: #444; padding: 2px 4px; border-radius: 3px;
-    color: #f0f0f0; font-size: 0.85rem;
-}
-
-
-#arena {
-    background-color: #2c2c2c;
-    border: 2px solid #444;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    display: block;
-    max-width: 100%;
-    aspect-ratio: 1 / 1;
-    flex-grow: 1; /* Allow arena canvas to grow vertically */
-    min-height: 200px;
-    align-self: center;
-    width: auto;
-}
-
-/* Row containing the two consoles at the bottom of Arena Column */
-.consoles-row {
-    display: flex;
-    gap: 10px;
-    width: 100%;
-    flex-shrink: 0;
-    /* Explicitly limit the row's height */
-    max-height: 270px; /* Example: panel max-height + padding */
-    min-height: 100px;
-}
-
-/* Shared styles for console panels within the consoles-row */
-.consoles-row .console-panel {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    /* Panel height inherits limit from parent row */
-    max-height: 100%;
-    background-color: #333;
-    padding: 8px 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border: 1px solid #444;
-    overflow: hidden; /* Panel itself should not scroll */
-}
-
-.consoles-row .console-panel h3 {
-    font-family: 'VT323', monospace;
-    font-size: 1.0rem;
-    margin-bottom: 5px;
-    flex-shrink: 0;
-    padding-bottom: 3px;
-    border-bottom: 1px solid #555;
-    text-align: center;
-}
-
-/* Make the log-box inside consoles fill space and scroll */
-.consoles-row .console-panel .log-box {
-     overflow-y: auto; /* Enable vertical scroll *only* for the log box */
-     flex-grow: 1;
-     min-height: 50px;
-     /* Let the parent (.console-panel) limit height */
-     font-family: 'VT323', monospace;
-     word-wrap: break-word;
-     padding: 5px;
-     font-size: 0.9rem;
-     scrollbar-width: thin;
-     scrollbar-color: #666 #2a2a2a;
-}
-.consoles-row .console-panel .log-box::-webkit-scrollbar { width: 8px; }
-.consoles-row .console-panel .log-box::-webkit-scrollbar-track { background: #2a2a2a; border-radius: 4px; }
-.consoles-row .console-panel .log-box::-webkit-scrollbar-thumb { background-color: #666; border-radius: 4px; border: 2px solid #2a2a2a; }
-
-
-/* === DevTools Column (Editor Only) === */
-.editor-section {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    min-height: 0;
-    overflow: hidden;
-    background-color: #2a2a2a;
-    padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border: 1px solid #444;
-}
-.editor-section h3 {
-    font-family: 'VT323', monospace;
-    font-size: 1.0rem;
-    margin-bottom: 5px;
-    color: #aaa;
-    flex-shrink: 0;
-    padding-bottom: 3px;
-    border-bottom: 1px solid #555;
-}
-
-.code-editor-wrapper {
-    flex-grow: 1;
-    min-height: 200px;
-    position: relative;
-    display: flex;
-    border: 1px solid #444;
-    border-radius: 4px;
-    margin-bottom: 10px;
-    overflow: hidden;
-}
-
-.CodeMirror {
-    flex-grow: 1;
-    height: 100% !important;
-    font-family: 'VT323', monospace;
-    font-size: 17px; /* Slightly larger editor font */
-}
-.CodeMirror-readonly .CodeMirror-cursor { display: none !important; }
-.CodeMirror-readonly { background-color: #222 !important; }
-
-.editor-controls {
-     display: flex;
-     gap: 10px;
-     align-items: center;
-     flex-shrink: 0;
-     padding: 5px 0 0 0;
-     flex-wrap: wrap; /* Allow wrapping on small screens */
-}
-/* Adjust delete button size slightly */
-#btn-delete-loadout { padding: 3px 6px; font-size: 0.8em; background-color: #c0392b; }
-#btn-delete-loadout:hover:not(:disabled) { background-color: #a93226; }
-#btn-delete-loadout:disabled { background-color: #555; color: #aaa; }
-/* Adjust status font size */
-#loadout-status { font-size: 0.8rem; min-height: 1.2em; color: #aaa; flex-shrink: 0; margin-left: 5px; }
-
-
-/* === Info/Lobby Column === */
-/* Shared panel styles within Info Column */
-.stats-panel,
-#lobby-area,
-#game-history-log {
-    background-color: #333;
-    /* Reduced panel padding */
-    padding: 8px 12px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border: 1px solid #444;
-    flex-shrink: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Reduced panel title font size */
-.stats-panel h3, #lobby-area h3, #game-history-log h4 {
-     font-family: 'VT323', monospace;
-     font-size: 1.1rem;
-     margin-bottom: 8px;
-     color: #4CAF50;
-     flex-shrink: 0;
-     padding-bottom: 5px;
-     border-bottom: 1px solid #555;
-}
-
-/* Specific panel sizing and content */
-/* Reduced max-height for stats panel */
-.stats-panel { max-height: 180px; }
-
-/* Reduce font size inside stats panel */
-#robot-stats { overflow-y: auto; flex-grow: 1; padding: 5px 0; font-size: 0.9rem; }
-#dashboard-game-title { font-weight: bold; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #555; color: #4CAF50; font-family: "'VT323', monospace"; font-size: 1.0rem; display: none; }
-.robot-stat { border-left: 3px solid #888; margin-bottom: 6px; padding: 4px 4px 4px 8px; font-family: "'VT323', monospace"; font-size: inherit; }
-.robot-stat div { margin-bottom: 2px; }
-.robot-stat strong { color: #eee; }
-
-#lobby-area { flex-grow: 1; max-height: none; } /* Lobby takes remaining space */
-/* Reduce lobby status font size */
-#lobby-status { margin-bottom: 8px; font-weight: bold; color: #e0e0e0; flex-shrink: 0; font-size: 1.0rem; }
-#event-log {
-    flex-grow: 1;
-    flex-shrink: 1;
-    min-height: 80px;
-    max-height: 180px;
-    background: #222;
-    /* Reduce event log font size */
-    font-size: 0.85rem;
-    border: 1px solid #555;
-    overflow-y: auto; margin-bottom: 10px; padding: 5px 8px;
-    scrollbar-width: thin; scrollbar-color: #666 #222;
-}
-#event-log::-webkit-scrollbar { width: 8px; }
-#event-log::-webkit-scrollbar-track { background: #222; border-radius: 4px; }
-#event-log::-webkit-scrollbar-thumb { background-color: #666; border-radius: 4px; border: 2px solid #222; }
-
-#chat-area { display: flex; gap: 5px; flex-shrink: 0; margin-top: auto; padding-top: 10px; }
-/* Reduce chat input/button font size */
-#chat-input { flex-grow: 1; padding: 6px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #e0e0e0; font-family: 'VT323', monospace; font-size: 0.9rem; }
-#send-chat { padding: 6px 12px; font-size: 0.9rem; }
-
-/* Reduced max-height for history panel */
-#game-history-log { max-height: 200px; }
-#game-history-list {
-    overflow-y: auto; flex-grow: 1;
-    /* Reduce history list font size */
-    font-size: 0.85rem;
-    padding-right: 5px;
-    scrollbar-width: thin; scrollbar-color: #666 #333;
-}
-#game-history-list::-webkit-scrollbar { width: 8px; }
-#game-history-list::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
-#game-history-list::-webkit-scrollbar-thumb { background-color: #666; border-radius: 4px; border: 2px solid #333; }
-#game-history-list > div { margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #444; color: #cccccc; }
-#game-history-list > div:last-child { border-bottom: none; margin-bottom: 0; }
+ttom: none; margin-bottom: 0; }
 
 
 /* === Console Log Specific Themes === */
@@ -911,530 +649,139 @@ input#loadout-name-input, input#builder-player-name {
 
 /**
  * Manages the rendering of the game arena canvas, including the background,
- * grid, robots (based on visual loadout data), missiles (with trails),
- * scorch marks, muzzle flashes, and visual effects like explosions.
- */
-class Arena { // File name remains Arena, class concept is Renderer
-    constructor(canvasId) {
-        this.canvas = document.getElementById(canvasId);
-        if (!this.canvas) throw new Error(`Canvas element with ID "${canvasId}" not found.`);
-        this.ctx = this.canvas.getContext('2d');
-        if (!this.ctx) throw new Error(`Failed to get 2D context for canvas "${canvasId}".`);
-
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
-        if (!this.width || this.width <= 0 || !this.height || this.height <= 0) {
-            console.error(`Canvas "${canvasId}" has invalid dimensions (${this.canvas.width}x${this.canvas.height}). Halting setup.`);
-            throw new Error(`Canvas "${canvasId}" requires valid width and height attributes.`);
-        }
-        console.log(`Renderer initialized with dimensions: ${this.width}x${this.height}`);
-
-        this.robots = []; // Populated by Game class with data from server
-
-        // Background Canvas for Persistence (scorch marks, grid)
-        this.backgroundCanvas = document.createElement('canvas');
-        this.backgroundCanvas.width = this.width;
-        this.backgroundCanvas.height = this.height;
-        this.backgroundCtx = this.backgroundCanvas.getContext('2d');
-        if (!this.backgroundCtx) throw new Error(`Failed to get 2D context for background canvas.`);
-
-        // Grid Configuration
-        this.gridSize = 50;
-        this.gridColor = '#444444';
-
-        // Background Texture Loading
-        this.backgroundPattern = null;
-        this.backgroundImage = new Image();
-        this.backgroundImage.onload = () => {
-            if (this.ctx && this.backgroundCtx) {
-                this.backgroundPattern = this.ctx.createPattern(this.backgroundImage, 'repeat');
-                console.log("Arena background texture loaded.");
-                this.redrawArenaBackground(); // Redraw background once image is loaded
-            } else { console.error("Context lost before background pattern could be created/drawn."); }
-        };
-        this.backgroundImage.onerror = () => {
-            console.error("Failed to load arena background texture.");
-            this.redrawArenaBackground(); // Draw fallback color/grid
-        };
-        this.backgroundImage.src = 'assets/images/metal_floor.png'; // Path to your texture
-
-        this.redrawArenaBackground(); // Initial draw (might be fallback color initially)
-    }
-
-    // --- Coordinate Translation Helpers ---
-    // Currently 1:1, but could be used for camera panning/zooming later
-    translateX(gameX) { return gameX; }
-    translateY(gameY) { return gameY; }
-
-    // --- Background Canvas Methods ---
-    /** Draws the background texture/color */
-    drawBackgroundTexture(targetCtx) {
-        targetCtx.clearRect(0, 0, this.width, this.height);
-        targetCtx.fillStyle = this.backgroundPattern || '#2c2c2c'; // Use pattern or fallback color
-        targetCtx.fillRect(0, 0, this.width, this.height);
-    }
-    /** Draws the grid lines */
-    drawGridLines(targetCtx) {
-        targetCtx.save();
-        targetCtx.strokeStyle = this.gridColor;
-        targetCtx.lineWidth = 0.5;
-        // Vertical lines
-        for (let x = this.gridSize; x < this.width; x += this.gridSize) {
-            targetCtx.beginPath(); targetCtx.moveTo(x, 0); targetCtx.lineTo(x, this.height); targetCtx.stroke();
-        }
-        // Horizontal lines
-        for (let y = this.gridSize; y < this.height; y += this.gridSize) {
-            targetCtx.beginPath(); targetCtx.moveTo(0, y); targetCtx.lineTo(this.width, y); targetCtx.stroke();
-        }
-        targetCtx.restore();
-    }
-    /** Redraws the persistent background canvas (texture and grid) */
-    redrawArenaBackground() {
-        console.log("Redrawing arena background canvas (clears scorch marks).");
-        if (!this.backgroundCtx) return;
-        this.drawBackgroundTexture(this.backgroundCtx);
-        this.drawGridLines(this.backgroundCtx);
-    }
-    /** Adds a scorch mark to the persistent background canvas */
-    addScorchMark(x, y, radius) {
-        if (!this.backgroundCtx) return;
-        const canvasX = this.translateX(x);
-        const canvasY = this.translateY(y);
-        // Use a semi-transparent dark color for the scorch mark
-        this.backgroundCtx.fillStyle = 'rgba(20, 20, 20, 0.65)';
-        this.backgroundCtx.beginPath();
-        this.backgroundCtx.arc(canvasX, canvasY, radius, 0, Math.PI * 2);
-        this.backgroundCtx.fill();
-    }
-
-    // === START: Enhanced Robot Drawing System ===
-    /**
-     * Main function to draw all robots based on data from Game class,
-     * using the 'visuals' property for component types and colors.
-     * Includes name and health bar. Checks visibility flag.
-     */
-    drawRobots() {
-        const ctx = this.ctx;
-        if (!ctx || !this.robots) return;
-
-        const baseRadius = 15; // Use a consistent base size reference
-
-        this.robots.forEach(robotData => {
-            // Skip if data is missing or robot is not visible/alive
-            // Use robotData.isAlive which comes from the server state
-            if (!robotData || !robotData.isAlive) return;
-
-            // Ensure visuals data exists, provide defaults if missing
-            const visuals = robotData.visuals || {
-                turret: { type: 'standard', color: '#ffffff' },
-                chassis: { type: 'medium', color: '#aaaaaa' },
-                mobility: { type: 'wheels' }
-            };
-            const chassisColor = visuals.chassis?.color || '#aaaaaa';
-            const turretColor = visuals.turret?.color || '#ffffff';
-            const mobilityType = visuals.mobility?.type || 'wheels';
-            const chassisType = visuals.chassis?.type || 'medium';
-            const turretType = visuals.turret?.type || 'standard';
-
-            ctx.save(); // Save context state before drawing this robot
-
-            // Get robot position and direction
-            const robotX = this.translateX(robotData.x || 0);
-            const robotY = this.translateY(robotData.y || 0);
-            const robotDir = robotData.direction || 0; // Robot's body direction
-            const radians = robotDir * Math.PI / 180;
-
-            // Translate and rotate context to robot's position and orientation
-            ctx.translate(robotX, robotY);
-            ctx.rotate(radians);
-
-            // --- Draw Robot Components (Layered) ---
-            ctx.lineWidth = 1; // Base line width
-            ctx.strokeStyle = '#111'; // Base stroke color (outline)
-
-            // 1. Draw Mobility (Bottom Layer)
-            this._drawMobility(ctx, mobilityType, baseRadius, chassisColor);
-
-            // 2. Draw Chassis (Middle Layer)
-            this._drawChassis(ctx, chassisType, chassisColor, baseRadius);
-
-            // 3. Draw Turret (Top Layer) - Turret might face a different direction (TODO: add turret direction if needed)
-            this._drawTurret(ctx, turretType, turretColor, baseRadius);
-
-            ctx.restore(); // Restore rotation/translation
-
-            // --- Draw Name and Health Bar (Common Elements) ---
-            // Position relative to the un-rotated canvas
-            const textYOffset = baseRadius + 3;
-            const barYOffset = textYOffset + 15; // Place bar below name
-            const barWidth = baseRadius * 2;
-            const barHeight = 5;
-            const barX = robotX - baseRadius;
-            const barY = robotY + barYOffset;
-
-            // Name Text
-            ctx.fillStyle = '#ffffff';
-            ctx.font = "14px 'VT323', monospace";
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom'; // Align text bottom relative to its position
-            const displayName = robotData.name || 'Unnamed Bot'; // Use name from server data
-            ctx.shadowColor = 'black'; ctx.shadowBlur = 2; // Add subtle shadow for readability
-            ctx.fillText(displayName, robotX, robotY + textYOffset);
-            ctx.shadowBlur = 0; // Reset shadow
-
-            // Health Bar
-            // Ensure damage is within 0-100 range
-            const damageClamped = Math.max(0, Math.min(100, robotData.damage || 0));
-            const healthPercent = 1 - (damageClamped / 100);
-            // Background of the bar
-            ctx.fillStyle = '#555555'; ctx.fillRect(barX, barY, barWidth, barHeight);
-            // Health portion (colored based on health remaining)
-            if (healthPercent > 0) {
-                ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : // Green > 50%
-                                healthPercent > 0.25 ? '#FFC107' : // Yellow > 25%
-                                                       '#F44336';   // Red <= 25%
-                ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
-            }
-            // Border for the bar
-            ctx.strokeStyle = '#222222'; ctx.lineWidth = 0.5; ctx.strokeRect(barX, barY, barWidth, barHeight);
-            // --- End Name/Health Bar ---
-        }); // End forEach robot
-    }
-
-    /**
-     * Draws the mobility component of a robot
-     * @param {CanvasRenderingContext2D} ctx - The canvas context
-     * @param {string} mobilityType - Type of mobility component (wheels, treads, hover, etc.)
-     * @param {number} baseRadius - Base radius for scaling
-     * @param {string} chassisColor - Color of chassis for coordinate mobility elements
-     */
-    _drawMobility(ctx, mobilityType, baseRadius, chassisColor) {
-        ctx.fillStyle = '#555'; // Default mobility color
-        const darkAccent = this._darkenColor(chassisColor, 0.7); // Darker shade of chassis color
-
-        let treadWidth = baseRadius * 2.0;
-        let treadHeight = baseRadius * 0.6;
-        let wheelRadius = baseRadius * 0.5;
-        let hoverRadiusX = baseRadius * 1.2;
-        let hoverRadiusY = baseRadius * 0.8;
-
-        switch (mobilityType) {
-            case 'treads':
-                ctx.fillStyle = darkAccent;
-                ctx.fillRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight); // Top tread
-                ctx.fillRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);  // Bottom tread
-                ctx.strokeRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight);
-                ctx.strokeRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);
-                // Tread details
-                ctx.fillStyle = '#333';
-                const segmentWidth = 5; const segmentGap = 4;
-                for (let x = -treadWidth/2 + 2; x < treadWidth/2 - 2; x += segmentGap) {
-                    ctx.fillRect(x, -treadHeight * 1.5 + 2, segmentWidth, treadHeight - 4);
-                    ctx.fillRect(x, treadHeight * 0.5 + 2, segmentWidth, treadHeight - 4);
-                }
-                break;
-
-            case 'hover':
-                ctx.save(); // Glow effect
-                ctx.fillStyle = 'rgba(100, 150, 255, 0.3)';
-                ctx.beginPath(); ctx.ellipse(0, 0, hoverRadiusX * 1.2, hoverRadiusY * 1.2, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = 'rgba(160, 190, 255, 0.2)';
-                ctx.beginPath(); ctx.ellipse(0, 0, hoverRadiusX * 0.9, hoverRadiusY * 0.9, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-                // Base pad
-                ctx.beginPath(); ctx.ellipse(0, 0, hoverRadiusX, hoverRadiusY, 0, 0, Math.PI * 2);
-                ctx.fillStyle = darkAccent; ctx.fill();
-                ctx.strokeStyle = '#88aaff'; ctx.lineWidth = 1; ctx.stroke();
-                // Vents
-                ctx.fillStyle = '#222';
-                ctx.beginPath(); ctx.ellipse(-hoverRadiusX * 0.4, 0, hoverRadiusX * 0.2, hoverRadiusY * 0.3, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(hoverRadiusX * 0.4, 0, hoverRadiusX * 0.2, hoverRadiusY * 0.3, 0, 0, Math.PI * 2); ctx.fill();
-                break;
-
-            case 'quad':
-                ctx.fillStyle = darkAccent;
-                const offsetX = baseRadius * 0.9; const offsetY = baseRadius * 0.6;
-                // Wheels
-                ctx.beginPath(); ctx.arc(-offsetX, -offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                ctx.beginPath(); ctx.arc(offsetX, -offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                ctx.beginPath(); ctx.arc(-offsetX, offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                ctx.beginPath(); ctx.arc(offsetX, offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                // Hubs
-                ctx.fillStyle = '#222';
-                ctx.beginPath(); ctx.arc(-offsetX, -offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(offsetX, -offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(-offsetX, offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(offsetX, offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
-                break;
-
-            case 'legs':
-                ctx.fillStyle = darkAccent;
-                const legLength = baseRadius * 0.7; const legWidth = baseRadius * 0.2;
-                const drawLeg = (angle, segment1Angle, segment2Angle) => {
-                    ctx.save(); ctx.rotate(angle);
-                    ctx.fillRect(0, -legWidth/2, legLength, legWidth); ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
-                    ctx.translate(legLength, 0); ctx.rotate(segment1Angle);
-                    ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth); ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
-                    // Optional: Add a third segment
-                    // ctx.translate(legLength*0.7, 0); ctx.rotate(segment2Angle);
-                    // ctx.fillRect(0, -legWidth/2, legLength*0.5, legWidth); ctx.strokeRect(0, -legWidth/2, legLength*0.5, legWidth);
-                    ctx.restore();
-                };
-                drawLeg(Math.PI / 6, Math.PI / 4, -Math.PI / 6); // Front-right
-                drawLeg(-Math.PI / 6, -Math.PI / 4, Math.PI / 6); // Back-right
-                drawLeg(Math.PI * 5 / 6, -Math.PI / 4, Math.PI / 6); // Front-left
-                drawLeg(-Math.PI * 5 / 6, Math.PI / 4, -Math.PI / 6); // Back-left
-                break;
-
-            case 'wheels': default:
-                ctx.fillStyle = darkAccent;
-                // Wheels
-                ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // Left
-                ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();  // Right
-                // Hubs
-                ctx.fillStyle = '#222';
-                ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
-                break;
-        }
-    }
-
-    /**
-     * Draws the chassis component of a robot
-     * @param {CanvasRenderingContext2D} ctx - The canvas context
-     * @param {string} chassisType - Type of chassis (medium, heavy, light, etc.)
-     * @param {string} chassisColor - Color of the chassis
-     * @param {number} baseRadius - Base radius for scaling
-     */
-    _drawChassis(ctx, chassisType, chassisColor, baseRadius) {
-        ctx.fillStyle = chassisColor;
-        ctx.strokeStyle = '#111'; // Reset stroke color
-
-        switch (chassisType) {
-            case 'heavy':
-                const heavyWidth = baseRadius * 2.4; const heavyHeight = baseRadius * 1.6; const heavyBorderRadius = 4;
-                this._drawRoundedRect(ctx, -heavyWidth/2, -heavyHeight/2, heavyWidth, heavyHeight, heavyBorderRadius);
-                // Armor plates/details
-                ctx.fillStyle = this._darkenColor(chassisColor, 0.8);
-                this._drawRoundedRect(ctx, -heavyWidth/2 + 4, -heavyHeight/2 + 3, heavyWidth - 8, heavyHeight/4, 2); // Top strip
-                this._drawRoundedRect(ctx, -heavyWidth/2 + 4, heavyHeight/2 - heavyHeight/4 - 3, heavyWidth - 8, heavyHeight/4, 2); // Bottom strip
-                // Center detail
-                ctx.fillStyle = this._darkenColor(chassisColor, 0.6);
-                ctx.beginPath(); ctx.arc(0, 0, heavyHeight/4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                break;
-
-            case 'light':
-                const lightWidth = baseRadius * 1.7; const lightHeight = baseRadius * 1.2;
-                // Pointy front shape
-                ctx.beginPath();
-                ctx.moveTo(lightWidth/2, 0); ctx.lineTo(lightWidth/4, -lightHeight/2); ctx.lineTo(-lightWidth/2, -lightHeight/2);
-                ctx.lineTo(-lightWidth/2, lightHeight/2); ctx.lineTo(lightWidth/4, lightHeight/2); ctx.closePath();
-                ctx.fill(); ctx.stroke();
-                // Detail lines
-                ctx.strokeStyle = this._darkenColor(chassisColor, 0.7);
-                ctx.beginPath(); ctx.moveTo(-lightWidth/3, -lightHeight/2); ctx.lineTo(0, 0); ctx.lineTo(-lightWidth/3, lightHeight/2); ctx.stroke();
-                break;
-
-            case 'hexagonal':
-                const hexWidth = baseRadius * 2.2; const hexHeight = baseRadius * 1.5; const hexSide = hexHeight / 2;
-                ctx.beginPath();
-                ctx.moveTo(hexWidth/2, 0); ctx.lineTo(hexWidth/4, -hexSide); ctx.lineTo(-hexWidth/4, -hexSide);
-                ctx.lineTo(-hexWidth/2, 0); ctx.lineTo(-hexWidth/4, hexSide); ctx.lineTo(hexWidth/4, hexSide); ctx.closePath();
-                ctx.fill(); ctx.stroke();
-                // Center detail
-                ctx.fillStyle = this._darkenColor(chassisColor, 0.85);
-                ctx.beginPath(); ctx.arc(0, 0, hexHeight/4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                break;
-
-            case 'triangular':
-                const triWidth = baseRadius * 2.2; const triHeight = baseRadius * 1.8;
-                ctx.beginPath();
-                ctx.moveTo(triWidth/2, 0); ctx.lineTo(-triWidth/2, -triHeight/2); ctx.lineTo(-triWidth/2, triHeight/2); ctx.closePath();
-                ctx.fill(); ctx.stroke();
-                // Inner triangle detail
-                ctx.fillStyle = this._darkenColor(chassisColor, 0.8);
-                ctx.beginPath(); ctx.moveTo(triWidth/4, 0); ctx.lineTo(-triWidth/3, -triHeight/3); ctx.lineTo(-triWidth/3, triHeight/3); ctx.closePath();
-                ctx.fill(); ctx.stroke();
-                break;
-
-            case 'medium': default:
-                const mediumWidth = baseRadius * 2.0; const mediumHeight = baseRadius * 1.4; const mediumBorderRadius = 3;
-                this._drawRoundedRect(ctx, -mediumWidth/2, -mediumHeight/2, mediumWidth, mediumHeight, mediumBorderRadius);
-                // Detail lines
-                ctx.strokeStyle = this._darkenColor(chassisColor, 0.7);
-                ctx.beginPath(); ctx.moveTo(-mediumWidth/3, -mediumHeight/2); ctx.lineTo(-mediumWidth/3, mediumHeight/2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(mediumWidth/6, -mediumHeight/2); ctx.lineTo(mediumWidth/6, mediumHeight/2); ctx.stroke();
-                break;
-        }
-    }
-
-    /**
-     * Draws the turret component of a robot
-     * @param {CanvasRenderingContext2D} ctx - The canvas context
-     * @param {string} turretType - Type of turret (standard, cannon, laser, etc.)
-     * @param {string} turretColor - Color of the turret
-     * @param {number} baseRadius - Base radius for scaling
-     */
-    _drawTurret(ctx, turretType, turretColor, baseRadius) {
-        ctx.fillStyle = turretColor;
-        ctx.strokeStyle = '#111'; // Reset stroke for turret
-
-        switch (turretType) {
-            case 'cannon':
-                const cannonBaseRadius = baseRadius * 0.7; const cannonLength = baseRadius * 1.5; const cannonWidth = baseRadius * 0.4;
-                // Base
-                ctx.beginPath(); ctx.rect(-cannonBaseRadius * 0.5, -cannonBaseRadius * 0.8, cannonBaseRadius, cannonBaseRadius * 1.6); ctx.fill(); ctx.stroke();
-                // Barrel
-                ctx.fillRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonLength, cannonWidth); ctx.strokeRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonLength, cannonWidth);
-                // Barrel reinforcement
-                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
-                ctx.fillRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonWidth/2, cannonWidth); ctx.strokeRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonWidth/2, cannonWidth);
-                // Muzzle brake
-                ctx.fillStyle = this._darkenColor(turretColor, 0.6);
-                ctx.fillRect(cannonBaseRadius * 0.5 + cannonLength - cannonWidth/2, -cannonWidth/2 - cannonWidth/4, cannonWidth/2, cannonWidth * 1.5);
-                ctx.strokeRect(cannonBaseRadius * 0.5 + cannonLength - cannonWidth/2, -cannonWidth/2 - cannonWidth/4, cannonWidth/2, cannonWidth * 1.5);
-                break;
-
-            case 'laser':
-                const laserBaseRadius = baseRadius * 0.5; const laserLength = baseRadius * 1.7; const laserWidth = baseRadius * 0.2;
-                // Base
-                ctx.beginPath(); ctx.arc(0, 0, laserBaseRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                // Barrel
-                ctx.fillRect(laserBaseRadius*0.8, -laserWidth / 2, laserLength, laserWidth); ctx.strokeRect(laserBaseRadius*0.8, -laserWidth / 2, laserLength, laserWidth);
-                // Energy coils
-                const coilCount = 3; const coilSpacing = laserLength / (coilCount + 1); const coilHeight = laserWidth * 2;
-                ctx.fillStyle = this._lightenColor(turretColor, 1.3);
-                for (let i = 1; i <= coilCount; i++) {
-                    const coilX = laserBaseRadius*0.8 + i * coilSpacing;
-                    ctx.beginPath(); ctx.rect(coilX - laserWidth/2, -coilHeight/2, laserWidth, coilHeight); ctx.fill(); ctx.stroke();
-                }
-                // Emitter tip
-                ctx.fillStyle = '#88CCFF'; ctx.beginPath(); ctx.arc(laserBaseRadius*0.8 + laserLength, 0, laserWidth, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                break;
-
-            case 'dual':
-                const dualBaseRadius = baseRadius * 0.6; const dualLength = baseRadius * 1.2; const dualWidth = baseRadius * 0.25; const dualGap = dualWidth * 0.8;
-                // Base
-                ctx.beginPath(); ctx.arc(0, 0, dualBaseRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                // Center detail
-                ctx.fillStyle = this._darkenColor(turretColor, 0.8); ctx.beginPath(); ctx.arc(0, 0, dualBaseRadius * 0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                // Barrels
-                ctx.fillStyle = turretColor;
-                ctx.fillRect(dualBaseRadius*0.8, -dualGap/2 - dualWidth, dualLength, dualWidth); ctx.strokeRect(dualBaseRadius*0.8, -dualGap/2 - dualWidth, dualLength, dualWidth); // Upper
-                ctx.fillRect(dualBaseRadius*0.8, dualGap/2, dualLength, dualWidth); ctx.strokeRect(dualBaseRadius*0.8, dualGap/2, dualLength, dualWidth); // Lower
-                break;
-
-            case 'missile':
-                const missileBaseRadius = baseRadius * 0.7; const missileLength = baseRadius * 1.1; const missileWidth = baseRadius * 1.0; const missileCount = 3;
-                // Base
-                this._drawRoundedRect(ctx, -missileBaseRadius*0.7, -missileBaseRadius*0.7, missileBaseRadius*1.4, missileBaseRadius*1.4, 2);
-                // Launcher box
-                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
-                this._drawRoundedRect(ctx, missileBaseRadius*0.6, -missileWidth/2, missileLength, missileWidth, 2);
-                // Missile tubes
-                const tubeHeight = missileWidth / (missileCount + 1); ctx.fillStyle = '#333';
-                for (let i = 1; i <= missileCount; i++) {
-                    const tubeY = -missileWidth/2 + i * tubeHeight;
-                    this._drawRoundedRect(ctx, missileBaseRadius*0.7, tubeY - tubeHeight*0.4, missileLength*0.8, tubeHeight*0.8, 2);
-                }
-                break;
-
-            case 'standard': default:
-                const stdBaseRadius = baseRadius * 0.6; const stdLength = baseRadius * 1.3; const stdWidth = baseRadius * 0.3;
-                // Base
-                ctx.beginPath(); ctx.arc(0, 0, stdBaseRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                // Center detail
-                ctx.fillStyle = this._darkenColor(turretColor, 0.8); ctx.beginPath(); ctx.arc(0, 0, stdBaseRadius * 0.4, 0, Math.PI * 2); ctx.fill();
-                // Barrel
-                ctx.fillStyle = turretColor;
-                ctx.fillRect(stdBaseRadius*0.8, -stdWidth / 2, stdLength, stdWidth); ctx.strokeRect(stdBaseRadius*0.8, -stdWidth / 2, stdLength, stdWidth);
-                // Barrel detail/tip
-                ctx.fillStyle = this._darkenColor(turretColor, 0.7);
-                ctx.fillRect(stdBaseRadius*0.8 + stdLength - stdWidth, -stdWidth / 2, stdWidth, stdWidth); ctx.strokeRect(stdBaseRadius*0.8 + stdLength - stdWidth, -stdWidth / 2, stdWidth, stdWidth);
-                break;
-        }
-    }
-
-    /** Helper method to draw a rounded rectangle */
-    _drawRoundedRect(ctx, x, y, width, height, radius) {
-        radius = Math.min(radius, Math.min(width / 2, height / 2)); // Prevent overly large radius
-        ctx.beginPath();
-        ctx.moveTo(x + radius, y); ctx.lineTo(x + width - radius, y); ctx.arcTo(x + width, y, x + width, y + radius, radius);
-        ctx.lineTo(x + width, y + height - radius); ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
-        ctx.lineTo(x + radius, y + height); ctx.arcTo(x, y + height, x, y + height - radius, radius);
-        ctx.lineTo(x, y + radius); ctx.arcTo(x, y, x + radius, y, radius); ctx.closePath();
-        ctx.fill(); ctx.stroke();
-    }
-
-    /** Helper method to darken a hex color */
-    _darkenColor(color, factor) {
-        let r = parseInt(color.substring(1, 3), 16); let g = parseInt(color.substring(3, 5), 16); let b = parseInt(color.substring(5, 7), 16);
-        r = Math.max(0, Math.floor(r * factor)); g = Math.max(0, Math.floor(g * factor)); b = Math.max(0, Math.floor(b * factor));
-        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-    }
-
-    /** Helper method to lighten a hex color */
-    _lightenColor(color, factor) {
-        let r = parseInt(color.substring(1, 3), 16); let g = parseInt(color.substring(3, 5), 16); let b = parseInt(color.substring(5, 7), 16);
-        r = Math.min(255, Math.floor(r * factor)); g = Math.min(255, Math.floor(g * factor)); b = Math.min(255, Math.floor(b * factor));
-        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+ * grid, robots (based on visual loadout data), missiles (with unique visuals/trails),
+ * oString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     }
     // === END: Enhanced Robot Drawing System ===
 
 
-    /** Draws missiles WITH TRAILS */
+    // --- START: Updated drawMissiles ---
+    /** Draws missiles with unique visuals and trails based on turretType */
     drawMissiles(missiles) {
         const ctx = this.ctx;
         if (!ctx || !missiles || missiles.length === 0) return;
 
-        const trailLength = 5; // How many segments, conceptually
-        const baseTrailOpacity = 0.5; // Max opacity of the trail near the missile
-
         missiles.forEach(missile => {
-            // Get missile properties from the gameState update
             const missileX = this.translateX(missile.x);
             const missileY = this.translateY(missile.y);
-            const radius = missile.radius || 4; // Use radius from data or default
-            const directionRad = (missile.direction || 0) * Math.PI / 180; // Missile direction in radians
-
-            // --- Draw Trail ---
-            // Simple fading line trail extending behind the missile
-            const trailRenderLength = radius + trailLength * 3; // Adjust multiplier for visual length
-            const tailEndX = missileX - Math.cos(directionRad) * trailRenderLength;
-            const tailEndY = missileY + Math.sin(directionRad) * trailRenderLength; // Add sin because Y is inverted
-
-            // Create gradient from missile color to transparent
-            const gradient = ctx.createLinearGradient(missileX, missileY, tailEndX, tailEndY);
-            gradient.addColorStop(0, `rgba(255, 165, 0, ${baseTrailOpacity})`); // Orange near missile
-            gradient.addColorStop(1, `rgba(128, 128, 128, 0)`);           // Fade to transparent grey
+            const radius = missile.radius || 4;
+            const directionRad = (missile.direction || 0) * Math.PI / 180;
+            const turretType = missile.turretType || 'standard'; // Default if missing
 
             ctx.save();
-            ctx.strokeStyle = gradient;
-            ctx.lineWidth = Math.max(1, radius * 0.8); // Trail width based on missile size
-            ctx.beginPath();
-            ctx.moveTo(missileX, missileY); // Start line at missile center
-            ctx.lineTo(tailEndX, tailEndY); // End line behind missile
-            ctx.stroke();
-            ctx.restore();
-            // --- End Trail ---
+
+            // --- Turret-Specific Drawing ---
+            switch (turretType) {
+                case 'cannon':
+                    // Trail: Thicker, shorter, grey particle puffs (simple version: thick grey gradient)
+                    const cannonTrailLength = radius + 5 * 3;
+                    const cannonTailEndX = missileX - Math.cos(directionRad) * cannonTrailLength;
+                    const cannonTailEndY = missileY + Math.sin(directionRad) * cannonTrailLength;
+                    const cannonGradient = ctx.createLinearGradient(missileX, missileY, cannonTailEndX, cannonTailEndY);
+                    cannonGradient.addColorStop(0, `rgba(120, 120, 120, 0.7)`); // Dark Grey start
+                    cannonGradient.addColorStop(0.7, `rgba(80, 80, 80, 0.3)`);
+                    cannonGradient.addColorStop(1, `rgba(50, 50, 50, 0)`);
+                    ctx.strokeStyle = cannonGradient;
+                    ctx.lineWidth = Math.max(2, radius * 1.2); // Thicker trail
+                    ctx.beginPath(); ctx.moveTo(missileX, missileY); ctx.lineTo(cannonTailEndX, cannonTailEndY); ctx.stroke();
+
+                    // Body: Larger, darker orange/red circle
+                    ctx.fillStyle = '#D9531E'; // Darker Orange/Red
+                    ctx.beginPath(); ctx.arc(missileX, missileY, radius * 1.1, 0, Math.PI * 2); ctx.fill();
+                    // Highlight
+                    ctx.fillStyle = 'rgba(255, 165, 0, 0.6)';
+                    ctx.beginPath(); ctx.arc(missileX - radius * 0.2, missileY - radius * 0.2, radius * 0.6, 0, Math.PI * 2); ctx.fill();
+                    break;
+
+                case 'laser':
+                    // Trail: Minimal or none. Maybe a very thin, short, bright trail.
+                    const laserTrailLength = radius + 2 * 3;
+                    const laserTailEndX = missileX - Math.cos(directionRad) * laserTrailLength;
+                    const laserTailEndY = missileY + Math.sin(directionRad) * laserTrailLength;
+                    const laserGradient = ctx.createLinearGradient(missileX, missileY, laserTailEndX, laserTailEndY);
+                    laserGradient.addColorStop(0, `rgba(173, 216, 230, 0.8)`); // Light Blue
+                    laserGradient.addColorStop(1, `rgba(173, 216, 230, 0)`);
+                    ctx.strokeStyle = laserGradient;
+                    ctx.lineWidth = Math.max(1, radius * 0.5); // Very thin trail
+                    ctx.beginPath(); ctx.moveTo(missileX, missileY); ctx.lineTo(laserTailEndX, laserTailEndY); ctx.stroke();
+
+                    // Body: Small, bright cyan point/circle
+                    ctx.fillStyle = '#88CCFF'; // Bright Cyan/Blue
+                    ctx.beginPath(); ctx.arc(missileX, missileY, radius * 0.8, 0, Math.PI * 2); ctx.fill();
+                    // Optional: Outer glow
+                    ctx.shadowColor = 'rgba(173, 216, 230, 0.7)'; ctx.shadowBlur = 5;
+                    ctx.fillStyle = 'rgba(220, 240, 255, 0.8)'; // Inner white core
+                    ctx.beginPath(); ctx.arc(missileX, missileY, radius * 0.4, 0, Math.PI * 2); ctx.fill();
+                    ctx.shadowBlur = 0; // Reset shadow
+                    break;
+
+                case 'dual':
+                    // Trail: Similar to standard, maybe slightly thinner/faster fade
+                    const dualTrailLength = radius + 4 * 3;
+                    const dualTailEndX = missileX - Math.cos(directionRad) * dualTrailLength;
+                    const dualTailEndY = missileY + Math.sin(directionRad) * dualTrailLength;
+                    const dualGradient = ctx.createLinearGradient(missileX, missileY, dualTailEndX, dualTailEndY);
+                    dualGradient.addColorStop(0, `rgba(255, 200, 80, 0.6)`); // Yellow-Orange
+                    dualGradient.addColorStop(1, `rgba(128, 128, 128, 0)`);
+                    ctx.strokeStyle = dualGradient;
+                    ctx.lineWidth = Math.max(1, radius * 0.7); // Slightly thinner
+                    ctx.beginPath(); ctx.moveTo(missileX, missileY); ctx.lineTo(dualTailEndX, dualTailEndY); ctx.stroke();
+
+                    // Body: Standard orange, maybe slightly smaller
+                    ctx.fillStyle = '#FFA500';
+                    ctx.beginPath(); ctx.arc(missileX, missileY, radius * 0.9, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.beginPath(); ctx.arc(missileX - radius * 0.2, missileY - radius * 0.2, radius * 0.4, 0, Math.PI * 2); ctx.fill();
+                    break;
+
+                case 'missile': // Missile Launcher Turret
+                    // Trail: Distinctive, maybe slightly smoky or white
+                    const rocketTrailLength = radius + 6 * 3;
+                    const rocketTailEndX = missileX - Math.cos(directionRad) * rocketTrailLength;
+                    const rocketTailEndY = missileY + Math.sin(directionRad) * rocketTrailLength;
+                    const rocketGradient = ctx.createLinearGradient(missileX, missileY, rocketTailEndX, rocketTailEndY);
+                    rocketGradient.addColorStop(0, `rgba(220, 220, 220, 0.8)`); // White/Light Grey start
+                    rocketGradient.addColorStop(0.6, `rgba(180, 180, 180, 0.4)`);
+                    rocketGradient.addColorStop(1, `rgba(150, 150, 150, 0)`);
+                    ctx.strokeStyle = rocketGradient;
+                    ctx.lineWidth = Math.max(2, radius * 1.1); // Slightly thicker white trail
+                    ctx.beginPath(); ctx.moveTo(missileX, missileY); ctx.lineTo(rocketTailEndX, rocketTailEndY); ctx.stroke();
+
+                    // Body: Greyish/Silver circle to look like a small rocket
+                    ctx.fillStyle = '#C0C0C0'; // Silver
+                    ctx.beginPath(); ctx.arc(missileX, missileY, radius, 0, Math.PI * 2); ctx.fill();
+                    // Darker tip
+                    ctx.fillStyle = '#555555';
+                    ctx.beginPath(); ctx.arc(missileX + Math.cos(directionRad) * radius*0.4, missileY - Math.sin(directionRad) * radius*0.4, radius * 0.5, 0, Math.PI * 2); ctx.fill();
+                    break;
 
 
-            // --- Draw Missile Body ---
-            ctx.save();
-            ctx.fillStyle = '#FFA500'; // Bright orange base color
-            ctx.beginPath();
-            ctx.arc(missileX, missileY, radius, 0, Math.PI * 2);
-            ctx.fill();
-            // Optional: Add a small highlight for a bit of depth
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Semi-transparent white
-            ctx.beginPath();
-            // Offset the highlight slightly up and to the left
-            ctx.arc(missileX - radius*0.2, missileY - radius*0.2, radius*0.5, 0, Math.PI*2);
-            ctx.fill();
+                case 'standard':
+                default:
+                    // --- Default/Standard Trail ---
+                    const stdTrailLength = radius + 5 * 3; // Default length
+                    const stdTailEndX = missileX - Math.cos(directionRad) * stdTrailLength;
+                    const stdTailEndY = missileY + Math.sin(directionRad) * stdTrailLength;
+                    const stdGradient = ctx.createLinearGradient(missileX, missileY, stdTailEndX, stdTailEndY);
+                    stdGradient.addColorStop(0, `rgba(255, 165, 0, 0.7)`); // Orange near missile
+                    stdGradient.addColorStop(1, `rgba(128, 128, 128, 0)`); // Fade to transparent grey
+                    ctx.strokeStyle = stdGradient;
+                    ctx.lineWidth = Math.max(1, radius * 0.8); // Default trail width
+                    ctx.beginPath(); ctx.moveTo(missileX, missileY); ctx.lineTo(stdTailEndX, stdTailEndY); ctx.stroke();
+
+                    // --- Default/Standard Missile Body ---
+                    ctx.fillStyle = '#FFA500'; // Bright orange base color
+                    ctx.beginPath(); ctx.arc(missileX, missileY, radius, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Highlight
+                    ctx.beginPath(); ctx.arc(missileX - radius * 0.2, missileY - radius * 0.2, radius * 0.5, 0, Math.PI * 2); ctx.fill();
+                    break;
+            }
+            // --- END: Turret-Specific Drawing ---
+
             ctx.restore();
-            // --- End Missile Body ---
         });
     }
+    // --- END: Updated drawMissiles ---
 
     /** Draws active muzzle flash effects */
     drawMuzzleFlashes(activeFlashes) {
@@ -1460,7 +807,7 @@ class Arena { // File name remains Arena, class concept is Renderer
             ctx.globalAlpha = alpha;       // Apply fade effect
 
             // --- Draw flash based on turret type ---
-            switch (flash.type) {
+            switch (flash.type) { // flash.type now comes from ServerRobot.fire eventData
                 case 'cannon':
                 case 'standard':
                 case 'dual': // Using a star shape for these
@@ -1514,9 +861,6 @@ class Arena { // File name remains Arena, class concept is Renderer
                     break;
 
                 default: // Fallback for unknown types (optional)
-                    // Could draw a simple small circle
-                    // ctx.fillStyle = 'white';
-                    // ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
                     break;
             }
             // --- End flash drawing ---
@@ -1525,38 +869,80 @@ class Arena { // File name remains Arena, class concept is Renderer
         });
     }
 
-
-    /** Draws explosion effects */
-    drawEffects(activeExplosions) {
+    // --- START: New drawParticleEffects ---
+    /** Draws particle-based explosion effects */
+    drawParticleEffects(particleEffects) {
         const ctx = this.ctx;
-        if (!ctx || !activeExplosions || activeExplosions.length === 0) return;
-        const now = Date.now();
-        // Iterate backwards for safe removal if needed (though Game.js filters now)
-        for (let i = activeExplosions.length - 1; i >= 0; i--) {
-            const explosion = activeExplosions[i];
-            const elapsedTime = now - explosion.startTime;
-            const progress = Math.min(elapsedTime / explosion.duration, 1);
+        if (!ctx || !particleEffects || particleEffects.length === 0) return;
 
-            // If progress is 1, it should have been filtered by Game.js, skip just in case
-            if (progress >= 1) continue;
+        particleEffects.forEach(effect => {
+            effect.particles.forEach(p => {
+                // Calculate alpha based on remaining lifespan and particle type
+                const lifeRatio = Math.max(0, p.lifespan / p.maxLifespan); // Ensure ratio is not negative
+                let alpha = 1.0;
+                let drawSize = p.size;
 
-            // Use an easing function for smoother expansion/fade
-            const easeOutProgress = progress * (2 - progress); // Ease-out quad
-            const currentRadius = explosion.maxRadius * easeOutProgress;
+                ctx.save();
 
-            // Select color based on progress through the sequence
-            const colorIndex = Math.floor(progress * explosion.colorSequence.length);
-            const color = explosion.colorSequence[colorIndex] || explosion.colorSequence[explosion.colorSequence.length - 1]; // Fallback
+                // Apply type-specific fading and size changes
+                if (p.type === 'smoke') {
+                    alpha = lifeRatio * 0.7; // Smoke fades and starts semi-transparent
+                    drawSize = p.size * (1.5 - lifeRatio * 0.5); // Smoke expands slightly as it fades
+                     // Extract base color and apply alpha
+                     try { // Add try-catch for robust color parsing
+                        let baseColor = p.color.substring(0, p.color.lastIndexOf(',')) + ',';
+                        ctx.fillStyle = baseColor + alpha.toFixed(2) + ')';
+                     } catch(e) {
+                         console.warn("Error parsing smoke color, using fallback:", p.color, e);
+                         ctx.fillStyle = `rgba(100, 100, 100, ${alpha.toFixed(2)})`; // Fallback grey
+                     }
 
-            ctx.save();
-            ctx.globalAlpha = 1.0 - progress; // Fade out
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.arc(this.translateX(explosion.x), this.translateY(explosion.y), currentRadius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        }
+                } else if (p.type === 'spark') {
+                    alpha = lifeRatio; // Sparks fade out linearly
+                    drawSize = p.size * lifeRatio; // Sparks shrink
+                    ctx.fillStyle = p.color; // Assume spark color has no alpha initially
+                    ctx.globalAlpha = alpha;
+                } else if (p.type === 'flash') {
+                     alpha = Math.pow(lifeRatio, 0.5); // Flash fades quickly
+                     drawSize = p.size * (1 + (1-lifeRatio)*0.5); // Flash expands
+                     ctx.fillStyle = p.color;
+                     ctx.globalAlpha = alpha;
+                } else { // Default particle behavior
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = lifeRatio;
+                }
+
+                // Don't draw if invisible or too small
+                if (alpha <= 0 || drawSize <= 0.1) {
+                    ctx.restore();
+                    return;
+                }
+
+                // Draw the particle shape
+                if (p.type === 'spark' || p.type === 'flash') {
+                    // Draw sparks/flashes as circles
+                     ctx.beginPath();
+                     ctx.arc(this.translateX(p.x), this.translateY(p.y), Math.max(0.1, drawSize / 2), 0, Math.PI * 2); // Ensure radius > 0
+                     ctx.fill();
+                } else {
+                    // Draw smoke (or default) as squares
+                     ctx.fillRect(this.translateX(p.x) - drawSize / 2, this.translateY(p.y) - drawSize / 2, Math.max(0.1, drawSize), Math.max(0.1, drawSize)); // Ensure size > 0
+                }
+                ctx.restore(); // Restore alpha changes etc.
+            });
+        });
     }
+    // --- END: New drawParticleEffects ---
+
+
+    // --- START: Removed old drawEffects ---
+    /*
+    drawEffects(activeExplosions) {
+        // ... old implementation removed ...
+    }
+    */
+    // --- END: Removed old drawEffects ---
+
 
     /** Clears main canvas and draws the persistent background */
     clear() {
@@ -1567,26 +953,53 @@ class Arena { // File name remains Arena, class concept is Renderer
         this.ctx.drawImage(this.backgroundCanvas, 0, 0);
     }
 
-    /** Main drawing loop method - called by Game.js */
-    draw(missiles, activeExplosions, activeFlashes) { // <<< UPDATED SIGNATURE
+    /**
+     * Main drawing loop method - called by Game.js.
+     * Includes optional screen shake.
+     * @param {Array} missiles - Array of missile data from game state.
+     * @param {Array} activeExplosions - Array of simple explosion objects (e.g., for missile impacts).
+     * @param {Array} activeFlashes - Array of active muzzle flash objects.
+     * @param {Array} particleEffects - Array of active particle effect objects (for robot deaths).
+     * @param {number} [shakeMagnitude=0] - Current magnitude for screen shake effect.
+     */
+    draw(missiles, activeExplosions, activeFlashes, particleEffects, shakeMagnitude = 0) { // Updated Signature
         if (!this.ctx || !this.backgroundCanvas) {
             console.error("Cannot draw, context/background missing!");
             return;
         }
         // 1. Clear the dynamic canvas and draw the static background
-        this.clear(); // Uses the method above
+        this.clear();
+
+        // --- Screen Shake Start ---
+        let shakeX = 0; let shakeY = 0;
+        if(shakeMagnitude > 0) {
+            shakeX = (Math.random() - 0.5) * 2 * shakeMagnitude;
+            shakeY = (Math.random() - 0.5) * 2 * shakeMagnitude;
+        }
+        this.ctx.save(); // Save context before shake translation
+        this.ctx.translate(shakeX, shakeY);
+        // --- Screen Shake End ---
 
         // 2. Draw Robots
         this.drawRobots();
 
-        // 3. Draw Missiles (now with trails)
+        // 3. Draw Missiles (now with unique visuals/trails)
         this.drawMissiles(missiles);
 
-        // 4. Draw Explosions
-        this.drawEffects(activeExplosions);
+        // 4. Draw OLD Explosions (e.g., for simple missile impacts if needed)
+        // If particle explosions completely replace these, you can remove this call.
+        // For now, assume they might coexist for different event types.
+        // this.drawEffects(activeExplosions); // <<< Kept commented out, assuming replacement
 
-        // 5. Draw Muzzle Flashes <<< ADDED
+        // 5. Draw NEW Particle Effects (for robot destruction)
+        this.drawParticleEffects(particleEffects); // <<< ADDED CALL
+
+        // 6. Draw Muzzle Flashes
         this.drawMuzzleFlashes(activeFlashes);
+
+        // --- Screen Shake Restore ---
+        this.ctx.restore(); // Restore context after drawing everything (removes shake translation)
+        // --- Screen Shake End ---
     }
 } // End Arena (Renderer) Class
 ```
@@ -1594,57 +1007,73 @@ class Arena { // File name remains Arena, class concept is Renderer
 ## client/js/engine/collision.js
 
 ```code
+// server/server-collision.js
+
 /**
- * Collision detection system for Robot Wars
- * Handles collisions between robots, missiles, and arena boundaries
+ * Server-side collision detection system for Robot Wars.
+ * Handles interactions between robots, missiles, and arena boundaries.
+ * Modifies the game state directly (e.g., applies damage) and
+ * notifies the GameInstance about hit OR explosion events for sound/visual triggers.
  */
-class CollisionSystem {
-    constructor(game) {
-        this.game = game;
+class ServerCollisionSystem {
+    constructor(gameInstance) {
+        this.game = gameInstance; // Reference to the GameInstance
+        this.arenaWidth = 900; // TODO: Get from config/GameInstance
+        this.arenaHeight = 900;
     }
 
     /**
-     * Check all possible collisions in the game
+     * Checks all relevant collisions for the current game tick.
      */
-    checkCollisions() {
-        this.checkRobotMissileCollisions();
+    checkAllCollisions() {
+        this.checkMissileRobotCollisions();
         this.checkRobotRobotCollisions();
-        this.checkMissileBoundaryCollisions();
+        // TODO: Add checkMissileBoundaryCollisions() if needed, which should also trigger game.createExplosion
     }
 
     /**
-     * Check for collisions between robots and missiles
+     * Checks for collisions between missiles and robots.
+     * Applies damage, removes missiles, and generates EXPLOSION events.
      */
-    checkRobotMissileCollisions() {
+    checkMissileRobotCollisions() {
         const robots = this.game.robots;
 
-        robots.forEach(robotA => {
-            robots.forEach(robotB => {
-                if (robotA.id !== robotB.id) {
-                    // Check if any of robotB's missiles hit robotA
-                    for (let i = robotB.missiles.length - 1; i >= 0; i--) {
-                        const missile = robotB.missiles[i];
-                        const dx = robotA.x - missile.x;
-                        const dy = robotA.y - missile.y;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
+        robots.forEach(targetRobot => {
+            // Skip robots that are not active (already destroyed)
+            if (targetRobot.state !== 'active') return; // Use state check
 
-                        if (distance < robotA.radius + missile.radius) {
-                            // Collision detected
-                            robotB.missiles.splice(i, 1);
+            robots.forEach(firingRobot => {
+                if (targetRobot.id === firingRobot.id) return;
 
-                            // Create explosion
-                            this.game.arena.createExplosion(missile.x, missile.y, missile.power);
+                for (let i = firingRobot.missiles.length - 1; i >= 0; i--) {
+                    const missile = firingRobot.missiles[i];
 
-                            // Apply damage based on missile power
-                            const damage = 10 * missile.power;
-                            const destroyed = robotA.takeDamage(damage);
+                    const dx = targetRobot.x - missile.x;
+                    const dy = targetRobot.y - missile.y;
+                    const distanceSquared = dx * dx + dy * dy;
+                    const radiiSum = targetRobot.radius + missile.radius;
+                    const radiiSumSquared = radiiSum * radiiSum;
 
-                            // Check if robot was destroyed
-                            if (destroyed) {
-                                this.game.arena.createExplosion(robotA.x, robotA.y, 5);
-                                console.log(`Robot ${robotA.id} was destroyed!`);
-                            }
+                    if (distanceSquared < radiiSumSquared) {
+                        // --- MISSILE-ROBOT COLLISION DETECTED ---
+                        const damageAmount = missile.power * 10;
+
+                        // Apply damage (still returns hit flag, but we won't use it for a hitEvent here)
+                        const result = targetRobot.takeDamage(damageAmount, 'missile');
+
+                        console.log(`[Collision M-R] Missile from ${firingRobot.id} hit ${targetRobot.id}. Damage: ${damageAmount}. Destroyed: ${result.destroyed}.`);
+
+                        // --- START CHANGE: Trigger EXPLOSION, not HIT event ---
+                        // If damage was dealt (result.hit is true), create an explosion effect
+                        if (result.hit && typeof this.game.createExplosion === 'function') {
+                            // Use missile location for the explosion center
+                            this.game.createExplosion(missile.x, missile.y, missile.power);
+                            console.log(`[Collision M-R] Triggered EXPLOSION for missile hit on ${targetRobot.id}`);
                         }
+                        // --- END CHANGE ---
+
+                        // Remove the missile
+                        firingRobot.missiles.splice(i, 1);
                     }
                 }
             });
@@ -1652,73 +1081,71 @@ class CollisionSystem {
     }
 
     /**
-     * Check for collisions between robots and prevent overlap
+     * Checks for collisions between robots to prevent overlap.
+     * Applies minor damage, pushes robots apart, and generates HIT events.
      */
-    checkRobotRobotCollisions() {
+     checkRobotRobotCollisions() {
         const robots = this.game.robots;
+        const numRobots = robots.length;
 
-        for (let i = 0; i < robots.length; i++) {
-            for (let j = i + 1; j < robots.length; j++) {
-                const robotA = robots[i];
+        for (let i = 0; i < numRobots; i++) {
+            const robotA = robots[i];
+            // Skip non-active robots
+            if (robotA.state !== 'active') continue;
+
+            for (let j = i + 1; j < numRobots; j++) {
                 const robotB = robots[j];
-
-                // Skip robots that are destroyed
-                if (robotA.damage >= 100 || robotB.damage >= 100) continue;
+                // Skip non-active robots
+                if (robotB.state !== 'active') continue;
 
                 const dx = robotB.x - robotA.x;
                 const dy = robotB.y - robotA.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+                const distanceSquared = dx * dx + dy * dy;
                 const minDistance = robotA.radius + robotB.radius;
+                const minDistanceSquared = minDistance * minDistance;
 
-                // If robots are overlapping
-                if (distance < minDistance) {
-                    // Calculate collision response
-                    const angle = Math.atan2(dy, dx);
+                if (distanceSquared < minDistanceSquared && distanceSquared > 0.001) {
+                    // --- ROBOT-ROBOT OVERLAP DETECTED ---
+                    const distance = Math.sqrt(distanceSquared);
                     const overlap = minDistance - distance;
+                    const separationX = dx / distance;
+                    const separationY = dy / distance;
+                    const moveDist = overlap / 2;
 
                     // Move robots apart
-                    const moveX = Math.cos(angle) * overlap / 2;
-                    const moveY = Math.sin(angle) * overlap / 2;
+                    robotA.x -= separationX * moveDist;
+                    robotA.y -= separationY * moveDist;
+                    robotB.x += separationX * moveDist;
+                    robotB.y += separationY * moveDist;
 
-                    robotA.x -= moveX;
-                    robotA.y -= moveY;
-                    robotB.x += moveX;
-                    robotB.y += moveY;
+                    // Apply small collision damage & Generate HIT Events
+                    // --- START CHANGE: Only trigger HIT events here ---
+                    const collisionDamage = 0.5; // Small damage for bumping
+                    const resultA = robotA.takeDamage(collisionDamage, 'collision');
+                    const resultB = robotB.takeDamage(collisionDamage, 'collision');
 
-                    // Apply minor damage from collision
-                    robotA.takeDamage(1);
-                    robotB.takeDamage(1);
-                }
-            }
-        }
-    }
+                    // If damage was dealt, trigger a hit event for sound/visuals
+                    if (resultA.hit && typeof this.game.addHitEvent === 'function') {
+                         this.game.addHitEvent(resultA.x, resultA.y, robotA.id);
+                         console.log(`[Collision R-R] Triggered HIT event for ${robotA.id}`);
 
-    /**
-     * Check for missiles hitting arena boundaries
-     */
-    checkMissileBoundaryCollisions() {
-        const arena = this.game.arena;
-        const robots = this.game.robots;
+                    }
+                    if (resultB.hit && typeof this.game.addHitEvent === 'function') {
+                         this.game.addHitEvent(resultB.x, resultB.y, robotB.id);
+                          console.log(`[Collision R-R] Triggered HIT event for ${robotB.id}`);
+                    }
+                    // --- END CHANGE ---
 
-        robots.forEach(robot => {
-            for (let i = robot.missiles.length - 1; i >= 0; i--) {
-                const missile = robot.missiles[i];
+                    // Clamp positions after push to prevent going out of bounds
+                    robotA.x = Math.max(robotA.radius, Math.min(this.arenaWidth - robotA.radius, robotA.x));
+                    robotA.y = Math.max(robotA.radius, Math.min(this.arenaHeight - robotA.radius, robotA.y));
+                    robotB.x = Math.max(robotB.radius, Math.min(this.arenaWidth - robotB.radius, robotB.x));
+                    robotB.y = Math.max(robotB.radius, Math.min(this.arenaHeight - robotB.radius, robotB.y));
 
-                // Check if missile is out of bounds
-                if (missile.x - missile.radius < 0 ||
-                    missile.x + missile.radius > arena.width ||
-                    missile.y - missile.radius < 0 ||
-                    missile.y + missile.radius > arena.height) {
-
-                    // Create small explosion at boundary
-                    this.game.arena.createExplosion(missile.x, missile.y, missile.power / 2);
-
-                    // Remove the missile
-                    robot.missiles.splice(i, 1);
-                }
-            }
-        });
-    }
+                } // End if overlap
+            } // End inner loop
+        } // End outer loop
+    } // End checkRobotRobotCollisions
 }
 ```
 
@@ -2664,222 +2091,6 @@ class Controls {
 
 ## client/js/ui/dashboard.js
 
-```code
-// client/js/ui/dashboard.js
-
-/**
- * Dashboard UI handler for Robot Wars
- * Manages the stats panel display.
- */
-class Dashboard {
-    constructor() {
-        this.statsPanel = document.getElementById('robot-stats');
-        this.gameTitleElement = null; // Element to display game name (optional)
-        this.statsContainer = null; // Container for the actual robot stats divs
-
-        // Try to find/create a title element and stats container within the panel
-        this.createLayoutElements();
-
-        if (!this.statsPanel) {
-            console.error("Dashboard stats panel element '#robot-stats' not found!");
-        } else {
-            console.log('Dashboard initialized');
-        }
-    }
-
-    /** Create or find the elements for title and stats list */
-    createLayoutElements() {
-        if (!this.statsPanel) return;
-
-        // Title Element
-        this.gameTitleElement = document.getElementById('dashboard-game-title');
-        if (!this.gameTitleElement) {
-            this.gameTitleElement = document.createElement('div');
-            this.gameTitleElement.id = 'dashboard-game-title';
-            // Style the title element (adjust as needed)
-            this.gameTitleElement.style.fontWeight = 'bold';
-            this.gameTitleElement.style.marginBottom = '10px';
-            this.gameTitleElement.style.paddingBottom = '5px';
-            this.gameTitleElement.style.borderBottom = '1px solid #555';
-            this.gameTitleElement.style.color = '#4CAF50'; // Match theme accent
-            this.gameTitleElement.style.fontFamily = "'VT323', monospace"; // Use retro font
-            this.gameTitleElement.style.fontSize = '18px'; // Adjust size
-            this.gameTitleElement.style.display = 'none'; // Hidden initially
-            // Prepend it to the stats panel
-            this.statsPanel.insertBefore(this.gameTitleElement, this.statsPanel.firstChild);
-        }
-
-        // Stats Container Element
-        this.statsContainer = document.getElementById('robot-stats-list');
-        if (!this.statsContainer) {
-            this.statsContainer = document.createElement('div');
-            this.statsContainer.id = 'robot-stats-list';
-            // Append it after the title (or as the only child if title failed)
-            this.statsPanel.appendChild(this.statsContainer);
-        }
-    }
-
-    /**
-     * Update robot stats display based on the provided robot data.
-     * @param {Array<object>} robots - Array of robot data objects received from the server state.
-     *                                  Each object should have id, name, damage, color, isAlive.
-     * @param {object} [context={}] - Optional context object (e.g., { gameName }).
-     */
-    updateStats(robots, context = {}) {
-        // Ensure container exists
-        if (!this.statsContainer) {
-            console.warn("Stats container not found in dashboard.");
-            return;
-        }
-
-        // Update Game Title display
-        if (this.gameTitleElement) {
-            const showTitle = context.gameName && robots && robots.length > 0;
-            this.gameTitleElement.textContent = showTitle ? `Stats for: ${context.gameName}` : '';
-            this.gameTitleElement.style.display = showTitle ? '' : 'none';
-        }
-
-        // Clear previous stats from the container
-        this.statsContainer.innerHTML = ''; // Simple way to clear children
-
-        // Guard against invalid input
-        if (!Array.isArray(robots)) {
-            const noDataDiv = document.createElement('div');
-            noDataDiv.textContent = 'Invalid robot data received.';
-            this.statsContainer.appendChild(noDataDiv);
-            return;
-        }
-
-        // --- Efficient DOM Update ---
-        // Use a fragment to minimize reflows when adding multiple stats
-        const fragment = document.createDocumentFragment();
-
-        if (robots.length === 0) {
-            const waitingDiv = document.createElement('div');
-            waitingDiv.textContent = context.gameName ? 'Game ended or no robots active.' : 'Waiting for game to start...';
-            fragment.appendChild(waitingDiv);
-        } else {
-            robots.forEach(robot => {
-                // Default values and checks for robustness
-                const damageValue = (typeof robot.damage === 'number') ? robot.damage : 100;
-                const isAlive = robot.isAlive !== undefined ? robot.isAlive : (damageValue < 100);
-
-                const status = isAlive ? 'Active' : 'Destroyed';
-                const statusColor = isAlive ? '#2ecc71' : '#e74c3c';
-
-                let robotIdDisplay = '????';
-                if (robot.id && typeof robot.id === 'string') {
-                    robotIdDisplay = robot.id.substring(0, 4);
-                }
-                const robotName = robot.name || `ID: ${robotIdDisplay}...`;
-
-                const damageDisplay = (typeof robot.damage === 'number') ? robot.damage.toFixed(0) : 'N/A';
-
-                // Create elements for this robot's stats
-                const statDiv = document.createElement('div');
-                statDiv.className = 'robot-stat'; // Add class for potential CSS styling
-                statDiv.style.borderLeft = `3px solid ${robot.color || '#888'}`;
-                statDiv.style.marginBottom = '10px';
-                statDiv.style.padding = '5px';
-                // Ensure consistent font for stats
-                statDiv.style.fontFamily = "'VT323', monospace";
-                statDiv.style.fontSize = '16px'; // Adjust as needed
-
-                const nameDiv = document.createElement('div');
-                const nameStrong = document.createElement('strong');
-                nameStrong.textContent = robotName;
-                nameDiv.appendChild(nameStrong);
-
-                const damageDiv = document.createElement('div');
-                damageDiv.textContent = `Damage: ${damageDisplay}%`;
-
-                const statusDiv = document.createElement('div');
-                const statusSpan = document.createElement('span');
-                statusSpan.style.color = statusColor;
-                statusSpan.textContent = status;
-                statusDiv.appendChild(document.createTextNode('Status: '));
-                statusDiv.appendChild(statusSpan);
-
-                statDiv.appendChild(nameDiv);
-                statDiv.appendChild(damageDiv);
-                statDiv.appendChild(statusDiv);
-
-                fragment.appendChild(statDiv);
-            });
-        }
-
-        // Append the fragment containing new stats to the dedicated container
-        this.statsContainer.appendChild(fragment);
-    }
-}
-
-// Initialize dashboard when document is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Ensure the dashboard object is created and attached to window for global access
-    window.dashboard = new Dashboard();
-    // Clear stats initially or show a waiting message
-    if(window.dashboard) {
-         window.dashboard.updateStats([], {}); // Pass empty array and context
-    }
-});
-```
-
-## client/js/ui/history.js
-
-```code
-// client/js/ui/history.js
-
-/**
- * Updates the game history log display on the page.
- * @param {Array<object>} historyArray - An array of completed game objects from the server,
- *                                      expected format: [{name, winnerName, players, endTime}, ...]
- *                                      (Assumed to be sorted newest first by the server)
- */
-function updateGameHistory(historyArray) {
-    const historyListElement = document.getElementById('game-history-list');
-
-    if (!historyListElement) {
-        console.warn("Game history list element '#game-history-list' not found.");
-        return;
-    }
-
-    // Clear previous history entries
-    historyListElement.innerHTML = '';
-
-    if (!Array.isArray(historyArray) || historyArray.length === 0) {
-        const noHistoryDiv = document.createElement('div');
-        noHistoryDiv.textContent = 'No games finished yet.';
-        historyListElement.appendChild(noHistoryDiv);
-        return;
-    }
-
-    // Use a document fragment for potentially better performance
-    const fragment = document.createDocumentFragment();
-
-    historyArray.forEach(gameResult => {
-        const entryDiv = document.createElement('div');
-        // Format the output string
-        const winnerText = gameResult.winnerName ? gameResult.winnerName : 'None';
-        entryDiv.textContent = `Game '${gameResult.name || 'Unknown'}' finished. Winner: ${winnerText}`;
-        // You could add more details here, like players involved, using gameResult.players
-
-        fragment.appendChild(entryDiv);
-    });
-
-    // Append the populated fragment to the list element
-    historyListElement.appendChild(fragment);
-}
-
-// Make the function globally accessible
-window.updateGameHistory = updateGameHistory;
-
-console.log("History UI functions initialized (history.js).");
-
-// Initial clear or placeholder (optional, CSS handles initial state)
-// document.addEventListener('DOMContentLoaded', () => {
-//     updateGameHistory([]); // Clear on load
-// });
-```
 
 ## client/js/ui/loadoutBuilder.js
 
@@ -6117,7 +5328,7 @@ class GameInstance {
         this.gameLoopInterval = null;
         this.lastTickTime = 0;
         this.explosionsToBroadcast = [];
-        this.fireEventsToBroadcast = []; // Will contain { type, x, y, ownerId, direction }
+        this.fireEventsToBroadcast = []; // Will contain { type, x, y, ownerId, direction, turretType }
         this.hitEventsToBroadcast = []; // Will contain { type, x, y, targetId }
         this.gameOverCallback = gameOverCallback;
         this.gameName = gameName || `Game ${gameId}`;
@@ -6271,11 +5482,17 @@ class GameInstance {
     // --- addFireEvent, addHitEvent ---
     /** Stores a fire event to be broadcast in the next game state update. */
     addFireEvent(eventData) {
-        // Ensure it has the expected structure (including direction)
-        if (eventData?.type === 'fire' && typeof eventData.direction === 'number') {
+        // Validate the structure before adding
+        if (eventData?.type === 'fire' &&
+            typeof eventData.x === 'number' &&
+            typeof eventData.y === 'number' &&
+            typeof eventData.ownerId === 'string' &&
+            typeof eventData.direction === 'number' &&
+            typeof eventData.turretType === 'string') // <<< Added turretType check
+        {
             this.fireEventsToBroadcast.push(eventData);
         } else {
-            console.warn(`[${this.gameId}] Invalid fire event data received:`, eventData);
+            console.warn(`[${this.gameId}] Invalid fire event data received in addFireEvent:`, eventData);
         }
     }
 
@@ -6309,7 +5526,7 @@ class GameInstance {
 
         // If a loser's delay just finished, the game ends now
         if (potentialLoser) {
-            destructionPending = false; // No longer pending, we have a loser
+             destructionPending = false; // No longer pending, we have a loser
         } else if (destructionPending) {
             return false; // Game not over yet, wait for visual delay
         }
@@ -6445,12 +5662,13 @@ class GameInstance {
                 x: m.x, y: m.y,
                 radius: m.radius,
                 ownerId: m.ownerId,
-                direction: m.direction // Missile travel direction <<< ENSURE THIS IS PRESENT
+                direction: m.direction, // Missile travel direction
+                turretType: m.turretType // <<< ADDED turretType HERE
             })),
             // Include the lists of events to be processed by the client renderer this frame
             explosions: this.explosionsToBroadcast,
-            fireEvents: this.fireEventsToBroadcast, // <<< Includes direction now
-            hitEvents: this.hitEventsToBroadcast,
+            fireEvents: this.fireEventsToBroadcast, // Contains { type, x, y, ownerId, direction, turretType }
+            hitEvents: this.hitEventsToBroadcast, // Contains { type, x, y, targetId }
             timestamp: Date.now()
         };
     }
@@ -7179,34 +6397,6 @@ server.listen(PORT, () => {
 });
 ```
 
-## server/middleware/auth.js
-
-```code
-// server/middleware/auth.js
-// Middleware to check if the user is authenticated
-
-module.exports = (req, res, next) => {
-    // --- START: Added Logging ---
-    console.log(`[AuthMiddleware] Triggered for path: ${req.path}`);
-    console.log(`[AuthMiddleware] Session ID from Cookie (via express-session): ${req.sessionID}`);
-    console.log(`[AuthMiddleware] req.session object:`, JSON.stringify(req.session)); // Log the session object content
-    // console.log('[AuthMiddleware] Cookie Header Raw:', req.headers['cookie']); // Optionally log raw header if needed
-    // --- END: Added Logging ---
-
-    // Original check
-    if (req.session && req.session.userId) {
-        // User is authenticated, proceed to the next middleware or route handler
-        console.log(`[AuthMiddleware] Authorized. User ID: ${req.session.userId}, Username: ${req.session.username}`);
-        // Optionally attach userId to req for easier access in routes (though req.session.userId is standard)
-        // req.userId = req.session.userId;
-        return next();
-    } else {
-        // User is not authenticated
-        console.warn('[AuthMiddleware] Access DENIED: No active session or userId found in session.');
-        return res.status(401).json({ message: 'Authentication required. Please log in.' });
-    }
-};
-```
 
 ## server/routes/auth.js
 
@@ -9068,9 +8258,20 @@ module.exports = ServerRobotInterpreter;
 
 /**
  * Represents a missile's state on the server.
+ * Now includes the turret type that fired it for visual differentiation.
  */
 class ServerMissile {
-    constructor(x, y, direction, speed, power, ownerId) {
+    /**
+     * Creates a ServerMissile instance.
+     * @param {number} x - Initial X coordinate.
+     * @param {number} y - Initial Y coordinate.
+     * @param {number} direction - Direction in degrees.
+     * @param {number} speed - Speed of the missile.
+     * @param {number} power - Power level (affects damage and radius).
+     * @param {string} ownerId - ID of the robot that fired the missile.
+     * @param {string} turretType - The type of turret that fired the missile (e.g., 'standard', 'cannon').
+     */
+    constructor(x, y, direction, speed, power, ownerId, turretType) { // Added turretType
         this.id = `m-${Date.now()}-${Math.random().toString(16).substring(2, 8)}`;
         this.x = x;
         this.y = y;
@@ -9079,7 +8280,9 @@ class ServerMissile {
         this.power = power;
         this.ownerId = ownerId;
         this.radius = 3 + power;
+        this.turretType = turretType; // <<< STORED turretType
     }
+
     update(deltaTime) {
         const moveSpeed = this.speed * deltaTime * 60;
         const radians = this.direction * Math.PI / 180;
@@ -9103,7 +8306,7 @@ class ServerRobot {
      * @param {object} visuals - Visual configuration object { turret: {type, color}, chassis: {type, color}, mobility: {type} }.
      * @param {string} name - The display name for the robot.
      */
-    constructor(id, x, y, direction, visuals, name) { // Updated constructor signature
+    constructor(id, x, y, direction, visuals, name) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -9197,6 +8400,12 @@ class ServerRobot {
     }
 
     // --- fire ---
+    /**
+     * Attempts to fire a missile.
+     * @param {number} direction - Firing direction in degrees.
+     * @param {number} [power=1] - Power level (1-3).
+     * @returns {{success: boolean, eventData?: object}} Object indicating success and event data if successful.
+     */
     fire(direction, power = 1) {
         // Cannot fire if destroyed or on cooldown
         if (this.state !== 'active' || this.cooldown > 0) {
@@ -9213,42 +8422,48 @@ class ServerRobot {
             power = clampedPower; // Use the validated value
         }
 
-
         // Set cooldown based on power
         this.cooldown = power * 10 + 10; // Example: Power 1=20 ticks, Power 3=40 ticks
 
         // Validate and normalize direction
         // Use Number() to handle non-numeric inputs
-        const fireDirection = ((Number(direction) % 360) + 360) % 360;
+        let fireDirection = ((Number(direction) % 360) + 360) % 360;
          if (isNaN(fireDirection)) {
               console.warn(`[${this.id}] Invalid fire direction: ${direction}. Defaulting to 0.`);
-              direction = 0; // Use validated 'direction' variable now
-         } else {
-             direction = fireDirection; // Use the validated value
+              fireDirection = 0; // Use validated 'fireDirection' variable now
          }
 
-
         // Calculate missile properties
-        const radians = direction * Math.PI / 180;
+        const radians = fireDirection * Math.PI / 180;
         const missileSpeed = 7 + power; // Speed increases with power
         const startOffset = this.radius + 5; // Start missile just outside the robot's radius
 
         const missileStartX = this.x + Math.cos(radians) * startOffset;
         const missileStartY = this.y - Math.sin(radians) * startOffset; // Correct for canvas Y-down
 
-        // Create and add the missile
-        const missile = new ServerMissile(missileStartX, missileStartY, direction, missileSpeed, power, this.id);
-        this.missiles.push(missile);
+        // --- START: Get Turret Type ---
+        // Safely get the turret type from the robot's visuals data
+        const turretType = this.visuals?.turret?.type || 'standard';
+        // --- END: Get Turret Type ---
 
-        // --- Prepare event data, INCLUDING direction ---
+        // Create and add the missile
+        // --- START: Pass Turret Type to Missile ---
+        const missile = new ServerMissile(
+            missileStartX, missileStartY, fireDirection, missileSpeed, power, this.id,
+            turretType // Pass the turret type
+        );
+        this.missiles.push(missile);
+        // --- END: Pass Turret Type to Missile ---
+
+        // Prepare event data, INCLUDING direction and turret type for muzzle flash
         const fireEventData = {
-            type: 'fire',
-            x: missileStartX, // Where the missile appears
+            type: 'fire', // Used for muzzle flash type lookup on client
+            x: missileStartX, // Where the missile/flash appears
             y: missileStartY,
             ownerId: this.id,
-            direction: direction // Direction the missile/flash should face
+            direction: fireDirection, // Direction the missile/flash should face
+            turretType: turretType    // Pass turret type for client muzzle flash style
         };
-        // --- End Modification ---
 
         // Return success and the event data
         return { success: true, eventData: fireEventData };
@@ -9293,7 +8508,7 @@ class ServerRobot {
             return { destroyed: true, hit: true, x: hitX, y: hitY, cause: cause }; // Return hit details
         } else {
             // Damage taken, but not destroyed
-            console.log(`[${this.id}] Took ${damageAmount.toFixed(1)} damage via ${cause}. Current health: ${(100 - this._damage).toFixed(1)}%`);
+            // console.log(`[${this.id}] Took ${damageAmount.toFixed(1)} damage via ${cause}. Current health: ${(100 - this._damage).toFixed(1)}%`); // DEBUG: Optional verbose logging
             return { destroyed: false, hit: true, x: hitX, y: hitY }; // Return hit details
         }
     }
@@ -9302,202 +8517,5 @@ class ServerRobot {
 module.exports = ServerRobot;
 ```
 
-## server/socket-handler.js
 
-```code
-// server/socket-handler.js
-const GameManager = require('./game-manager'); // Assuming GameManager is updated
-
-/**
- * Initializes Socket.IO event handlers.
- * Now uses session data for user identification.
- */
-function initializeSocketHandler(io, db) { // db might be needed by GameManager now
-    const gameManager = new GameManager(io, db); // Pass db if needed
-
-    io.on('connection', (socket) => {
-        // Access session data associated with this socket
-        const session = socket.request.session;
-        let userId = session?.userId;
-        let username = session?.username;
-
-        // Only proceed if the user is logged in via session
-        if (!userId || !username) {
-            console.log(`[Socket ${socket.id}] Connection attempt rejected: No active session.`);
-            socket.emit('authError', { message: 'Please log in to play.' });
-            socket.disconnect(true);
-            return;
-        }
-
-        console.log(`[Socket ${socket.id}] Client connected: User '${username}' (ID: ${userId})`);
-        socket.emit('assignId', socket.id); // Still useful for client-side logic
-
-        // --- START: Adapted Player Adding ---
-        // Add player to GameManager using their user info.
-        // GameManager should handle preventing duplicates or managing state if already connected.
-        gameManager.addPlayer(socket); // Pass socket, GM can get user info if needed or addPlayer is adapted
-        // --- END: Adapted Player Adding ---
-
-        // --- Send Initial Game History to just this user ---
-        gameManager.broadcastGameHistory(socket);
-
-
-        socket.on('disconnect', () => {
-            console.log(`[Socket ${socket.id}] Client disconnected: User '${username}' (ID: ${userId})`);
-            // Ensure GameManager uses socket.id to remove, but might need userId too for cross-referencing
-            gameManager.removePlayer(socket.id); // Pass socket.id for removal
-        });
-
-        // === Event Listeners - Use userId/username from session ===
-
-        // Handles 'Ready Up' signal with full loadout data
-        socket.on('submitPlayerData', (loadoutData) => {
-             if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
-
-             // Validate received loadoutData structure
-             if (!loadoutData || typeof loadoutData.name !== 'string' || !loadoutData.visuals || typeof loadoutData.code !== 'string') {
-                 console.error(`[Socket ${socket.id}] Received invalid loadoutData structure from user ${username}:`, loadoutData);
-                 socket.emit('lobbyEvent', { message: 'Invalid loadout data received. Please try again.', type: 'error' });
-                 return;
-             }
-             // Note: Server uses the validated loadoutData.name (robot name) directly.
-             // The username from session identifies the *account*.
-             console.log(`[Socket ${socket.id}] User ${username} submitted player data (Robot: ${loadoutData.name})`);
-             // Pass the full loadoutData received from client to GameManager
-             gameManager.handlePlayerCode(socket.id, loadoutData); // handlePlayerCode expects the full {name, visuals, code}
-        });
-
-        // Handles 'Unready' signal
-        socket.on('playerUnready', () => {
-             if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
-             console.log(`[Socket ${socket.id}] User ${username} unreadied.`);
-             // Pass socket.id only, GameManager uses this to find the player
-             gameManager.setPlayerReadyStatus(socket.id, false);
-        });
-
-        // Handles 'Test Code' request with full loadout data
-        socket.on('requestTestGame', (loadoutData) => {
-            if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
-
-            // Validate received loadoutData structure
-            if (!loadoutData || typeof loadoutData.name !== 'string' || !loadoutData.visuals || typeof loadoutData.code !== 'string') {
-                 console.error(`[Socket ${socket.id}] Received invalid loadoutData structure for test game from user ${username}:`, loadoutData);
-                 socket.emit('lobbyEvent', { message: 'Invalid loadout data received for test game. Please try again.', type: 'error' });
-                 return;
-            }
-
-            console.log(`[Socket ${socket.id}] User ${username} requested test game (Robot: ${loadoutData.name})`);
-            // --- START: Corrected Call ---
-            // Pass the socket object and the full loadoutData object received from the client
-            gameManager.startTestGameForPlayer(socket, loadoutData);
-            // --- END: Corrected Call ---
-        });
-
-        // Handles Chat Messages
-        socket.on('chatMessage', (data) => {
-             if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
-             const senderName = username; // Use session username
-             const messageText = data?.text || '';
-
-             // Basic validation/sanitization (consider a library for robustness)
-             if (typeof messageText !== 'string' || messageText.trim().length === 0 || messageText.length > 100) {
-                 console.warn(`[Socket ${socket.id}] User ${username} sent invalid chat message.`);
-                 return; // Ignore empty or too long messages
-             }
-             const sanitizedText = messageText.trim(); // Basic trim
-
-             console.log(`[Socket ${socket.id}] Chat from ${senderName}: ${sanitizedText}`);
-             io.emit('chatUpdate', { sender: senderName, text: sanitizedText });
-        });
-
-        // Handles Self-Destruct request
-        socket.on('selfDestruct', () => {
-             if (!userId || !username) return socket.emit('authError', { message: 'Session expired. Please log in.' });
-             console.log(`[Socket ${socket.id}] User ${username} requested self-destruct.`);
-             // Pass socket.id only, GameManager uses this to find the player/game
-             gameManager.handleSelfDestruct(socket.id);
-        });
-
-    });
-
-    console.log("[Socket Handler] Initialized with session support.");
-}
-
-module.exports = initializeSocketHandler;
-```
-
-## server/db.js
-
-```code
-// server/db.js
-const { Pool } = require('pg');
-
-const connectionString = process.env.DATABASE_URL || 'YOUR_RENDER_POSTGRES_URL'; // Use env var or fallback
-
-if (!connectionString || connectionString === 'YOUR_RENDER_POSTGRES_URL') {
-    console.error("FATAL: Database connection string not found. Set DATABASE_URL environment variable or update server/db.js");
-    // process.exit(1); // Optionally exit if DB is critical
-}
-
-const pool = new Pool({
-    connectionString: connectionString,
-    // Render recommends SSL for external connections
-    ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false }
-});
-
-pool.on('connect', () => {
-    console.log('[DB] Client connected to the database pool');
-});
-
-pool.on('error', (err, client) => {
-    console.error('[DB] Unexpected error on idle client', err);
-    // process.exit(-1); // Decide if errors are fatal
-});
-
-module.exports = {
-    query: (text, params) => pool.query(text, params),
-    pool: pool // Export pool if needed for session store
-};
-```
-
-## server/dummy-bot-ai.js
-
-```code
-// server/dummy-bot-ai.js
-// Simple AI for the test bot
-
-// Initialize state if it doesn't exist
-if (typeof state.dir === 'undefined') {
-    state.dir = Math.random() * 360; // Start in a random direction
-    state.moveTimer = 0;
-    state.scanTimer = 0;
-    console.log("Dummy Bot Initialized.");
-}
-
-// --- Movement ---
-state.moveTimer++;
-// Drive straight most of the time
-robot.drive(state.dir, 2);
-// Turn ~ every 3 seconds (assuming 30 ticks/sec)
-if (state.moveTimer > 90) {
-    state.dir = (state.dir + (Math.random() * 90 - 45)) % 360; // Turn randomly +/- 45 deg
-    state.moveTimer = 0;
-    // console.log("Dummy Bot changing direction to: " + state.dir.toFixed(0));
-}
-
-// --- Scanning & Firing ---
-state.scanTimer++;
-// Scan less frequently than moving, ~ every 1 second
-if (state.scanTimer > 30) {
-    let scanResult = robot.scan(state.dir, 45); // Scan ahead in a 45 deg arc
-    if (scanResult) {
-        // console.log("Dummy Bot sees something at direction: " + scanResult.direction.toFixed(0));
-        // Aim and fire!
-        robot.fire(scanResult.direction, 1); // Fire low power shots
-    }
-    state.scanTimer = 0;
-}
-
-// Avoid firing constantly - cooldown is handled by robot.fire automatically
-```
 
