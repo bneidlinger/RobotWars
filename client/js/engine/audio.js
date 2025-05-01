@@ -18,7 +18,7 @@ class AudioManager {
         this.sounds = {
             'fire': '/assets/sounds/fire.mp3',
             'hit': '/assets/sounds/hit.mp3',
-            'explode': '/assets/sounds/explosion.mp3', // Generic explosion
+            'explode': '/assets/sounds/explode.mp3', // Generic explosion
             'robotDeath': '/assets/sounds/robotdeath.wav' // <<< ADDED NEW SOUND
             // Add more sounds here as needed
         };

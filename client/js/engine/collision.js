@@ -138,5 +138,3 @@ class ServerCollisionSystem {
         } // End outer loop
     } // End checkRobotRobotCollisions
 }
-
-module.exports = ServerCollisionSystem;
