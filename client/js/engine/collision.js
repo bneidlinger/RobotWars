@@ -1,54 +1,70 @@
+// server/server-collision.js
+
 /**
- * Collision detection system for Robot Wars
- * Handles collisions between robots, missiles, and arena boundaries
+ * Server-side collision detection system for Robot Wars.
+ * Handles interactions between robots, missiles, and arena boundaries.
+ * Modifies the game state directly (e.g., applies damage) and
+ * notifies the GameInstance about hit OR explosion events for sound/visual triggers.
  */
-class CollisionSystem {
-    constructor(game) {
-        this.game = game;
+class ServerCollisionSystem {
+    constructor(gameInstance) {
+        this.game = gameInstance; // Reference to the GameInstance
+        this.arenaWidth = 900; // TODO: Get from config/GameInstance
+        this.arenaHeight = 900;
     }
 
     /**
-     * Check all possible collisions in the game
+     * Checks all relevant collisions for the current game tick.
      */
-    checkCollisions() {
-        this.checkRobotMissileCollisions();
+    checkAllCollisions() {
+        this.checkMissileRobotCollisions();
         this.checkRobotRobotCollisions();
-        this.checkMissileBoundaryCollisions();
+        // TODO: Add checkMissileBoundaryCollisions() if needed, which should also trigger game.createExplosion
     }
 
     /**
-     * Check for collisions between robots and missiles
+     * Checks for collisions between missiles and robots.
+     * Applies damage, removes missiles, and generates EXPLOSION events.
      */
-    checkRobotMissileCollisions() {
+    checkMissileRobotCollisions() {
         const robots = this.game.robots;
 
-        robots.forEach(robotA => {
-            robots.forEach(robotB => {
-                if (robotA.id !== robotB.id) {
-                    // Check if any of robotB's missiles hit robotA
-                    for (let i = robotB.missiles.length - 1; i >= 0; i--) {
-                        const missile = robotB.missiles[i];
-                        const dx = robotA.x - missile.x;
-                        const dy = robotA.y - missile.y;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
+        robots.forEach(targetRobot => {
+            // Skip robots that are not active (already destroyed)
+            if (targetRobot.state !== 'active') return; // Use state check
 
-                        if (distance < robotA.radius + missile.radius) {
-                            // Collision detected
-                            robotB.missiles.splice(i, 1);
+            robots.forEach(firingRobot => {
+                if (targetRobot.id === firingRobot.id) return;
 
-                            // Create explosion
-                            this.game.arena.createExplosion(missile.x, missile.y, missile.power);
+                for (let i = firingRobot.missiles.length - 1; i >= 0; i--) {
+                    const missile = firingRobot.missiles[i];
 
-                            // Apply damage based on missile power
-                            const damage = 10 * missile.power;
-                            const destroyed = robotA.takeDamage(damage);
+                    const dx = targetRobot.x - missile.x;
+                    const dy = targetRobot.y - missile.y;
+                    const distanceSquared = dx * dx + dy * dy;
+                    const radiiSum = targetRobot.radius + missile.radius;
+                    const radiiSumSquared = radiiSum * radiiSum;
 
-                            // Check if robot was destroyed
-                            if (destroyed) {
-                                this.game.arena.createExplosion(robotA.x, robotA.y, 5);
-                                console.log(`Robot ${robotA.id} was destroyed!`);
-                            }
+                    if (distanceSquared < radiiSumSquared) {
+                        // --- MISSILE-ROBOT COLLISION DETECTED ---
+                        const damageAmount = missile.power * 10;
+
+                        // Apply damage (still returns hit flag, but we won't use it for a hitEvent here)
+                        const result = targetRobot.takeDamage(damageAmount, 'missile');
+
+                        console.log(`[Collision M-R] Missile from ${firingRobot.id} hit ${targetRobot.id}. Damage: ${damageAmount}. Destroyed: ${result.destroyed}.`);
+
+                        // --- START CHANGE: Trigger EXPLOSION, not HIT event ---
+                        // If damage was dealt (result.hit is true), create an explosion effect
+                        if (result.hit && typeof this.game.createExplosion === 'function') {
+                            // Use missile location for the explosion center
+                            this.game.createExplosion(missile.x, missile.y, missile.power);
+                            console.log(`[Collision M-R] Triggered EXPLOSION for missile hit on ${targetRobot.id}`);
                         }
+                        // --- END CHANGE ---
+
+                        // Remove the missile
+                        firingRobot.missiles.splice(i, 1);
                     }
                 }
             });
@@ -56,71 +72,71 @@ class CollisionSystem {
     }
 
     /**
-     * Check for collisions between robots and prevent overlap
+     * Checks for collisions between robots to prevent overlap.
+     * Applies minor damage, pushes robots apart, and generates HIT events.
      */
-    checkRobotRobotCollisions() {
+     checkRobotRobotCollisions() {
         const robots = this.game.robots;
+        const numRobots = robots.length;
 
-        for (let i = 0; i < robots.length; i++) {
-            for (let j = i + 1; j < robots.length; j++) {
-                const robotA = robots[i];
+        for (let i = 0; i < numRobots; i++) {
+            const robotA = robots[i];
+            // Skip non-active robots
+            if (robotA.state !== 'active') continue;
+
+            for (let j = i + 1; j < numRobots; j++) {
                 const robotB = robots[j];
-
-                // Skip robots that are destroyed
-                if (robotA.damage >= 100 || robotB.damage >= 100) continue;
+                // Skip non-active robots
+                if (robotB.state !== 'active') continue;
 
                 const dx = robotB.x - robotA.x;
                 const dy = robotB.y - robotA.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+                const distanceSquared = dx * dx + dy * dy;
                 const minDistance = robotA.radius + robotB.radius;
+                const minDistanceSquared = minDistance * minDistance;
 
-                // If robots are overlapping
-                if (distance < minDistance) {
-                    // Calculate collision response
-                    const angle = Math.atan2(dy, dx);
+                if (distanceSquared < minDistanceSquared && distanceSquared > 0.001) {
+                    // --- ROBOT-ROBOT OVERLAP DETECTED ---
+                    const distance = Math.sqrt(distanceSquared);
                     const overlap = minDistance - distance;
+                    const separationX = dx / distance;
+                    const separationY = dy / distance;
+                    const moveDist = overlap / 2;
 
                     // Move robots apart
-                    const moveX = Math.cos(angle) * overlap / 2;
-                    const moveY = Math.sin(angle) * overlap / 2;
+                    robotA.x -= separationX * moveDist;
+                    robotA.y -= separationY * moveDist;
+                    robotB.x += separationX * moveDist;
+                    robotB.y += separationY * moveDist;
 
-                    robotA.x -= moveX;
-                    robotA.y -= moveY;
-                    robotB.x += moveX;
-                    robotB.y += moveY;
+                    // Apply small collision damage & Generate HIT Events
+                    // --- START CHANGE: Only trigger HIT events here ---
+                    const collisionDamage = 0.5; // Small damage for bumping
+                    const resultA = robotA.takeDamage(collisionDamage, 'collision');
+                    const resultB = robotB.takeDamage(collisionDamage, 'collision');
 
-                    // Apply minor damage from collision
-                    robotA.takeDamage(1);
-                    robotB.takeDamage(1);
-                }
-            }
-        }
-    }
+                    // If damage was dealt, trigger a hit event for sound/visuals
+                    if (resultA.hit && typeof this.game.addHitEvent === 'function') {
+                         this.game.addHitEvent(resultA.x, resultA.y, robotA.id);
+                         console.log(`[Collision R-R] Triggered HIT event for ${robotA.id}`);
 
-    /**
-     * Check for missiles hitting arena boundaries
-     */
-    checkMissileBoundaryCollisions() {
-        const arena = this.game.arena;
-        const robots = this.game.robots;
+                    }
+                    if (resultB.hit && typeof this.game.addHitEvent === 'function') {
+                         this.game.addHitEvent(resultB.x, resultB.y, robotB.id);
+                          console.log(`[Collision R-R] Triggered HIT event for ${robotB.id}`);
+                    }
+                    // --- END CHANGE ---
 
-        robots.forEach(robot => {
-            for (let i = robot.missiles.length - 1; i >= 0; i--) {
-                const missile = robot.missiles[i];
+                    // Clamp positions after push to prevent going out of bounds
+                    robotA.x = Math.max(robotA.radius, Math.min(this.arenaWidth - robotA.radius, robotA.x));
+                    robotA.y = Math.max(robotA.radius, Math.min(this.arenaHeight - robotA.radius, robotA.y));
+                    robotB.x = Math.max(robotB.radius, Math.min(this.arenaWidth - robotB.radius, robotB.x));
+                    robotB.y = Math.max(robotB.radius, Math.min(this.arenaHeight - robotB.radius, robotB.y));
 
-                // Check if missile is out of bounds
-                if (missile.x - missile.radius < 0 ||
-                    missile.x + missile.radius > arena.width ||
-                    missile.y - missile.radius < 0 ||
-                    missile.y + missile.radius > arena.height) {
-
-                    // Create small explosion at boundary
-                    this.game.arena.createExplosion(missile.x, missile.y, missile.power / 2);
-
-                    // Remove the missile
-                    robot.missiles.splice(i, 1);
-                }
-            }
-        });
-    }
+                } // End if overlap
+            } // End inner loop
+        } // End outer loop
+    } // End checkRobotRobotCollisions
 }
+
+module.exports = ServerCollisionSystem;
