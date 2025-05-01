@@ -2,9 +2,20 @@
 
 /**
  * Represents a missile's state on the server.
+ * Now includes the turret type that fired it for visual differentiation.
  */
 class ServerMissile {
-    constructor(x, y, direction, speed, power, ownerId) {
+    /**
+     * Creates a ServerMissile instance.
+     * @param {number} x - Initial X coordinate.
+     * @param {number} y - Initial Y coordinate.
+     * @param {number} direction - Direction in degrees.
+     * @param {number} speed - Speed of the missile.
+     * @param {number} power - Power level (affects damage and radius).
+     * @param {string} ownerId - ID of the robot that fired the missile.
+     * @param {string} turretType - The type of turret that fired the missile (e.g., 'standard', 'cannon').
+     */
+    constructor(x, y, direction, speed, power, ownerId, turretType) { // Added turretType
         this.id = `m-${Date.now()}-${Math.random().toString(16).substring(2, 8)}`;
         this.x = x;
         this.y = y;
@@ -13,7 +24,9 @@ class ServerMissile {
         this.power = power;
         this.ownerId = ownerId;
         this.radius = 3 + power;
+        this.turretType = turretType; // <<< STORED turretType
     }
+
     update(deltaTime) {
         const moveSpeed = this.speed * deltaTime * 60;
         const radians = this.direction * Math.PI / 180;
@@ -37,7 +50,7 @@ class ServerRobot {
      * @param {object} visuals - Visual configuration object { turret: {type, color}, chassis: {type, color}, mobility: {type} }.
      * @param {string} name - The display name for the robot.
      */
-    constructor(id, x, y, direction, visuals, name) { // Updated constructor signature
+    constructor(id, x, y, direction, visuals, name) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -131,6 +144,12 @@ class ServerRobot {
     }
 
     // --- fire ---
+    /**
+     * Attempts to fire a missile.
+     * @param {number} direction - Firing direction in degrees.
+     * @param {number} [power=1] - Power level (1-3).
+     * @returns {{success: boolean, eventData?: object}} Object indicating success and event data if successful.
+     */
     fire(direction, power = 1) {
         // Cannot fire if destroyed or on cooldown
         if (this.state !== 'active' || this.cooldown > 0) {
@@ -147,42 +166,48 @@ class ServerRobot {
             power = clampedPower; // Use the validated value
         }
 
-
         // Set cooldown based on power
         this.cooldown = power * 10 + 10; // Example: Power 1=20 ticks, Power 3=40 ticks
 
         // Validate and normalize direction
         // Use Number() to handle non-numeric inputs
-        const fireDirection = ((Number(direction) % 360) + 360) % 360;
+        let fireDirection = ((Number(direction) % 360) + 360) % 360;
          if (isNaN(fireDirection)) {
               console.warn(`[${this.id}] Invalid fire direction: ${direction}. Defaulting to 0.`);
-              direction = 0; // Use validated 'direction' variable now
-         } else {
-             direction = fireDirection; // Use the validated value
+              fireDirection = 0; // Use validated 'fireDirection' variable now
          }
 
-
         // Calculate missile properties
-        const radians = direction * Math.PI / 180;
+        const radians = fireDirection * Math.PI / 180;
         const missileSpeed = 7 + power; // Speed increases with power
         const startOffset = this.radius + 5; // Start missile just outside the robot's radius
 
         const missileStartX = this.x + Math.cos(radians) * startOffset;
         const missileStartY = this.y - Math.sin(radians) * startOffset; // Correct for canvas Y-down
 
-        // Create and add the missile
-        const missile = new ServerMissile(missileStartX, missileStartY, direction, missileSpeed, power, this.id);
-        this.missiles.push(missile);
+        // --- START: Get Turret Type ---
+        // Safely get the turret type from the robot's visuals data
+        const turretType = this.visuals?.turret?.type || 'standard';
+        // --- END: Get Turret Type ---
 
-        // --- Prepare event data, INCLUDING direction ---
+        // Create and add the missile
+        // --- START: Pass Turret Type to Missile ---
+        const missile = new ServerMissile(
+            missileStartX, missileStartY, fireDirection, missileSpeed, power, this.id,
+            turretType // Pass the turret type
+        );
+        this.missiles.push(missile);
+        // --- END: Pass Turret Type to Missile ---
+
+        // Prepare event data, INCLUDING direction and turret type for muzzle flash
         const fireEventData = {
-            type: 'fire',
-            x: missileStartX, // Where the missile appears
+            type: 'fire', // Used for muzzle flash type lookup on client
+            x: missileStartX, // Where the missile/flash appears
             y: missileStartY,
             ownerId: this.id,
-            direction: direction // Direction the missile/flash should face
+            direction: fireDirection, // Direction the missile/flash should face
+            turretType: turretType    // Pass turret type for client muzzle flash style
         };
-        // --- End Modification ---
 
         // Return success and the event data
         return { success: true, eventData: fireEventData };
@@ -227,7 +252,7 @@ class ServerRobot {
             return { destroyed: true, hit: true, x: hitX, y: hitY, cause: cause }; // Return hit details
         } else {
             // Damage taken, but not destroyed
-            console.log(`[${this.id}] Took ${damageAmount.toFixed(1)} damage via ${cause}. Current health: ${(100 - this._damage).toFixed(1)}%`);
+            // console.log(`[${this.id}] Took ${damageAmount.toFixed(1)} damage via ${cause}. Current health: ${(100 - this._damage).toFixed(1)}%`); // DEBUG: Optional verbose logging
             return { destroyed: false, hit: true, x: hitX, y: hitY }; // Return hit details
         }
     }

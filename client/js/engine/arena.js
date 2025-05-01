@@ -2,8 +2,8 @@
 
 /**
  * Manages the rendering of the game arena canvas, including the background,
- * grid, robots (based on visual loadout data), missiles (with trails),
- * scorch marks, muzzle flashes, and visual effects like explosions.
+ * grid, robots (based on visual loadout data), missiles (with unique visuals/trails),
+ * scorch marks, muzzle flashes, and enhanced particle-based explosion effects.
  */
 class Arena { // File name remains Arena, class concept is Renderer
     constructor(canvasId) {
@@ -473,59 +473,133 @@ class Arena { // File name remains Arena, class concept is Renderer
     // === END: Enhanced Robot Drawing System ===
 
 
-    /** Draws missiles WITH TRAILS */
+    // --- START: Updated drawMissiles ---
+    /** Draws missiles with unique visuals and trails based on turretType */
     drawMissiles(missiles) {
         const ctx = this.ctx;
         if (!ctx || !missiles || missiles.length === 0) return;
 
-        const trailLength = 5; // How many segments, conceptually
-        const baseTrailOpacity = 0.5; // Max opacity of the trail near the missile
-
         missiles.forEach(missile => {
-            // Get missile properties from the gameState update
             const missileX = this.translateX(missile.x);
             const missileY = this.translateY(missile.y);
-            const radius = missile.radius || 4; // Use radius from data or default
-            const directionRad = (missile.direction || 0) * Math.PI / 180; // Missile direction in radians
-
-            // --- Draw Trail ---
-            // Simple fading line trail extending behind the missile
-            const trailRenderLength = radius + trailLength * 3; // Adjust multiplier for visual length
-            const tailEndX = missileX - Math.cos(directionRad) * trailRenderLength;
-            const tailEndY = missileY + Math.sin(directionRad) * trailRenderLength; // Add sin because Y is inverted
-
-            // Create gradient from missile color to transparent
-            const gradient = ctx.createLinearGradient(missileX, missileY, tailEndX, tailEndY);
-            gradient.addColorStop(0, `rgba(255, 165, 0, ${baseTrailOpacity})`); // Orange near missile
-            gradient.addColorStop(1, `rgba(128, 128, 128, 0)`);           // Fade to transparent grey
+            const radius = missile.radius || 4;
+            const directionRad = (missile.direction || 0) * Math.PI / 180;
+            const turretType = missile.turretType || 'standard'; // Default if missing
 
             ctx.save();
-            ctx.strokeStyle = gradient;
-            ctx.lineWidth = Math.max(1, radius * 0.8); // Trail width based on missile size
-            ctx.beginPath();
-            ctx.moveTo(missileX, missileY); // Start line at missile center
-            ctx.lineTo(tailEndX, tailEndY); // End line behind missile
-            ctx.stroke();
-            ctx.restore();
-            // --- End Trail ---
+
+            // --- Turret-Specific Drawing ---
+            switch (turretType) {
+                case 'cannon':
+                    // Trail: Thicker, shorter, grey particle puffs (simple version: thick grey gradient)
+                    const cannonTrailLength = radius + 5 * 3;
+                    const cannonTailEndX = missileX - Math.cos(directionRad) * cannonTrailLength;
+                    const cannonTailEndY = missileY + Math.sin(directionRad) * cannonTrailLength;
+                    const cannonGradient = ctx.createLinearGradient(missileX, missileY, cannonTailEndX, cannonTailEndY);
+                    cannonGradient.addColorStop(0, `rgba(120, 120, 120, 0.7)`); // Dark Grey start
+                    cannonGradient.addColorStop(0.7, `rgba(80, 80, 80, 0.3)`);
+                    cannonGradient.addColorStop(1, `rgba(50, 50, 50, 0)`);
+                    ctx.strokeStyle = cannonGradient;
+                    ctx.lineWidth = Math.max(2, radius * 1.2); // Thicker trail
+                    ctx.beginPath(); ctx.moveTo(missileX, missileY); ctx.lineTo(cannonTailEndX, cannonTailEndY); ctx.stroke();
+
+                    // Body: Larger, darker orange/red circle
+                    ctx.fillStyle = '#D9531E'; // Darker Orange/Red
+                    ctx.beginPath(); ctx.arc(missileX, missileY, radius * 1.1, 0, Math.PI * 2); ctx.fill();
+                    // Highlight
+                    ctx.fillStyle = 'rgba(255, 165, 0, 0.6)';
+                    ctx.beginPath(); ctx.arc(missileX - radius * 0.2, missileY - radius * 0.2, radius * 0.6, 0, Math.PI * 2); ctx.fill();
+                    break;
+
+                case 'laser':
+                    // Trail: Minimal or none. Maybe a very thin, short, bright trail.
+                    const laserTrailLength = radius + 2 * 3;
+                    const laserTailEndX = missileX - Math.cos(directionRad) * laserTrailLength;
+                    const laserTailEndY = missileY + Math.sin(directionRad) * laserTrailLength;
+                    const laserGradient = ctx.createLinearGradient(missileX, missileY, laserTailEndX, laserTailEndY);
+                    laserGradient.addColorStop(0, `rgba(173, 216, 230, 0.8)`); // Light Blue
+                    laserGradient.addColorStop(1, `rgba(173, 216, 230, 0)`);
+                    ctx.strokeStyle = laserGradient;
+                    ctx.lineWidth = Math.max(1, radius * 0.5); // Very thin trail
+                    ctx.beginPath(); ctx.moveTo(missileX, missileY); ctx.lineTo(laserTailEndX, laserTailEndY); ctx.stroke();
+
+                    // Body: Small, bright cyan point/circle
+                    ctx.fillStyle = '#88CCFF'; // Bright Cyan/Blue
+                    ctx.beginPath(); ctx.arc(missileX, missileY, radius * 0.8, 0, Math.PI * 2); ctx.fill();
+                    // Optional: Outer glow
+                    ctx.shadowColor = 'rgba(173, 216, 230, 0.7)'; ctx.shadowBlur = 5;
+                    ctx.fillStyle = 'rgba(220, 240, 255, 0.8)'; // Inner white core
+                    ctx.beginPath(); ctx.arc(missileX, missileY, radius * 0.4, 0, Math.PI * 2); ctx.fill();
+                    ctx.shadowBlur = 0; // Reset shadow
+                    break;
+
+                case 'dual':
+                    // Trail: Similar to standard, maybe slightly thinner/faster fade
+                    const dualTrailLength = radius + 4 * 3;
+                    const dualTailEndX = missileX - Math.cos(directionRad) * dualTrailLength;
+                    const dualTailEndY = missileY + Math.sin(directionRad) * dualTrailLength;
+                    const dualGradient = ctx.createLinearGradient(missileX, missileY, dualTailEndX, dualTailEndY);
+                    dualGradient.addColorStop(0, `rgba(255, 200, 80, 0.6)`); // Yellow-Orange
+                    dualGradient.addColorStop(1, `rgba(128, 128, 128, 0)`);
+                    ctx.strokeStyle = dualGradient;
+                    ctx.lineWidth = Math.max(1, radius * 0.7); // Slightly thinner
+                    ctx.beginPath(); ctx.moveTo(missileX, missileY); ctx.lineTo(dualTailEndX, dualTailEndY); ctx.stroke();
+
+                    // Body: Standard orange, maybe slightly smaller
+                    ctx.fillStyle = '#FFA500';
+                    ctx.beginPath(); ctx.arc(missileX, missileY, radius * 0.9, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.beginPath(); ctx.arc(missileX - radius * 0.2, missileY - radius * 0.2, radius * 0.4, 0, Math.PI * 2); ctx.fill();
+                    break;
+
+                case 'missile': // Missile Launcher Turret
+                    // Trail: Distinctive, maybe slightly smoky or white
+                    const rocketTrailLength = radius + 6 * 3;
+                    const rocketTailEndX = missileX - Math.cos(directionRad) * rocketTrailLength;
+                    const rocketTailEndY = missileY + Math.sin(directionRad) * rocketTrailLength;
+                    const rocketGradient = ctx.createLinearGradient(missileX, missileY, rocketTailEndX, rocketTailEndY);
+                    rocketGradient.addColorStop(0, `rgba(220, 220, 220, 0.8)`); // White/Light Grey start
+                    rocketGradient.addColorStop(0.6, `rgba(180, 180, 180, 0.4)`);
+                    rocketGradient.addColorStop(1, `rgba(150, 150, 150, 0)`);
+                    ctx.strokeStyle = rocketGradient;
+                    ctx.lineWidth = Math.max(2, radius * 1.1); // Slightly thicker white trail
+                    ctx.beginPath(); ctx.moveTo(missileX, missileY); ctx.lineTo(rocketTailEndX, rocketTailEndY); ctx.stroke();
+
+                    // Body: Greyish/Silver circle to look like a small rocket
+                    ctx.fillStyle = '#C0C0C0'; // Silver
+                    ctx.beginPath(); ctx.arc(missileX, missileY, radius, 0, Math.PI * 2); ctx.fill();
+                    // Darker tip
+                    ctx.fillStyle = '#555555';
+                    ctx.beginPath(); ctx.arc(missileX + Math.cos(directionRad) * radius*0.4, missileY - Math.sin(directionRad) * radius*0.4, radius * 0.5, 0, Math.PI * 2); ctx.fill();
+                    break;
 
 
-            // --- Draw Missile Body ---
-            ctx.save();
-            ctx.fillStyle = '#FFA500'; // Bright orange base color
-            ctx.beginPath();
-            ctx.arc(missileX, missileY, radius, 0, Math.PI * 2);
-            ctx.fill();
-            // Optional: Add a small highlight for a bit of depth
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Semi-transparent white
-            ctx.beginPath();
-            // Offset the highlight slightly up and to the left
-            ctx.arc(missileX - radius*0.2, missileY - radius*0.2, radius*0.5, 0, Math.PI*2);
-            ctx.fill();
+                case 'standard':
+                default:
+                    // --- Default/Standard Trail ---
+                    const stdTrailLength = radius + 5 * 3; // Default length
+                    const stdTailEndX = missileX - Math.cos(directionRad) * stdTrailLength;
+                    const stdTailEndY = missileY + Math.sin(directionRad) * stdTrailLength;
+                    const stdGradient = ctx.createLinearGradient(missileX, missileY, stdTailEndX, stdTailEndY);
+                    stdGradient.addColorStop(0, `rgba(255, 165, 0, 0.7)`); // Orange near missile
+                    stdGradient.addColorStop(1, `rgba(128, 128, 128, 0)`); // Fade to transparent grey
+                    ctx.strokeStyle = stdGradient;
+                    ctx.lineWidth = Math.max(1, radius * 0.8); // Default trail width
+                    ctx.beginPath(); ctx.moveTo(missileX, missileY); ctx.lineTo(stdTailEndX, stdTailEndY); ctx.stroke();
+
+                    // --- Default/Standard Missile Body ---
+                    ctx.fillStyle = '#FFA500'; // Bright orange base color
+                    ctx.beginPath(); ctx.arc(missileX, missileY, radius, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Highlight
+                    ctx.beginPath(); ctx.arc(missileX - radius * 0.2, missileY - radius * 0.2, radius * 0.5, 0, Math.PI * 2); ctx.fill();
+                    break;
+            }
+            // --- END: Turret-Specific Drawing ---
+
             ctx.restore();
-            // --- End Missile Body ---
         });
     }
+    // --- END: Updated drawMissiles ---
 
     /** Draws active muzzle flash effects */
     drawMuzzleFlashes(activeFlashes) {
@@ -551,7 +625,7 @@ class Arena { // File name remains Arena, class concept is Renderer
             ctx.globalAlpha = alpha;       // Apply fade effect
 
             // --- Draw flash based on turret type ---
-            switch (flash.type) {
+            switch (flash.type) { // flash.type now comes from ServerRobot.fire eventData
                 case 'cannon':
                 case 'standard':
                 case 'dual': // Using a star shape for these
@@ -605,9 +679,6 @@ class Arena { // File name remains Arena, class concept is Renderer
                     break;
 
                 default: // Fallback for unknown types (optional)
-                    // Could draw a simple small circle
-                    // ctx.fillStyle = 'white';
-                    // ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
                     break;
             }
             // --- End flash drawing ---
@@ -616,38 +687,80 @@ class Arena { // File name remains Arena, class concept is Renderer
         });
     }
 
-
-    /** Draws explosion effects */
-    drawEffects(activeExplosions) {
+    // --- START: New drawParticleEffects ---
+    /** Draws particle-based explosion effects */
+    drawParticleEffects(particleEffects) {
         const ctx = this.ctx;
-        if (!ctx || !activeExplosions || activeExplosions.length === 0) return;
-        const now = Date.now();
-        // Iterate backwards for safe removal if needed (though Game.js filters now)
-        for (let i = activeExplosions.length - 1; i >= 0; i--) {
-            const explosion = activeExplosions[i];
-            const elapsedTime = now - explosion.startTime;
-            const progress = Math.min(elapsedTime / explosion.duration, 1);
+        if (!ctx || !particleEffects || particleEffects.length === 0) return;
 
-            // If progress is 1, it should have been filtered by Game.js, skip just in case
-            if (progress >= 1) continue;
+        particleEffects.forEach(effect => {
+            effect.particles.forEach(p => {
+                // Calculate alpha based on remaining lifespan and particle type
+                const lifeRatio = Math.max(0, p.lifespan / p.maxLifespan); // Ensure ratio is not negative
+                let alpha = 1.0;
+                let drawSize = p.size;
 
-            // Use an easing function for smoother expansion/fade
-            const easeOutProgress = progress * (2 - progress); // Ease-out quad
-            const currentRadius = explosion.maxRadius * easeOutProgress;
+                ctx.save();
 
-            // Select color based on progress through the sequence
-            const colorIndex = Math.floor(progress * explosion.colorSequence.length);
-            const color = explosion.colorSequence[colorIndex] || explosion.colorSequence[explosion.colorSequence.length - 1]; // Fallback
+                // Apply type-specific fading and size changes
+                if (p.type === 'smoke') {
+                    alpha = lifeRatio * 0.7; // Smoke fades and starts semi-transparent
+                    drawSize = p.size * (1.5 - lifeRatio * 0.5); // Smoke expands slightly as it fades
+                     // Extract base color and apply alpha
+                     try { // Add try-catch for robust color parsing
+                        let baseColor = p.color.substring(0, p.color.lastIndexOf(',')) + ',';
+                        ctx.fillStyle = baseColor + alpha.toFixed(2) + ')';
+                     } catch(e) {
+                         console.warn("Error parsing smoke color, using fallback:", p.color, e);
+                         ctx.fillStyle = `rgba(100, 100, 100, ${alpha.toFixed(2)})`; // Fallback grey
+                     }
 
-            ctx.save();
-            ctx.globalAlpha = 1.0 - progress; // Fade out
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.arc(this.translateX(explosion.x), this.translateY(explosion.y), currentRadius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        }
+                } else if (p.type === 'spark') {
+                    alpha = lifeRatio; // Sparks fade out linearly
+                    drawSize = p.size * lifeRatio; // Sparks shrink
+                    ctx.fillStyle = p.color; // Assume spark color has no alpha initially
+                    ctx.globalAlpha = alpha;
+                } else if (p.type === 'flash') {
+                     alpha = Math.pow(lifeRatio, 0.5); // Flash fades quickly
+                     drawSize = p.size * (1 + (1-lifeRatio)*0.5); // Flash expands
+                     ctx.fillStyle = p.color;
+                     ctx.globalAlpha = alpha;
+                } else { // Default particle behavior
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = lifeRatio;
+                }
+
+                // Don't draw if invisible or too small
+                if (alpha <= 0 || drawSize <= 0.1) {
+                    ctx.restore();
+                    return;
+                }
+
+                // Draw the particle shape
+                if (p.type === 'spark' || p.type === 'flash') {
+                    // Draw sparks/flashes as circles
+                     ctx.beginPath();
+                     ctx.arc(this.translateX(p.x), this.translateY(p.y), Math.max(0.1, drawSize / 2), 0, Math.PI * 2); // Ensure radius > 0
+                     ctx.fill();
+                } else {
+                    // Draw smoke (or default) as squares
+                     ctx.fillRect(this.translateX(p.x) - drawSize / 2, this.translateY(p.y) - drawSize / 2, Math.max(0.1, drawSize), Math.max(0.1, drawSize)); // Ensure size > 0
+                }
+                ctx.restore(); // Restore alpha changes etc.
+            });
+        });
     }
+    // --- END: New drawParticleEffects ---
+
+
+    // --- START: Removed old drawEffects ---
+    /*
+    drawEffects(activeExplosions) {
+        // ... old implementation removed ...
+    }
+    */
+    // --- END: Removed old drawEffects ---
+
 
     /** Clears main canvas and draws the persistent background */
     clear() {
@@ -658,25 +771,52 @@ class Arena { // File name remains Arena, class concept is Renderer
         this.ctx.drawImage(this.backgroundCanvas, 0, 0);
     }
 
-    /** Main drawing loop method - called by Game.js */
-    draw(missiles, activeExplosions, activeFlashes) { // <<< UPDATED SIGNATURE
+    /**
+     * Main drawing loop method - called by Game.js.
+     * Includes optional screen shake.
+     * @param {Array} missiles - Array of missile data from game state.
+     * @param {Array} activeExplosions - Array of simple explosion objects (e.g., for missile impacts).
+     * @param {Array} activeFlashes - Array of active muzzle flash objects.
+     * @param {Array} particleEffects - Array of active particle effect objects (for robot deaths).
+     * @param {number} [shakeMagnitude=0] - Current magnitude for screen shake effect.
+     */
+    draw(missiles, activeExplosions, activeFlashes, particleEffects, shakeMagnitude = 0) { // Updated Signature
         if (!this.ctx || !this.backgroundCanvas) {
             console.error("Cannot draw, context/background missing!");
             return;
         }
         // 1. Clear the dynamic canvas and draw the static background
-        this.clear(); // Uses the method above
+        this.clear();
+
+        // --- Screen Shake Start ---
+        let shakeX = 0; let shakeY = 0;
+        if(shakeMagnitude > 0) {
+            shakeX = (Math.random() - 0.5) * 2 * shakeMagnitude;
+            shakeY = (Math.random() - 0.5) * 2 * shakeMagnitude;
+        }
+        this.ctx.save(); // Save context before shake translation
+        this.ctx.translate(shakeX, shakeY);
+        // --- Screen Shake End ---
 
         // 2. Draw Robots
         this.drawRobots();
 
-        // 3. Draw Missiles (now with trails)
+        // 3. Draw Missiles (now with unique visuals/trails)
         this.drawMissiles(missiles);
 
-        // 4. Draw Explosions
-        this.drawEffects(activeExplosions);
+        // 4. Draw OLD Explosions (e.g., for simple missile impacts if needed)
+        // If particle explosions completely replace these, you can remove this call.
+        // For now, assume they might coexist for different event types.
+        // this.drawEffects(activeExplosions); // <<< Kept commented out, assuming replacement
 
-        // 5. Draw Muzzle Flashes <<< ADDED
+        // 5. Draw NEW Particle Effects (for robot destruction)
+        this.drawParticleEffects(particleEffects); // <<< ADDED CALL
+
+        // 6. Draw Muzzle Flashes
         this.drawMuzzleFlashes(activeFlashes);
+
+        // --- Screen Shake Restore ---
+        this.ctx.restore(); // Restore context after drawing everything (removes shake translation)
+        // --- Screen Shake End ---
     }
 } // End Arena (Renderer) Class

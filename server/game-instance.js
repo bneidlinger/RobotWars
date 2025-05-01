@@ -38,7 +38,7 @@ class GameInstance {
         this.gameLoopInterval = null;
         this.lastTickTime = 0;
         this.explosionsToBroadcast = [];
-        this.fireEventsToBroadcast = []; // Will contain { type, x, y, ownerId, direction }
+        this.fireEventsToBroadcast = []; // Will contain { type, x, y, ownerId, direction, turretType }
         this.hitEventsToBroadcast = []; // Will contain { type, x, y, targetId }
         this.gameOverCallback = gameOverCallback;
         this.gameName = gameName || `Game ${gameId}`;
@@ -192,11 +192,17 @@ class GameInstance {
     // --- addFireEvent, addHitEvent ---
     /** Stores a fire event to be broadcast in the next game state update. */
     addFireEvent(eventData) {
-        // Ensure it has the expected structure (including direction)
-        if (eventData?.type === 'fire' && typeof eventData.direction === 'number') {
+        // Validate the structure before adding
+        if (eventData?.type === 'fire' &&
+            typeof eventData.x === 'number' &&
+            typeof eventData.y === 'number' &&
+            typeof eventData.ownerId === 'string' &&
+            typeof eventData.direction === 'number' &&
+            typeof eventData.turretType === 'string') // <<< Added turretType check
+        {
             this.fireEventsToBroadcast.push(eventData);
         } else {
-            console.warn(`[${this.gameId}] Invalid fire event data received:`, eventData);
+            console.warn(`[${this.gameId}] Invalid fire event data received in addFireEvent:`, eventData);
         }
     }
 
@@ -230,7 +236,7 @@ class GameInstance {
 
         // If a loser's delay just finished, the game ends now
         if (potentialLoser) {
-            destructionPending = false; // No longer pending, we have a loser
+             destructionPending = false; // No longer pending, we have a loser
         } else if (destructionPending) {
             return false; // Game not over yet, wait for visual delay
         }
@@ -366,12 +372,13 @@ class GameInstance {
                 x: m.x, y: m.y,
                 radius: m.radius,
                 ownerId: m.ownerId,
-                direction: m.direction // Missile travel direction <<< ENSURE THIS IS PRESENT
+                direction: m.direction, // Missile travel direction
+                turretType: m.turretType // <<< ADDED turretType HERE
             })),
             // Include the lists of events to be processed by the client renderer this frame
             explosions: this.explosionsToBroadcast,
-            fireEvents: this.fireEventsToBroadcast, // <<< Includes direction now
-            hitEvents: this.hitEventsToBroadcast,
+            fireEvents: this.fireEventsToBroadcast, // Contains { type, x, y, ownerId, direction, turretType }
+            hitEvents: this.hitEventsToBroadcast, // Contains { type, x, y, targetId }
             timestamp: Date.now()
         };
     }

@@ -911,8 +911,8 @@ input#loadout-name-input, input#builder-player-name {
 
 /**
  * Manages the rendering of the game arena canvas, including the background,
- * grid, robots (based on visual loadout data), missiles, scorch marks, // <-- Updated description
- * and visual effects like explosions.
+ * grid, robots (based on visual loadout data), missiles (with trails),
+ * scorch marks, muzzle flashes, and visual effects like explosions.
  */
 class Arena { // File name remains Arena, class concept is Renderer
     constructor(canvasId) {
@@ -929,9 +929,9 @@ class Arena { // File name remains Arena, class concept is Renderer
         }
         console.log(`Renderer initialized with dimensions: ${this.width}x${this.height}`);
 
-        this.robots = []; // Populated by Game class
+        this.robots = []; // Populated by Game class with data from server
 
-        // Background Canvas for Persistence
+        // Background Canvas for Persistence (scorch marks, grid)
         this.backgroundCanvas = document.createElement('canvas');
         this.backgroundCanvas.width = this.width;
         this.backgroundCanvas.height = this.height;
@@ -949,66 +949,69 @@ class Arena { // File name remains Arena, class concept is Renderer
             if (this.ctx && this.backgroundCtx) {
                 this.backgroundPattern = this.ctx.createPattern(this.backgroundImage, 'repeat');
                 console.log("Arena background texture loaded.");
-                this.redrawArenaBackground();
+                this.redrawArenaBackground(); // Redraw background once image is loaded
             } else { console.error("Context lost before background pattern could be created/drawn."); }
         };
         this.backgroundImage.onerror = () => {
             console.error("Failed to load arena background texture.");
-            this.redrawArenaBackground(); // Draw fallback
+            this.redrawArenaBackground(); // Draw fallback color/grid
         };
-        this.backgroundImage.src = 'assets/images/metal_floor.png';
+        this.backgroundImage.src = 'assets/images/metal_floor.png'; // Path to your texture
 
-        this.redrawArenaBackground(); // Initial draw
+        this.redrawArenaBackground(); // Initial draw (might be fallback color initially)
     }
 
-    // --- Coordinate Translation Helpers (No changes needed) ---
+    // --- Coordinate Translation Helpers ---
+    // Currently 1:1, but could be used for camera panning/zooming later
     translateX(gameX) { return gameX; }
     translateY(gameY) { return gameY; }
 
-    // --- Background Canvas Methods (No changes needed) ---
+    // --- Background Canvas Methods ---
+    /** Draws the background texture/color */
     drawBackgroundTexture(targetCtx) {
         targetCtx.clearRect(0, 0, this.width, this.height);
-        targetCtx.fillStyle = this.backgroundPattern || '#2c2c2c';
+        targetCtx.fillStyle = this.backgroundPattern || '#2c2c2c'; // Use pattern or fallback color
         targetCtx.fillRect(0, 0, this.width, this.height);
     }
+    /** Draws the grid lines */
     drawGridLines(targetCtx) {
         targetCtx.save();
         targetCtx.strokeStyle = this.gridColor;
         targetCtx.lineWidth = 0.5;
-        for (let x = this.gridSize; x < this.width; x += this.gridSize) { targetCtx.beginPath(); targetCtx.moveTo(x, 0); targetCtx.lineTo(x, this.height); targetCtx.stroke(); }
-        for (let y = this.gridSize; y < this.height; y += this.gridSize) { targetCtx.beginPath(); targetCtx.moveTo(0, y); targetCtx.lineTo(this.width, y); targetCtx.stroke(); }
+        // Vertical lines
+        for (let x = this.gridSize; x < this.width; x += this.gridSize) {
+            targetCtx.beginPath(); targetCtx.moveTo(x, 0); targetCtx.lineTo(x, this.height); targetCtx.stroke();
+        }
+        // Horizontal lines
+        for (let y = this.gridSize; y < this.height; y += this.gridSize) {
+            targetCtx.beginPath(); targetCtx.moveTo(0, y); targetCtx.lineTo(this.width, y); targetCtx.stroke();
+        }
         targetCtx.restore();
     }
+    /** Redraws the persistent background canvas (texture and grid) */
     redrawArenaBackground() {
         console.log("Redrawing arena background canvas (clears scorch marks).");
         if (!this.backgroundCtx) return;
         this.drawBackgroundTexture(this.backgroundCtx);
         this.drawGridLines(this.backgroundCtx);
     }
+    /** Adds a scorch mark to the persistent background canvas */
     addScorchMark(x, y, radius) {
         if (!this.backgroundCtx) return;
         const canvasX = this.translateX(x);
         const canvasY = this.translateY(y);
+        // Use a semi-transparent dark color for the scorch mark
         this.backgroundCtx.fillStyle = 'rgba(20, 20, 20, 0.65)';
         this.backgroundCtx.beginPath();
         this.backgroundCtx.arc(canvasX, canvasY, radius, 0, Math.PI * 2);
         this.backgroundCtx.fill();
-        // console.log(`Added scorch mark at (${x.toFixed(0)}, ${y.toFixed(0)}) radius ${radius}`);
     }
-
-    // --- Removed Old Individual Robot Drawing Functions ---
-    // drawDefaultBot(ctx, robotData) { ... } -> REMOVED
-    // drawTankBot(ctx, robotData) { ... } -> REMOVED
-    // drawSpikeBot(ctx, robotData) { ... } -> REMOVED
-    // drawTriBot(ctx, robotData) { ... } -> REMOVED
-
 
     // === START: Enhanced Robot Drawing System ===
     /**
      * Main function to draw all robots based on data from Game class,
      * using the 'visuals' property for component types and colors.
      * Includes name and health bar. Checks visibility flag.
-     * Now supports an expanded set of variants for each robot component.
      */
     drawRobots() {
         const ctx = this.ctx;
@@ -1017,8 +1020,9 @@ class Arena { // File name remains Arena, class concept is Renderer
         const baseRadius = 15; // Use a consistent base size reference
 
         this.robots.forEach(robotData => {
-            // Skip if data is missing or robot is not visible
-            if (!robotData || !robotData.visible) return;
+            // Skip if data is missing or robot is not visible/alive
+            // Use robotData.isAlive which comes from the server state
+            if (!robotData || !robotData.isAlive) return;
 
             // Ensure visuals data exists, provide defaults if missing
             const visuals = robotData.visuals || {
@@ -1037,7 +1041,7 @@ class Arena { // File name remains Arena, class concept is Renderer
             // Get robot position and direction
             const robotX = this.translateX(robotData.x || 0);
             const robotY = this.translateY(robotData.y || 0);
-            const robotDir = robotData.direction || 0;
+            const robotDir = robotData.direction || 0; // Robot's body direction
             const radians = robotDir * Math.PI / 180;
 
             // Translate and rotate context to robot's position and orientation
@@ -1046,7 +1050,7 @@ class Arena { // File name remains Arena, class concept is Renderer
 
             // --- Draw Robot Components (Layered) ---
             ctx.lineWidth = 1; // Base line width
-            ctx.strokeStyle = '#111'; // Base stroke color
+            ctx.strokeStyle = '#111'; // Base stroke color (outline)
 
             // 1. Draw Mobility (Bottom Layer)
             this._drawMobility(ctx, mobilityType, baseRadius, chassisColor);
@@ -1054,13 +1058,13 @@ class Arena { // File name remains Arena, class concept is Renderer
             // 2. Draw Chassis (Middle Layer)
             this._drawChassis(ctx, chassisType, chassisColor, baseRadius);
 
-            // 3. Draw Turret (Top Layer)
+            // 3. Draw Turret (Top Layer) - Turret might face a different direction (TODO: add turret direction if needed)
             this._drawTurret(ctx, turretType, turretColor, baseRadius);
 
             ctx.restore(); // Restore rotation/translation
 
             // --- Draw Name and Health Bar (Common Elements) ---
-            // (Position relative to the un-rotated canvas)
+            // Position relative to the un-rotated canvas
             const textYOffset = baseRadius + 3;
             const barYOffset = textYOffset + 15; // Place bar below name
             const barWidth = baseRadius * 2;
@@ -1072,23 +1076,26 @@ class Arena { // File name remains Arena, class concept is Renderer
             ctx.fillStyle = '#ffffff';
             ctx.font = "14px 'VT323', monospace";
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom'; // Align to bottom for consistent spacing above bar
-            const displayName = robotData.name || 'Unnamed Bot';
-            ctx.shadowColor = 'black'; ctx.shadowBlur = 2;
+            ctx.textBaseline = 'bottom'; // Align text bottom relative to its position
+            const displayName = robotData.name || 'Unnamed Bot'; // Use name from server data
+            ctx.shadowColor = 'black'; ctx.shadowBlur = 2; // Add subtle shadow for readability
             ctx.fillText(displayName, robotX, robotY + textYOffset);
-            ctx.shadowBlur = 0;
+            ctx.shadowBlur = 0; // Reset shadow
 
             // Health Bar
+            // Ensure damage is within 0-100 range
             const damageClamped = Math.max(0, Math.min(100, robotData.damage || 0));
             const healthPercent = 1 - (damageClamped / 100);
-            // Background
+            // Background of the bar
             ctx.fillStyle = '#555555'; ctx.fillRect(barX, barY, barWidth, barHeight);
-            // Health portion
+            // Health portion (colored based on health remaining)
             if (healthPercent > 0) {
-                ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : healthPercent > 0.25 ? '#FFC107' : '#F44336';
+                ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : // Green > 50%
+                                healthPercent > 0.25 ? '#FFC107' : // Yellow > 25%
+                                                       '#F44336';   // Red <= 25%
                 ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
             }
-            // Border
+            // Border for the bar
             ctx.strokeStyle = '#222222'; ctx.lineWidth = 0.5; ctx.strokeRect(barX, barY, barWidth, barHeight);
             // --- End Name/Health Bar ---
         }); // End forEach robot
@@ -1097,156 +1104,94 @@ class Arena { // File name remains Arena, class concept is Renderer
     /**
      * Draws the mobility component of a robot
      * @param {CanvasRenderingContext2D} ctx - The canvas context
-     * @param {string} mobilityType - Type of mobility component
+     * @param {string} mobilityType - Type of mobility component (wheels, treads, hover, etc.)
      * @param {number} baseRadius - Base radius for scaling
      * @param {string} chassisColor - Color of chassis for coordinate mobility elements
      */
     _drawMobility(ctx, mobilityType, baseRadius, chassisColor) {
         ctx.fillStyle = '#555'; // Default mobility color
-        const darkAccent = this._darkenColor(chassisColor, 0.7);
-        
+        const darkAccent = this._darkenColor(chassisColor, 0.7); // Darker shade of chassis color
+
         let treadWidth = baseRadius * 2.0;
         let treadHeight = baseRadius * 0.6;
         let wheelRadius = baseRadius * 0.5;
         let hoverRadiusX = baseRadius * 1.2;
         let hoverRadiusY = baseRadius * 0.8;
-        
+
         switch (mobilityType) {
             case 'treads':
-                // Main treads
                 ctx.fillStyle = darkAccent;
                 ctx.fillRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight); // Top tread
                 ctx.fillRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);  // Bottom tread
                 ctx.strokeRect(-treadWidth / 2, -treadHeight * 1.5, treadWidth, treadHeight);
                 ctx.strokeRect(-treadWidth / 2, treadHeight * 0.5, treadWidth, treadHeight);
-                
-                // Tread details - small rectangles to simulate treads
+                // Tread details
                 ctx.fillStyle = '#333';
-                const segmentWidth = 5;
-                const segmentGap = 4;
+                const segmentWidth = 5; const segmentGap = 4;
                 for (let x = -treadWidth/2 + 2; x < treadWidth/2 - 2; x += segmentGap) {
-                    // Top tread details
                     ctx.fillRect(x, -treadHeight * 1.5 + 2, segmentWidth, treadHeight - 4);
-                    // Bottom tread details
                     ctx.fillRect(x, treadHeight * 0.5 + 2, segmentWidth, treadHeight - 4);
                 }
                 break;
-                
+
             case 'hover':
-                // Hover effect glow
-                ctx.save();
-                ctx.fillStyle = 'rgba(100, 150, 255, 0.3)'; // Semi-transparent blue glow
-                ctx.beginPath();
-                ctx.ellipse(0, 0, hoverRadiusX * 1.2, hoverRadiusY * 1.2, 0, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Inner glow
+                ctx.save(); // Glow effect
+                ctx.fillStyle = 'rgba(100, 150, 255, 0.3)';
+                ctx.beginPath(); ctx.ellipse(0, 0, hoverRadiusX * 1.2, hoverRadiusY * 1.2, 0, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = 'rgba(160, 190, 255, 0.2)';
-                ctx.beginPath();
-                ctx.ellipse(0, 0, hoverRadiusX * 0.9, hoverRadiusY * 0.9, 0, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.ellipse(0, 0, hoverRadiusX * 0.9, hoverRadiusY * 0.9, 0, 0, Math.PI * 2); ctx.fill();
                 ctx.restore();
-                
-                // Base hover pad
-                ctx.beginPath();
-                ctx.ellipse(0, 0, hoverRadiusX, hoverRadiusY, 0, 0, Math.PI * 2);
-                ctx.fillStyle = darkAccent;
-                ctx.fill();
-                ctx.strokeStyle = '#88aaff';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-                
-                // Hover vents
+                // Base pad
+                ctx.beginPath(); ctx.ellipse(0, 0, hoverRadiusX, hoverRadiusY, 0, 0, Math.PI * 2);
+                ctx.fillStyle = darkAccent; ctx.fill();
+                ctx.strokeStyle = '#88aaff'; ctx.lineWidth = 1; ctx.stroke();
+                // Vents
                 ctx.fillStyle = '#222';
-                ctx.beginPath();
-                ctx.ellipse(-hoverRadiusX * 0.4, 0, hoverRadiusX * 0.2, hoverRadiusY * 0.3, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.ellipse(hoverRadiusX * 0.4, 0, hoverRadiusX * 0.2, hoverRadiusY * 0.3, 0, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.ellipse(-hoverRadiusX * 0.4, 0, hoverRadiusX * 0.2, hoverRadiusY * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(hoverRadiusX * 0.4, 0, hoverRadiusX * 0.2, hoverRadiusY * 0.3, 0, 0, Math.PI * 2); ctx.fill();
                 break;
-                
+
             case 'quad':
-                // Four wheels at corners
                 ctx.fillStyle = darkAccent;
-                const offsetX = baseRadius * 0.9;
-                const offsetY = baseRadius * 0.6;
-                
-                // Draw four wheels
+                const offsetX = baseRadius * 0.9; const offsetY = baseRadius * 0.6;
+                // Wheels
                 ctx.beginPath(); ctx.arc(-offsetX, -offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
                 ctx.beginPath(); ctx.arc(offsetX, -offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
                 ctx.beginPath(); ctx.arc(-offsetX, offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
                 ctx.beginPath(); ctx.arc(offsetX, offsetY, wheelRadius * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                
-                // Wheel details
+                // Hubs
                 ctx.fillStyle = '#222';
                 ctx.beginPath(); ctx.arc(-offsetX, -offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(offsetX, -offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(-offsetX, offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(offsetX, offsetY, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
                 break;
-                
+
             case 'legs':
-                // Spider-like leg arrangement
                 ctx.fillStyle = darkAccent;
-                const legLength = baseRadius * 0.7;
-                const legWidth = baseRadius * 0.2;
-                
-                // Four legs with joints
-                // Front-right leg
-                ctx.save();
-                ctx.rotate(Math.PI/6);
-                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
-                ctx.translate(legLength, 0);
-                ctx.rotate(Math.PI/4);
-                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.restore();
-                
-                // Back-right leg
-                ctx.save();
-                ctx.rotate(-Math.PI/6);
-                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
-                ctx.translate(legLength, 0);
-                ctx.rotate(-Math.PI/4);
-                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.restore();
-                
-                // Front-left leg
-                ctx.save();
-                ctx.rotate(Math.PI*5/6);
-                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
-                ctx.translate(legLength, 0);
-                ctx.rotate(-Math.PI/4);
-                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.restore();
-                
-                // Back-left leg
-                ctx.save();
-                ctx.rotate(-Math.PI*5/6);
-                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
-                ctx.translate(legLength, 0);
-                ctx.rotate(Math.PI/4);
-                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.restore();
+                const legLength = baseRadius * 0.7; const legWidth = baseRadius * 0.2;
+                const drawLeg = (angle, segment1Angle, segment2Angle) => {
+                    ctx.save(); ctx.rotate(angle);
+                    ctx.fillRect(0, -legWidth/2, legLength, legWidth); ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                    ctx.translate(legLength, 0); ctx.rotate(segment1Angle);
+                    ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth); ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
+                    // Optional: Add a third segment
+                    // ctx.translate(legLength*0.7, 0); ctx.rotate(segment2Angle);
+                    // ctx.fillRect(0, -legWidth/2, legLength*0.5, legWidth); ctx.strokeRect(0, -legWidth/2, legLength*0.5, legWidth);
+                    ctx.restore();
+                };
+                drawLeg(Math.PI / 6, Math.PI / 4, -Math.PI / 6); // Front-right
+                drawLeg(-Math.PI / 6, -Math.PI / 4, Math.PI / 6); // Back-right
+                drawLeg(Math.PI * 5 / 6, -Math.PI / 4, Math.PI / 6); // Front-left
+                drawLeg(-Math.PI * 5 / 6, Math.PI / 4, -Math.PI / 6); // Back-left
                 break;
 
             case 'wheels': default:
-                // Standard two wheels
                 ctx.fillStyle = darkAccent;
-                
-                // Main wheels
-                ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // Left wheel
-                ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();  // Right wheel
-                
-                // Wheel hubs
+                // Wheels
+                ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // Left
+                ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();  // Right
+                // Hubs
                 ctx.fillStyle = '#222';
                 ctx.beginPath(); ctx.arc(-baseRadius * 0.8, 0, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(baseRadius * 0.8, 0, wheelRadius * 0.4, 0, Math.PI * 2); ctx.fill();
@@ -1257,139 +1202,68 @@ class Arena { // File name remains Arena, class concept is Renderer
     /**
      * Draws the chassis component of a robot
      * @param {CanvasRenderingContext2D} ctx - The canvas context
-     * @param {string} chassisType - Type of chassis
+     * @param {string} chassisType - Type of chassis (medium, heavy, light, etc.)
      * @param {string} chassisColor - Color of the chassis
      * @param {number} baseRadius - Base radius for scaling
      */
     _drawChassis(ctx, chassisType, chassisColor, baseRadius) {
         ctx.fillStyle = chassisColor;
-        
+        ctx.strokeStyle = '#111'; // Reset stroke color
+
         switch (chassisType) {
             case 'heavy':
-                // Heavy armored chassis - more square, thicker
-                const heavyWidth = baseRadius * 2.4;
-                const heavyHeight = baseRadius * 1.6;
-                const heavyBorderRadius = 4;
-                
-                // Draw chassis body (rounded rectangle)
+                const heavyWidth = baseRadius * 2.4; const heavyHeight = baseRadius * 1.6; const heavyBorderRadius = 4;
                 this._drawRoundedRect(ctx, -heavyWidth/2, -heavyHeight/2, heavyWidth, heavyHeight, heavyBorderRadius);
-                
-                // Draw armor plates/details
+                // Armor plates/details
                 ctx.fillStyle = this._darkenColor(chassisColor, 0.8);
-                
-                // Top armor strip
-                this._drawRoundedRect(ctx, -heavyWidth/2 + 4, -heavyHeight/2 + 3, heavyWidth - 8, heavyHeight/4, 2);
-                
-                // Bottom armor strip
-                this._drawRoundedRect(ctx, -heavyWidth/2 + 4, heavyHeight/2 - heavyHeight/4 - 3, heavyWidth - 8, heavyHeight/4, 2);
-                
+                this._drawRoundedRect(ctx, -heavyWidth/2 + 4, -heavyHeight/2 + 3, heavyWidth - 8, heavyHeight/4, 2); // Top strip
+                this._drawRoundedRect(ctx, -heavyWidth/2 + 4, heavyHeight/2 - heavyHeight/4 - 3, heavyWidth - 8, heavyHeight/4, 2); // Bottom strip
                 // Center detail
                 ctx.fillStyle = this._darkenColor(chassisColor, 0.6);
-                ctx.beginPath();
-                ctx.arc(0, 0, heavyHeight/4, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+                ctx.beginPath(); ctx.arc(0, 0, heavyHeight/4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
                 break;
-                
+
             case 'light':
-                // Light agile chassis - streamlined, angular
-                const lightWidth = baseRadius * 1.7;
-                const lightHeight = baseRadius * 1.2;
-                
-                // Main chassis - pointy front
+                const lightWidth = baseRadius * 1.7; const lightHeight = baseRadius * 1.2;
+                // Pointy front shape
                 ctx.beginPath();
-                ctx.moveTo(lightWidth/2, 0); // Front point
-                ctx.lineTo(lightWidth/4, -lightHeight/2); // Top-right corner
-                ctx.lineTo(-lightWidth/2, -lightHeight/2); // Top-left corner
-                ctx.lineTo(-lightWidth/2, lightHeight/2); // Bottom-left corner
-                ctx.lineTo(lightWidth/4, lightHeight/2); // Bottom-right corner
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-                
+                ctx.moveTo(lightWidth/2, 0); ctx.lineTo(lightWidth/4, -lightHeight/2); ctx.lineTo(-lightWidth/2, -lightHeight/2);
+                ctx.lineTo(-lightWidth/2, lightHeight/2); ctx.lineTo(lightWidth/4, lightHeight/2); ctx.closePath();
+                ctx.fill(); ctx.stroke();
                 // Detail lines
                 ctx.strokeStyle = this._darkenColor(chassisColor, 0.7);
-                ctx.beginPath();
-                ctx.moveTo(-lightWidth/3, -lightHeight/2);
-                ctx.lineTo(0, 0);
-                ctx.lineTo(-lightWidth/3, lightHeight/2);
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-lightWidth/3, -lightHeight/2); ctx.lineTo(0, 0); ctx.lineTo(-lightWidth/3, lightHeight/2); ctx.stroke();
                 break;
-                
+
             case 'hexagonal':
-                // Hex-shaped chassis
-                const hexWidth = baseRadius * 2.2;
-                const hexHeight = baseRadius * 1.5;
-                const hexSide = hexHeight / 2;
-                
-                // Draw hexagon
+                const hexWidth = baseRadius * 2.2; const hexHeight = baseRadius * 1.5; const hexSide = hexHeight / 2;
                 ctx.beginPath();
-                ctx.moveTo(hexWidth/2, 0); // Right point
-                ctx.lineTo(hexWidth/4, -hexSide); // Top-right
-                ctx.lineTo(-hexWidth/4, -hexSide); // Top-left
-                ctx.lineTo(-hexWidth/2, 0); // Left point
-                ctx.lineTo(-hexWidth/4, hexSide); // Bottom-left
-                ctx.lineTo(hexWidth/4, hexSide); // Bottom-right
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-                
-                // Hex detail
+                ctx.moveTo(hexWidth/2, 0); ctx.lineTo(hexWidth/4, -hexSide); ctx.lineTo(-hexWidth/4, -hexSide);
+                ctx.lineTo(-hexWidth/2, 0); ctx.lineTo(-hexWidth/4, hexSide); ctx.lineTo(hexWidth/4, hexSide); ctx.closePath();
+                ctx.fill(); ctx.stroke();
+                // Center detail
                 ctx.fillStyle = this._darkenColor(chassisColor, 0.85);
-                ctx.beginPath();
-                ctx.arc(0, 0, hexHeight/4, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+                ctx.beginPath(); ctx.arc(0, 0, hexHeight/4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
                 break;
-                
+
             case 'triangular':
-                // Triangle-shaped chassis
-                const triWidth = baseRadius * 2.2;
-                const triHeight = baseRadius * 1.8;
-                
-                // Draw Triangle
+                const triWidth = baseRadius * 2.2; const triHeight = baseRadius * 1.8;
                 ctx.beginPath();
-                ctx.moveTo(triWidth/2, 0); // Point facing forward
-                ctx.lineTo(-triWidth/2, -triHeight/2); // Top-left
-                ctx.lineTo(-triWidth/2, triHeight/2); // Bottom-left
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-                
-                // Triangle details - smaller inner triangle
+                ctx.moveTo(triWidth/2, 0); ctx.lineTo(-triWidth/2, -triHeight/2); ctx.lineTo(-triWidth/2, triHeight/2); ctx.closePath();
+                ctx.fill(); ctx.stroke();
+                // Inner triangle detail
                 ctx.fillStyle = this._darkenColor(chassisColor, 0.8);
-                ctx.beginPath();
-                ctx.moveTo(triWidth/4, 0);
-                ctx.lineTo(-triWidth/3, -triHeight/3);
-                ctx.lineTo(-triWidth/3, triHeight/3);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(triWidth/4, 0); ctx.lineTo(-triWidth/3, -triHeight/3); ctx.lineTo(-triWidth/3, triHeight/3); ctx.closePath();
+                ctx.fill(); ctx.stroke();
                 break;
 
             case 'medium': default:
-                // Standard rounded chassis
-                const mediumWidth = baseRadius * 2.0;
-                const mediumHeight = baseRadius * 1.4;
-                const mediumBorderRadius = 3;
-                
-                // Draw chassis body
+                const mediumWidth = baseRadius * 2.0; const mediumHeight = baseRadius * 1.4; const mediumBorderRadius = 3;
                 this._drawRoundedRect(ctx, -mediumWidth/2, -mediumHeight/2, mediumWidth, mediumHeight, mediumBorderRadius);
-                
-                // Add detail lines
+                // Detail lines
                 ctx.strokeStyle = this._darkenColor(chassisColor, 0.7);
-                ctx.beginPath();
-                ctx.moveTo(-mediumWidth/3, -mediumHeight/2);
-                ctx.lineTo(-mediumWidth/3, mediumHeight/2);
-                ctx.stroke();
-                
-                ctx.beginPath();
-                ctx.moveTo(mediumWidth/6, -mediumHeight/2);
-                ctx.lineTo(mediumWidth/6, mediumHeight/2);
-                ctx.stroke();
-                
-                // Reset stroke style
-                ctx.strokeStyle = '#111';
+                ctx.beginPath(); ctx.moveTo(-mediumWidth/3, -mediumHeight/2); ctx.lineTo(-mediumWidth/3, mediumHeight/2); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(mediumWidth/6, -mediumHeight/2); ctx.lineTo(mediumWidth/6, mediumHeight/2); ctx.stroke();
                 break;
         }
     }
@@ -1397,130 +1271,68 @@ class Arena { // File name remains Arena, class concept is Renderer
     /**
      * Draws the turret component of a robot
      * @param {CanvasRenderingContext2D} ctx - The canvas context
-     * @param {string} turretType - Type of turret
+     * @param {string} turretType - Type of turret (standard, cannon, laser, etc.)
      * @param {string} turretColor - Color of the turret
      * @param {number} baseRadius - Base radius for scaling
      */
     _drawTurret(ctx, turretType, turretColor, baseRadius) {
         ctx.fillStyle = turretColor;
         ctx.strokeStyle = '#111'; // Reset stroke for turret
-        
+
         switch (turretType) {
             case 'cannon':
-                // Heavy cannon turret
-                const cannonBaseRadius = baseRadius * 0.7; 
-                const cannonLength = baseRadius * 1.5; 
-                const cannonWidth = baseRadius * 0.4;
-                
-                // Rectangular turret base
-                ctx.beginPath(); 
-                ctx.rect(-cannonBaseRadius * 0.5, -cannonBaseRadius * 0.8, cannonBaseRadius, cannonBaseRadius * 1.6); 
-                ctx.fill(); 
-                ctx.stroke();
-                
-                // Cannon barrel
-                ctx.fillRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonLength, cannonWidth); 
-                ctx.strokeRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonLength, cannonWidth);
-                
+                const cannonBaseRadius = baseRadius * 0.7; const cannonLength = baseRadius * 1.5; const cannonWidth = baseRadius * 0.4;
+                // Base
+                ctx.beginPath(); ctx.rect(-cannonBaseRadius * 0.5, -cannonBaseRadius * 0.8, cannonBaseRadius, cannonBaseRadius * 1.6); ctx.fill(); ctx.stroke();
+                // Barrel
+                ctx.fillRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonLength, cannonWidth); ctx.strokeRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonLength, cannonWidth);
                 // Barrel reinforcement
                 ctx.fillStyle = this._darkenColor(turretColor, 0.8);
-                ctx.fillRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonWidth/2, cannonWidth);
-                ctx.strokeRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonWidth/2, cannonWidth);
-                
+                ctx.fillRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonWidth/2, cannonWidth); ctx.strokeRect(cannonBaseRadius * 0.5, -cannonWidth / 2, cannonWidth/2, cannonWidth);
                 // Muzzle brake
                 ctx.fillStyle = this._darkenColor(turretColor, 0.6);
                 ctx.fillRect(cannonBaseRadius * 0.5 + cannonLength - cannonWidth/2, -cannonWidth/2 - cannonWidth/4, cannonWidth/2, cannonWidth * 1.5);
                 ctx.strokeRect(cannonBaseRadius * 0.5 + cannonLength - cannonWidth/2, -cannonWidth/2 - cannonWidth/4, cannonWidth/2, cannonWidth * 1.5);
                 break;
-                
+
             case 'laser':
-                // High-tech laser turret
-                const laserBaseRadius = baseRadius * 0.5; 
-                const laserLength = baseRadius * 1.7; 
-                const laserWidth = baseRadius * 0.2;
-                
-                // Round turret base
-                ctx.beginPath(); 
-                ctx.arc(0, 0, laserBaseRadius, 0, Math.PI * 2); 
-                ctx.fill(); 
-                ctx.stroke();
-                
-                // Thin laser barrel
-                ctx.fillRect(laserBaseRadius*0.8, -laserWidth / 2, laserLength, laserWidth); 
-                ctx.strokeRect(laserBaseRadius*0.8, -laserWidth / 2, laserLength, laserWidth);
-                
-                // Energy coils around barrel
-                const coilCount = 3;
-                const coilSpacing = laserLength / (coilCount + 1);
-                const coilHeight = laserWidth * 2;
-                
+                const laserBaseRadius = baseRadius * 0.5; const laserLength = baseRadius * 1.7; const laserWidth = baseRadius * 0.2;
+                // Base
+                ctx.beginPath(); ctx.arc(0, 0, laserBaseRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                // Barrel
+                ctx.fillRect(laserBaseRadius*0.8, -laserWidth / 2, laserLength, laserWidth); ctx.strokeRect(laserBaseRadius*0.8, -laserWidth / 2, laserLength, laserWidth);
+                // Energy coils
+                const coilCount = 3; const coilSpacing = laserLength / (coilCount + 1); const coilHeight = laserWidth * 2;
                 ctx.fillStyle = this._lightenColor(turretColor, 1.3);
                 for (let i = 1; i <= coilCount; i++) {
                     const coilX = laserBaseRadius*0.8 + i * coilSpacing;
-                    ctx.beginPath();
-                    ctx.rect(coilX - laserWidth/2, -coilHeight/2, laserWidth, coilHeight);
-                    ctx.fill();
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.rect(coilX - laserWidth/2, -coilHeight/2, laserWidth, coilHeight); ctx.fill(); ctx.stroke();
                 }
-                
                 // Emitter tip
-                ctx.fillStyle = '#88CCFF';
-                ctx.beginPath();
-                ctx.arc(laserBaseRadius*0.8 + laserLength, 0, laserWidth, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+                ctx.fillStyle = '#88CCFF'; ctx.beginPath(); ctx.arc(laserBaseRadius*0.8 + laserLength, 0, laserWidth, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
                 break;
-                
+
             case 'dual':
-                // Dual barrel turret
-                const dualBaseRadius = baseRadius * 0.6;
-                const dualLength = baseRadius * 1.2;
-                const dualWidth = baseRadius * 0.25;
-                const dualGap = dualWidth * 0.8;
-                
-                // Round base with detail
-                ctx.beginPath();
-                ctx.arc(0, 0, dualBaseRadius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                
-                // Detail circle in center
-                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
-                ctx.beginPath();
-                ctx.arc(0, 0, dualBaseRadius * 0.5, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                
-                // Reset fill color
+                const dualBaseRadius = baseRadius * 0.6; const dualLength = baseRadius * 1.2; const dualWidth = baseRadius * 0.25; const dualGap = dualWidth * 0.8;
+                // Base
+                ctx.beginPath(); ctx.arc(0, 0, dualBaseRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                // Center detail
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8); ctx.beginPath(); ctx.arc(0, 0, dualBaseRadius * 0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                // Barrels
                 ctx.fillStyle = turretColor;
-                
-                // Upper barrel
-                ctx.fillRect(dualBaseRadius*0.8, -dualGap/2 - dualWidth, dualLength, dualWidth);
-                ctx.strokeRect(dualBaseRadius*0.8, -dualGap/2 - dualWidth, dualLength, dualWidth);
-                
-                // Lower barrel
-                ctx.fillRect(dualBaseRadius*0.8, dualGap/2, dualLength, dualWidth);
-                ctx.strokeRect(dualBaseRadius*0.8, dualGap/2, dualLength, dualWidth);
+                ctx.fillRect(dualBaseRadius*0.8, -dualGap/2 - dualWidth, dualLength, dualWidth); ctx.strokeRect(dualBaseRadius*0.8, -dualGap/2 - dualWidth, dualLength, dualWidth); // Upper
+                ctx.fillRect(dualBaseRadius*0.8, dualGap/2, dualLength, dualWidth); ctx.strokeRect(dualBaseRadius*0.8, dualGap/2, dualLength, dualWidth); // Lower
                 break;
-                
+
             case 'missile':
-                // Missile launcher turret
-                const missileBaseRadius = baseRadius * 0.7;
-                const missileLength = baseRadius * 1.1;
-                const missileWidth = baseRadius * 1.0;
-                const missileCount = 3; // Visible missile tubes
-                
-                // Rectangular base
+                const missileBaseRadius = baseRadius * 0.7; const missileLength = baseRadius * 1.1; const missileWidth = baseRadius * 1.0; const missileCount = 3;
+                // Base
                 this._drawRoundedRect(ctx, -missileBaseRadius*0.7, -missileBaseRadius*0.7, missileBaseRadius*1.4, missileBaseRadius*1.4, 2);
-                
                 // Launcher box
                 ctx.fillStyle = this._darkenColor(turretColor, 0.8);
                 this._drawRoundedRect(ctx, missileBaseRadius*0.6, -missileWidth/2, missileLength, missileWidth, 2);
-                
                 // Missile tubes
-                const tubeHeight = missileWidth / (missileCount + 1);
-                ctx.fillStyle = '#333';
-                
+                const tubeHeight = missileWidth / (missileCount + 1); ctx.fillStyle = '#333';
                 for (let i = 1; i <= missileCount; i++) {
                     const tubeY = -missileWidth/2 + i * tubeHeight;
                     this._drawRoundedRect(ctx, missileBaseRadius*0.7, tubeY - tubeHeight*0.4, missileLength*0.8, tubeHeight*0.8, 2);
@@ -1528,160 +1340,253 @@ class Arena { // File name remains Arena, class concept is Renderer
                 break;
 
             case 'standard': default:
-                // Standard turret with medium barrel
-                const stdBaseRadius = baseRadius * 0.6; 
-                const stdLength = baseRadius * 1.3; 
-                const stdWidth = baseRadius * 0.3;
-                
-                // Round turret base
-                ctx.beginPath(); 
-                ctx.arc(0, 0, stdBaseRadius, 0, Math.PI * 2); 
-                ctx.fill(); 
-                ctx.stroke();
-                
+                const stdBaseRadius = baseRadius * 0.6; const stdLength = baseRadius * 1.3; const stdWidth = baseRadius * 0.3;
+                // Base
+                ctx.beginPath(); ctx.arc(0, 0, stdBaseRadius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
                 // Center detail
-                ctx.fillStyle = this._darkenColor(turretColor, 0.8);
-                ctx.beginPath();
-                ctx.arc(0, 0, stdBaseRadius * 0.4, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Reset fill color for barrel
+                ctx.fillStyle = this._darkenColor(turretColor, 0.8); ctx.beginPath(); ctx.arc(0, 0, stdBaseRadius * 0.4, 0, Math.PI * 2); ctx.fill();
+                // Barrel
                 ctx.fillStyle = turretColor;
-                
-                // Standard barrel
-                ctx.fillRect(stdBaseRadius*0.8, -stdWidth / 2, stdLength, stdWidth); 
-                ctx.strokeRect(stdBaseRadius*0.8, -stdWidth / 2, stdLength, stdWidth);
-                
-                // Barrel detail
+                ctx.fillRect(stdBaseRadius*0.8, -stdWidth / 2, stdLength, stdWidth); ctx.strokeRect(stdBaseRadius*0.8, -stdWidth / 2, stdLength, stdWidth);
+                // Barrel detail/tip
                 ctx.fillStyle = this._darkenColor(turretColor, 0.7);
-                ctx.fillRect(stdBaseRadius*0.8 + stdLength - stdWidth, -stdWidth / 2, stdWidth, stdWidth);
-                ctx.strokeRect(stdBaseRadius*0.8 + stdLength - stdWidth, -stdWidth / 2, stdWidth, stdWidth);
+                ctx.fillRect(stdBaseRadius*0.8 + stdLength - stdWidth, -stdWidth / 2, stdWidth, stdWidth); ctx.strokeRect(stdBaseRadius*0.8 + stdLength - stdWidth, -stdWidth / 2, stdWidth, stdWidth);
                 break;
         }
     }
 
-    /**
-     * Helper method to draw a rounded rectangle
-     * @param {CanvasRenderingContext2D} ctx - The canvas context
-     * @param {number} x - X coordinate of top-left corner
-     * @param {number} y - Y coordinate of top-left corner
-     * @param {number} width - Width of rectangle
-     * @param {number} height - Height of rectangle
-     * @param {number} radius - Corner radius
-     */
+    /** Helper method to draw a rounded rectangle */
     _drawRoundedRect(ctx, x, y, width, height, radius) {
-        // Ensure radius is not too large for the rectangle
-        radius = Math.min(radius, Math.min(width / 2, height / 2));
-        
+        radius = Math.min(radius, Math.min(width / 2, height / 2)); // Prevent overly large radius
         ctx.beginPath();
-        ctx.moveTo(x + radius, y);
-        ctx.lineTo(x + width - radius, y);
-        ctx.arcTo(x + width, y, x + width, y + radius, radius);
-        ctx.lineTo(x + width, y + height - radius);
-        ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
-        ctx.lineTo(x + radius, y + height);
-        ctx.arcTo(x, y + height, x, y + height - radius, radius);
-        ctx.lineTo(x, y + radius);
-        ctx.arcTo(x, y, x + radius, y, radius);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        ctx.moveTo(x + radius, y); ctx.lineTo(x + width - radius, y); ctx.arcTo(x + width, y, x + width, y + radius, radius);
+        ctx.lineTo(x + width, y + height - radius); ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
+        ctx.lineTo(x + radius, y + height); ctx.arcTo(x, y + height, x, y + height - radius, radius);
+        ctx.lineTo(x, y + radius); ctx.arcTo(x, y, x + radius, y, radius); ctx.closePath();
+        ctx.fill(); ctx.stroke();
     }
 
-    /**
-     * Helper method to darken a color
-     * @param {string} color - Hex color string
-     * @param {number} factor - Factor to darken by (0-1, where lower is darker)
-     * @returns {string} Darkened hex color
-     */
+    /** Helper method to darken a hex color */
     _darkenColor(color, factor) {
-        // Convert hex to RGB
-        let r = parseInt(color.substring(1, 3), 16);
-        let g = parseInt(color.substring(3, 5), 16);
-        let b = parseInt(color.substring(5, 7), 16);
-        
-        // Apply darkening factor
-        r = Math.max(0, Math.floor(r * factor));
-        g = Math.max(0, Math.floor(g * factor));
-        b = Math.max(0, Math.floor(b * factor));
-        
-        // Convert back to hex
+        let r = parseInt(color.substring(1, 3), 16); let g = parseInt(color.substring(3, 5), 16); let b = parseInt(color.substring(5, 7), 16);
+        r = Math.max(0, Math.floor(r * factor)); g = Math.max(0, Math.floor(g * factor)); b = Math.max(0, Math.floor(b * factor));
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     }
 
-    /**
-     * Helper method to lighten a color
-     * @param {string} color - Hex color string
-     * @param {number} factor - Factor to lighten by (>1 for lighter)
-     * @returns {string} Lightened hex color
-     */
+    /** Helper method to lighten a hex color */
     _lightenColor(color, factor) {
-        // Convert hex to RGB
-        let r = parseInt(color.substring(1, 3), 16);
-        let g = parseInt(color.substring(3, 5), 16);
-        let b = parseInt(color.substring(5, 7), 16);
-        
-        // Apply lightening factor
-        r = Math.min(255, Math.floor(r * factor));
-        g = Math.min(255, Math.floor(g * factor));
-        b = Math.min(255, Math.floor(b * factor));
-        
-        // Convert back to hex
+        let r = parseInt(color.substring(1, 3), 16); let g = parseInt(color.substring(3, 5), 16); let b = parseInt(color.substring(5, 7), 16);
+        r = Math.min(255, Math.floor(r * factor)); g = Math.min(255, Math.floor(g * factor)); b = Math.min(255, Math.floor(b * factor));
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     }
     // === END: Enhanced Robot Drawing System ===
 
 
-    /** Draws missiles (No change needed) */
+    /** Draws missiles WITH TRAILS */
     drawMissiles(missiles) {
         const ctx = this.ctx;
         if (!ctx || !missiles || missiles.length === 0) return;
-        ctx.save();
-        ctx.fillStyle = '#FFA500'; // Bright orange
+
+        const trailLength = 5; // How many segments, conceptually
+        const baseTrailOpacity = 0.5; // Max opacity of the trail near the missile
+
         missiles.forEach(missile => {
+            // Get missile properties from the gameState update
+            const missileX = this.translateX(missile.x);
+            const missileY = this.translateY(missile.y);
+            const radius = missile.radius || 4; // Use radius from data or default
+            const directionRad = (missile.direction || 0) * Math.PI / 180; // Missile direction in radians
+
+            // --- Draw Trail ---
+            // Simple fading line trail extending behind the missile
+            const trailRenderLength = radius + trailLength * 3; // Adjust multiplier for visual length
+            const tailEndX = missileX - Math.cos(directionRad) * trailRenderLength;
+            const tailEndY = missileY + Math.sin(directionRad) * trailRenderLength; // Add sin because Y is inverted
+
+            // Create gradient from missile color to transparent
+            const gradient = ctx.createLinearGradient(missileX, missileY, tailEndX, tailEndY);
+            gradient.addColorStop(0, `rgba(255, 165, 0, ${baseTrailOpacity})`); // Orange near missile
+            gradient.addColorStop(1, `rgba(128, 128, 128, 0)`);           // Fade to transparent grey
+
+            ctx.save();
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = Math.max(1, radius * 0.8); // Trail width based on missile size
             ctx.beginPath();
-            ctx.arc(this.translateX(missile.x), this.translateY(missile.y), missile.radius, 0, Math.PI * 2);
+            ctx.moveTo(missileX, missileY); // Start line at missile center
+            ctx.lineTo(tailEndX, tailEndY); // End line behind missile
+            ctx.stroke();
+            ctx.restore();
+            // --- End Trail ---
+
+
+            // --- Draw Missile Body ---
+            ctx.save();
+            ctx.fillStyle = '#FFA500'; // Bright orange base color
+            ctx.beginPath();
+            ctx.arc(missileX, missileY, radius, 0, Math.PI * 2);
             ctx.fill();
+            // Optional: Add a small highlight for a bit of depth
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Semi-transparent white
+            ctx.beginPath();
+            // Offset the highlight slightly up and to the left
+            ctx.arc(missileX - radius*0.2, missileY - radius*0.2, radius*0.5, 0, Math.PI*2);
+            ctx.fill();
+            ctx.restore();
+            // --- End Missile Body ---
         });
-        ctx.restore();
     }
 
-    /** Draws explosion effects (No change needed) */
+    /** Draws active muzzle flash effects */
+    drawMuzzleFlashes(activeFlashes) {
+        const ctx = this.ctx;
+        if (!ctx || !activeFlashes || activeFlashes.length === 0) return;
+
+        const now = Date.now();
+
+        activeFlashes.forEach(flash => {
+            const elapsedTime = now - flash.startTime;
+            const progress = Math.min(elapsedTime / flash.duration, 1);
+            // Should already be filtered by Game.js, but good safety check
+            if (progress >= 1) return;
+
+            const alpha = 1.0 - progress; // Fade out effect
+            const flashX = this.translateX(flash.x); // Position where missile spawned
+            const flashY = this.translateY(flash.y);
+            const directionRad = flash.direction * Math.PI / 180; // Direction flash points
+
+            ctx.save();
+            ctx.translate(flashX, flashY); // Move origin to flash position
+            ctx.rotate(directionRad);      // Rotate context to match firing direction
+            ctx.globalAlpha = alpha;       // Apply fade effect
+
+            // --- Draw flash based on turret type ---
+            switch (flash.type) {
+                case 'cannon':
+                case 'standard':
+                case 'dual': // Using a star shape for these
+                    const flashSize = 15 + (flash.type === 'cannon' ? 5 : 0); // Cannon gets bigger flash
+                    ctx.fillStyle = `rgba(255, 223, 0, ${alpha})`; // Yellow/Gold core
+                    ctx.strokeStyle = `rgba(255, 165, 0, ${alpha * 0.5})`; // Orange border
+                    ctx.lineWidth = 2;
+                    // Draw a star shape
+                    ctx.beginPath();
+                    for (let i = 0; i < 10; i++) { // 5 points, 10 vertices
+                        const outerRadius = flashSize * (1 - progress); // Flash shrinks over time
+                        const innerRadius = outerRadius / 2;
+                        const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                        // Calculate vertex position using cosine and sine
+                        ctx.lineTo(Math.cos(i * Math.PI / 5) * radius, Math.sin(i * Math.PI / 5) * radius);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    break;
+
+                case 'laser':
+                    const beamLength = 40 * (1 - progress * 0.5); // Beam shrinks, less dramatically
+                    const beamWidth = 6 * (1 - progress);      // Beam gets thinner
+                    ctx.fillStyle = `rgba(173, 216, 230, ${alpha})`; // Light blue color
+                    // Add a glow effect
+                    ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+                    ctx.shadowBlur = 10 * (1-progress);
+                    // Draw a rectangle extending forward from the origin (barrel tip)
+                    ctx.fillRect(0, -beamWidth / 2, beamLength, beamWidth);
+                    // Draw a brighter core inside the beam
+                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`; // White core
+                    ctx.fillRect(0, -beamWidth / 4, beamLength * 0.8, beamWidth / 2);
+                    // Reset shadow for other drawings
+                    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+                    break;
+
+                case 'missile': // Draw a smoke puff for missile launch
+                    const puffRadius = 12 * (1 + progress); // Puff expands outwards
+                    const puffColor = `rgba(160, 160, 160, ${alpha * 0.8})`; // Grey smoke color
+                    ctx.fillStyle = puffColor;
+                    ctx.beginPath();
+                    // Draw circle slightly offset behind origin to simulate coming from barrel
+                    ctx.arc(-puffRadius * 0.2, 0, puffRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Add a smaller, darker inner puff for variation
+                    ctx.fillStyle = `rgba(100, 100, 100, ${alpha * 0.6})`;
+                    ctx.beginPath();
+                    ctx.arc(-puffRadius*0.1, 0, puffRadius*0.6, 0, Math.PI*2);
+                    ctx.fill();
+                    break;
+
+                default: // Fallback for unknown types (optional)
+                    // Could draw a simple small circle
+                    // ctx.fillStyle = 'white';
+                    // ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+                    break;
+            }
+            // --- End flash drawing ---
+
+            ctx.restore(); // Restore translation, rotation, and alpha
+        });
+    }
+
+
+    /** Draws explosion effects */
     drawEffects(activeExplosions) {
         const ctx = this.ctx;
         if (!ctx || !activeExplosions || activeExplosions.length === 0) return;
         const now = Date.now();
+        // Iterate backwards for safe removal if needed (though Game.js filters now)
         for (let i = activeExplosions.length - 1; i >= 0; i--) {
             const explosion = activeExplosions[i];
             const elapsedTime = now - explosion.startTime;
             const progress = Math.min(elapsedTime / explosion.duration, 1);
-            if (progress >= 1) { activeExplosions.splice(i, 1); continue; }
-            const easeOutProgress = progress * (2 - progress);
+
+            // If progress is 1, it should have been filtered by Game.js, skip just in case
+            if (progress >= 1) continue;
+
+            // Use an easing function for smoother expansion/fade
+            const easeOutProgress = progress * (2 - progress); // Ease-out quad
             const currentRadius = explosion.maxRadius * easeOutProgress;
+
+            // Select color based on progress through the sequence
             const colorIndex = Math.floor(progress * explosion.colorSequence.length);
-            const color = explosion.colorSequence[colorIndex] || explosion.colorSequence[explosion.colorSequence.length - 1];
+            const color = explosion.colorSequence[colorIndex] || explosion.colorSequence[explosion.colorSequence.length - 1]; // Fallback
+
             ctx.save();
-            ctx.globalAlpha = 1.0 - progress; ctx.fillStyle = color; ctx.beginPath();
+            ctx.globalAlpha = 1.0 - progress; // Fade out
+            ctx.fillStyle = color;
+            ctx.beginPath();
             ctx.arc(this.translateX(explosion.x), this.translateY(explosion.y), currentRadius, 0, Math.PI * 2);
-            ctx.fill(); ctx.restore();
+            ctx.fill();
+            ctx.restore();
         }
     }
 
-    /** Clears main canvas and draws background (No change needed) */
+    /** Clears main canvas and draws the persistent background */
     clear() {
         if (!this.ctx || !this.backgroundCanvas) return;
+        // Clear the entire canvas
         this.ctx.clearRect(0, 0, this.width, this.height);
+        // Draw the pre-rendered background (texture, grid, scorch marks)
         this.ctx.drawImage(this.backgroundCanvas, 0, 0);
     }
 
-    /** Main drawing loop method (No change needed in call structure) */
-    draw(missiles, activeExplosions) {
-        if (!this.ctx || !this.backgroundCanvas) { console.error("Cannot draw, context/background missing!"); return; }
-        this.ctx.clearRect(0, 0, this.width, this.height);        // 1. Clear
-        this.ctx.drawImage(this.backgroundCanvas, 0, 0);          // 2. Draw Background (inc. scorch marks)
-        this.drawRobots();                                        // 3. Draw Robots (uses new logic)
-        this.drawMissiles(missiles);                              // 4. Draw Missiles
-        this.drawEffects(activeExplosions);                       // 5. Draw Effects (Explosions)
+    /** Main drawing loop method - called by Game.js */
+    draw(missiles, activeExplosions, activeFlashes) { // <<< UPDATED SIGNATURE
+        if (!this.ctx || !this.backgroundCanvas) {
+            console.error("Cannot draw, context/background missing!");
+            return;
+        }
+        // 1. Clear the dynamic canvas and draw the static background
+        this.clear(); // Uses the method above
+
+        // 2. Draw Robots
+        this.drawRobots();
+
+        // 3. Draw Missiles (now with trails)
+        this.drawMissiles(missiles);
+
+        // 4. Draw Explosions
+        this.drawEffects(activeExplosions);
+
+        // 5. Draw Muzzle Flashes <<< ADDED
+        this.drawMuzzleFlashes(activeFlashes);
     }
 } // End Arena (Renderer) Class
 ```
@@ -6149,11 +6054,13 @@ class Network {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
+    <!-- Engine -->
     <script src="js/engine/arena.js"></script>
-    <script src="js/engine/game.js"></script>
-    <script src="js/engine/audio.js"></script> <!-- Defines AudioManager -->
-    <!-- LocalStorageManager no longer needed for snippets/loadouts -->
-    <!-- <script src="js/utils/storage.js"></script> -->
+    <script src="js/engine/interpreter.js"></script>
+    <script src="js/engine/collision.js"></script> <!-- <<< MOVED HERE (Before game.js) -->
+    <script src="js/engine/game.js"></script>      <!-- Game.js can now use CollisionSystem -->
+    <script src="js/engine/audio.js"></script>
+    <!-- UI/SERVER -->
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
     <script src="js/ui/loadoutBuilder.js"></script> <!-- Defines LoadoutBuilder -->
@@ -6183,7 +6090,7 @@ const DESTRUCTION_VISUAL_DELAY_MS = 1500; // 1.5 seconds
 
 /**
  * Represents a single active game match on the server.
- * Manages game state, robots (with visual loadouts), interpreter, collisions, // <-- Updated description
+ * Manages game state, robots (with visual loadouts), interpreter, collisions,
  * game loop, delayed game over logic, sound event collection & broadcasting,
  * and notifies GameManager upon completion.
  */
@@ -6205,14 +6112,13 @@ class GameInstance {
         // Key: robotId (socketId or dummyId), Value: { socket, loadout: { name, visuals, code }, robot: ServerRobot }
         this.players = new Map();
         this.robots = []; // Array of ServerRobot instances
-        // this.playerNames = new Map(); // Potentially redundant if name is in players map
         this.interpreter = new ServerRobotInterpreter();
         this.collisionSystem = new ServerCollisionSystem(this);
         this.gameLoopInterval = null;
         this.lastTickTime = 0;
         this.explosionsToBroadcast = [];
-        this.fireEventsToBroadcast = [];
-        this.hitEventsToBroadcast = [];
+        this.fireEventsToBroadcast = []; // Will contain { type, x, y, ownerId, direction }
+        this.hitEventsToBroadcast = []; // Will contain { type, x, y, targetId }
         this.gameOverCallback = gameOverCallback;
         this.gameName = gameName || `Game ${gameId}`;
         this.spectatorRoom = `spectator-${this.gameId}`;
@@ -6242,9 +6148,10 @@ class GameInstance {
             const { socket, loadout } = playerData;
             const { name, visuals, code } = loadout; // Destructure loadout
 
+            // Stagger starting positions
             const startX = index % 2 === 0 ? 150 : ARENA_WIDTH - 150;
-            const startY = 100 + Math.floor(index / 2) * (ARENA_HEIGHT - 200);
-            const startDir = index % 2 === 0 ? 0 : 180;
+            const startY = 100 + Math.floor(index / 2) * (ARENA_HEIGHT - 200); // Adjust Y for more players if needed
+            const startDir = index % 2 === 0 ? 0 : 180; // Face opponents
             const robotId = socket ? socket.id : `dummy-bot-${this.gameId}`; // Use socket ID or generate dummy ID
 
             // --- Create ServerRobot instance, passing visuals and name ---
@@ -6254,7 +6161,6 @@ class GameInstance {
                 visuals, // Pass the visuals object
                 name     // Pass the name
             );
-            // robot.name = name; // Name is now set in constructor
 
             this.robots.push(robot);
 
@@ -6264,162 +6170,263 @@ class GameInstance {
                 loadout: loadout, // Store the original loadout data
                 robot: robot      // Store the created robot instance
             });
-            // this.playerNames.set(robot.id, name); // Can likely remove this map
 
             console.log(`[${this.gameId}] Added participant ${name} (${robot.id}), Socket: ${socket ? 'Yes' : 'No'}`);
             if (socket) {
+                // Join the game-specific room
                 socket.join(this.gameId);
             }
         });
     }
 
-    // --- startGameLoop, stopGameLoop (No changes needed) ---
+    // --- startGameLoop, stopGameLoop ---
     startGameLoop() {
         console.log(`[${this.gameId}] Starting game loop.`);
         this.lastTickTime = Date.now();
         this.gameEnded = false;
-        if (this.gameLoopInterval) clearInterval(this.gameLoopInterval);
+        if (this.gameLoopInterval) clearInterval(this.gameLoopInterval); // Clear any existing interval
+        // Use arrow function to maintain 'this' context
         this.gameLoopInterval = setInterval(() => {
-            if (this.gameEnded) { this.stopGameLoop(); return; }
+            if (this.gameEnded) { // Check if game has ended during the tick
+                this.stopGameLoop();
+                return;
+            }
             const now = Date.now();
-            const deltaTime = (now - this.lastTickTime) / 1000.0;
+            const deltaTime = (now - this.lastTickTime) / 1000.0; // Delta time in seconds
             this.lastTickTime = now;
-            this.tick(deltaTime);
-        }, 1000 / TICK_RATE);
+            this.tick(deltaTime); // Execute the game tick
+        }, 1000 / TICK_RATE); // Execute TICK_RATE times per second
     }
+
     stopGameLoop() {
         console.log(`[${this.gameId}] Stopping game loop.`);
-        if (this.gameLoopInterval) { clearInterval(this.gameLoopInterval); this.gameLoopInterval = null; }
+        if (this.gameLoopInterval) {
+            clearInterval(this.gameLoopInterval);
+            this.gameLoopInterval = null;
+        }
     }
 
-    // --- tick (No changes needed in the core tick logic) ---
+    // --- tick ---
     tick(deltaTime) {
         try {
+            // Stop processing if the game has already ended
             if (this.gameEnded) return;
 
+            // Clear per-tick broadcast arrays
             this.explosionsToBroadcast = [];
             this.fireEventsToBroadcast = [];
             this.hitEventsToBroadcast = [];
 
             // 1. Execute Robot AI Code
-            const executionResults = this.interpreter.executeTick(this.robots, this);
-            // No change needed here, interpreter uses the players map which has code
+            // The interpreter's safe API methods might populate fireEventsToBroadcast
+            this.interpreter.executeTick(this.robots, this);
 
-            // 2. Update Robot Physics/Movement
+            // 2. Update Robot Physics/Movement (including missiles)
             this.robots.forEach(robot => robot.update(deltaTime, ARENA_WIDTH, ARENA_HEIGHT));
 
             // 3. Check Collisions
+            // Collision checks might populate hitEventsToBroadcast and explosionsToBroadcast
             this.collisionSystem.checkAllCollisions();
 
-            // 4. Emit 'robotDestroyed' event
+            // 4. Emit 'robotDestroyed' event for newly destroyed robots
             this.robots.forEach(robot => {
+                // Check if robot is destroyed and notification hasn't been sent
                 if (robot.state === 'destroyed' && !robot.destructionNotified) {
-                    const destructionData = { robotId: robot.id, x: robot.x, y: robot.y, cause: robot.lastDamageCause || 'unknown' };
+                    const destructionData = {
+                        robotId: robot.id,
+                        x: robot.x, y: robot.y, // Location of destruction
+                        cause: robot.lastDamageCause || 'unknown'
+                    };
+                    // Broadcast to game participants and spectators
                     this.io.to(this.gameId).to(this.spectatorRoom).emit('robotDestroyed', destructionData);
-                    robot.destructionNotified = true;
+                    robot.destructionNotified = true; // Mark as notified
                 }
             });
 
-            // 5. Check for Game Over
-            if (this.checkGameOver()) { return; }
+            // 5. Check for Game Over condition
+            // This also handles stopping the loop and calling the game over callback
+            if (this.checkGameOver()) {
+                return; // Exit tick early if game over condition met
+            }
 
-            // 6. Broadcast State
-            const gameState = this.getGameState(); // Updated to include visuals
+            // 6. Broadcast Game State
+            // Gather the current state including pending events/explosions
+            const gameState = this.getGameState();
+            // Broadcast to game participants and spectators
             this.io.to(this.gameId).to(this.spectatorRoom).emit('gameStateUpdate', gameState);
 
         } catch (error) {
              console.error(`[${this.gameId}] CRITICAL ERROR during tick:`, error);
-             this.gameEnded = true;
+             this.gameEnded = true; // Stop the game immediately
              this.stopGameLoop();
+             // Notify clients of the error
              this.io.to(this.gameId).to(this.spectatorRoom).emit('gameError', { message: `Critical server error in '${this.gameName}'. Game aborted.` });
+             // Notify the GameManager
              if (typeof this.gameOverCallback === 'function') {
                  this.gameOverCallback(this.gameId, { winnerId: null, winnerName: 'None', reason: 'Server Error', wasTestGame: this.isTestGame });
              }
         }
     }
 
-    // --- addFireEvent, addHitEvent (No changes needed) ---
-    addFireEvent(eventData) { if (eventData?.type === 'fire') this.fireEventsToBroadcast.push(eventData); }
-    addHitEvent(x, y, targetId) { this.hitEventsToBroadcast.push({ type: 'hit', x, y, targetId }); }
+    // --- addFireEvent, addHitEvent ---
+    /** Stores a fire event to be broadcast in the next game state update. */
+    addFireEvent(eventData) {
+        // Ensure it has the expected structure (including direction)
+        if (eventData?.type === 'fire' && typeof eventData.direction === 'number') {
+            this.fireEventsToBroadcast.push(eventData);
+        } else {
+            console.warn(`[${this.gameId}] Invalid fire event data received:`, eventData);
+        }
+    }
 
-    // --- checkGameOver (No changes needed, uses players map correctly) ---
+    /** Stores a hit event to be broadcast in the next game state update. */
+    addHitEvent(x, y, targetId) {
+        this.hitEventsToBroadcast.push({ type: 'hit', x, y, targetId });
+    }
+
+    // --- checkGameOver ---
     checkGameOver() {
-        if (this.gameEnded || !this.gameLoopInterval) return true;
+        // Don't check if already ended or loop stopped
+        if (this.gameEnded || !this.gameLoopInterval) return true; // Return true to indicate it *is* over
+
         let potentialLoser = null;
-        let destructionPending = false;
+        let destructionPending = false; // Is any robot currently in the 'destroyed' state but waiting for visual delay?
         const now = Date.now();
+
+        // Check if any destroyed robot's visual delay has passed
         for (const robot of this.robots) {
             if (robot.state === 'destroyed') {
-                if (now >= (robot.destructionTime + DESTRUCTION_VISUAL_DELAY_MS)) { potentialLoser = robot; break; }
-                else { destructionPending = true; }
+                if (now >= (robot.destructionTime + DESTRUCTION_VISUAL_DELAY_MS)) {
+                    // This robot's delay is over, they are the definitive loser (or one of them)
+                    potentialLoser = robot;
+                    break; // Found the first loser whose delay expired
+                } else {
+                    // A robot is destroyed, but we're still waiting
+                    destructionPending = true;
+                }
             }
         }
-        if (destructionPending && !potentialLoser) return false; // Wait
 
+        // If a loser's delay just finished, the game ends now
+        if (potentialLoser) {
+            destructionPending = false; // No longer pending, we have a loser
+        } else if (destructionPending) {
+            return false; // Game not over yet, wait for visual delay
+        }
+
+        // --- Game Over Conditions Check ---
         const activeRobots = this.robots.filter(r => r.state === 'active');
         let isGameOver = false;
-        let winner = null;
-        let loser = null;
+        let winner = null; // Stores the full player data object { socket, loadout, robot }
+        let loser = null; // Stores the full player data object
         let reason = 'elimination';
 
         if (potentialLoser) {
+             // Game ended because a robot's destruction delay finished
              isGameOver = true;
-             loser = this.players.get(potentialLoser.id); // Get full player data
+             loser = this.players.get(potentialLoser.id); // Get full player data for the loser
+             // Winner is the other player (assuming 2-player game)
              winner = Array.from(this.players.values()).find(p => p.robot && p.robot.id !== potentialLoser.id);
              reason = `${loser?.loadout?.name || 'A robot'} was destroyed!`; // Use loadout name
         } else if (!destructionPending && activeRobots.length <= 1 && this.robots.length >= 2) {
+            // Game ended because only 1 or 0 robots are left active, and no destruction delays are pending
              isGameOver = true;
              if (activeRobots.length === 1) {
+                 // One winner left standing
                  winner = this.players.get(activeRobots[0].id);
                  loser = Array.from(this.players.values()).find(p => p.robot && p.robot.id !== activeRobots[0].id);
                  reason = "Last robot standing!";
-             } else { reason = "Mutual Destruction!"; }
+             } else {
+                 // Mutual Destruction (0 active robots left)
+                 reason = "Mutual Destruction!";
+                 winner = null; // No winner
+                 loser = null; // No single loser (both lost)
+             }
         }
+        // --- End Game Over Conditions Check ---
 
+        // --- Process Game Over ---
         if (isGameOver) {
-            this.gameEnded = true;
-            this.stopGameLoop();
+            this.gameEnded = true; // Mark game as ended
+            this.stopGameLoop(); // Stop the simulation
 
-            // Adjust for Test Games (Use loadout name)
+            // Adjust winner/loser determination specifically for Test Games
             if (this.isTestGame) {
+                // Find the real player and the dummy bot from the players map
                 const realPlayerEntry = Array.from(this.players.values()).find(p => p.socket !== null);
                 const botEntry = Array.from(this.players.values()).find(p => p.socket === null);
+
                 if(realPlayerEntry && botEntry){
-                    const realPlayer = realPlayerEntry; const botPlayer = botEntry;
-                    if (potentialLoser?.id === realPlayer.robot.id || (activeRobots.length===1 && activeRobots[0].id === botPlayer.robot.id)) { winner = botPlayer; loser = realPlayer; }
-                    else if (potentialLoser?.id === botPlayer.robot.id || (activeRobots.length===1 && activeRobots[0].id === realPlayer.robot.id)) { winner = realPlayer; loser = botPlayer; }
-                    else { winner = null; loser = null; }
-                    // Update reason based on winner/loser using loadout names
+                    const realPlayer = realPlayerEntry;
+                    const botPlayer = botEntry;
+
+                    // Determine winner based on who is still active or who was the potentialLoser
+                    if (potentialLoser?.id === realPlayer.robot.id || (activeRobots.length===1 && activeRobots[0].id === botPlayer.robot.id)) {
+                        // Real player lost or bot is the only one left
+                        winner = botPlayer; loser = realPlayer;
+                    } else if (potentialLoser?.id === botPlayer.robot.id || (activeRobots.length===1 && activeRobots[0].id === realPlayer.robot.id)) {
+                         // Bot lost or real player is the only one left
+                        winner = realPlayer; loser = botPlayer;
+                    } else {
+                        // Mutual destruction in test game
+                        winner = null; loser = null;
+                    }
+
+                    // Update reason using loadout names for test game clarity
                     if (winner && loser) reason = `${winner.loadout.name} defeated ${loser.loadout.name}!`;
                     else if (winner) reason = `${winner.loadout.name} is the last one standing!`;
                     else reason = "Mutual Destruction in test game!";
-                } else { reason = "Test game ended unexpectedly"; winner=null; loser=null; }
+
+                } else {
+                    // Should not happen if initialized correctly
+                    reason = "Test game ended unexpectedly (participant data missing)"; winner=null; loser=null;
+                }
             }
 
+            // --- Prepare final winner data object ---
             const finalWinnerData = {
                 gameId: this.gameId,
-                winnerId: winner ? winner.robot.id : null,
-                winnerName: winner ? winner.loadout.name : 'None', // Use name from loadout
+                winnerId: winner ? winner.robot.id : null, // ID of the winning robot
+                winnerName: winner ? winner.loadout.name : 'None', // Name from the winner's loadout
                 reason: reason,
-                wasTestGame: this.isTestGame
+                wasTestGame: this.isTestGame // Include flag indicating if it was a test game
             };
 
-            console.log(`[${this.gameId}] Final Game Over. Winner: ${finalWinnerData.winnerName}.`);
+            console.log(`[${this.gameId}] Final Game Over. Winner: ${finalWinnerData.winnerName}. Reason: ${reason}`);
+
+            // Notify participants and spectators
             this.io.to(this.gameId).emit('gameOver', finalWinnerData);
             this.io.to(this.spectatorRoom).emit('spectateGameOver', finalWinnerData);
-            if (typeof this.gameOverCallback === 'function') this.gameOverCallback(this.gameId, finalWinnerData);
-            return true;
+
+            // Trigger the callback to notify GameManager
+            if (typeof this.gameOverCallback === 'function') {
+                this.gameOverCallback(this.gameId, finalWinnerData);
+            }
+            return true; // Indicate game is over
         }
-        return false;
+        // --- End Process Game Over ---
+
+        return false; // Game is not over yet
     }
 
-    // --- createExplosion (No changes needed) ---
-    createExplosion(x, y, size) { this.explosionsToBroadcast.push({ id: `e-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`, x, y, size }); }
+    // --- createExplosion ---
+    /** Adds an explosion effect to be broadcast in the next state update. */
+    createExplosion(x, y, size) {
+        // Use a more unique ID combining time and random hex
+        const explosionId = `e-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+        this.explosionsToBroadcast.push({ id: explosionId, x, y, size });
+    }
 
-    /** Gathers the current game state including robot visuals */
+    /** Gathers the current game state including robot visuals and pending events */
     getGameState() {
         const activeMissiles = [];
-        this.robots.forEach(robot => activeMissiles.push(...robot.missiles));
+        // Collect all missiles from all robots
+        this.robots.forEach(robot => {
+            // Ensure robot.missiles is an array before spreading
+            if(Array.isArray(robot.missiles)) {
+                activeMissiles.push(...robot.missiles);
+            }
+        });
 
         return {
             gameId: this.gameId,
@@ -6427,90 +6434,166 @@ class GameInstance {
             robots: this.robots.map(r => ({
                 id: r.id,
                 x: r.x, y: r.y,
-                direction: r.direction,
+                direction: r.direction, // Robot body direction
                 damage: r.damage,
-                // color: r.color, // Color might now come from visuals? Keep base for now.
                 isAlive: r.isAlive,
-                name: r.name,
-                visuals: r.visuals, // <<< ADDED visuals object
-                // appearance: r.appearance, // <<< REMOVED old appearance string
+                name: r.name, // Robot's display name
+                visuals: r.visuals, // Visual configuration object
             })),
             missiles: activeMissiles.map(m => ({
-                id: m.id, x: m.x, y: m.y, radius: m.radius, ownerId: m.ownerId
+                id: m.id,
+                x: m.x, y: m.y,
+                radius: m.radius,
+                ownerId: m.ownerId,
+                direction: m.direction // Missile travel direction <<< ENSURE THIS IS PRESENT
             })),
+            // Include the lists of events to be processed by the client renderer this frame
             explosions: this.explosionsToBroadcast,
-            fireEvents: this.fireEventsToBroadcast,
+            fireEvents: this.fireEventsToBroadcast, // <<< Includes direction now
             hitEvents: this.hitEventsToBroadcast,
             timestamp: Date.now()
         };
     }
 
-    // --- performScan (No changes needed) ---
+    // --- performScan ---
+    /**
+     * Performs a scan for a robot, returning the closest active opponent found within the arc.
+     * @param {ServerRobot} scanningRobot - The robot performing the scan.
+     * @param {number} direction - The center direction of the scan arc (degrees).
+     * @param {number} resolution - The width of the scan arc (degrees).
+     * @returns {object|null} Info about the closest target ({ distance, direction, id, name }) or null if none found.
+     */
     performScan(scanningRobot, direction, resolution) {
+        // Cannot scan if not active
         if (scanningRobot.state !== 'active') return null;
+
+        // Validate inputs
         const scanDirection = ((Number(direction) % 360) + 360) % 360;
-        const halfResolution = Math.max(1, Number(resolution) / 2);
-        const scanRange = 800;
+        const halfResolution = Math.max(1, Number(resolution) / 2); // Ensure at least 1 degree half-width
+        const scanRange = 800; // Maximum scan distance
+
+        // Calculate scan arc boundaries
         let startAngleDeg = (scanDirection - halfResolution + 360) % 360;
         let endAngleDeg = (scanDirection + halfResolution + 360) % 360;
+
+        // Handle arc wrapping around 0/360 degrees
         const wrapsAround = startAngleDeg > endAngleDeg;
+
         let closestTargetInfo = null;
-        let closestDistanceSq = scanRange * scanRange;
+        let closestDistanceSq = scanRange * scanRange; // Compare squared distances initially
+
+        // Iterate through all other robots in the game
         this.robots.forEach(targetRobot => {
+            // Skip self and non-active robots
             if (scanningRobot.id === targetRobot.id || targetRobot.state !== 'active') return;
+
             const dx = targetRobot.x - scanningRobot.x;
-            const dy = targetRobot.y - scanningRobot.y;
+            const dy = targetRobot.y - scanningRobot.y; // Use standard math coordinates for angle calc
             const distanceSq = dx * dx + dy * dy;
+
+            // Skip if target is further than the current closest or outside scan range
             if (distanceSq >= closestDistanceSq) return;
+
+            // Calculate angle from scanning robot to target robot
+            // Use atan2(y, x) for correct quadrant; negate dy because positive Y is down in game coords
             let angleToTargetDeg = Math.atan2(-dy, dx) * 180 / Math.PI;
-            angleToTargetDeg = (angleToTargetDeg + 360) % 360;
-            let inArc = wrapsAround ? (angleToTargetDeg >= startAngleDeg || angleToTargetDeg <= endAngleDeg)
-                                    : (angleToTargetDeg >= startAngleDeg && angleToTargetDeg <= endAngleDeg);
+            angleToTargetDeg = (angleToTargetDeg + 360) % 360; // Normalize to 0-360
+
+            // Check if the target angle falls within the scan arc
+            let inArc;
+            if (wrapsAround) {
+                // Arc wraps around 0/360 (e.g., 350 to 10)
+                inArc = (angleToTargetDeg >= startAngleDeg || angleToTargetDeg <= endAngleDeg);
+            } else {
+                // Normal arc (e.g., 80 to 100)
+                inArc = (angleToTargetDeg >= startAngleDeg && angleToTargetDeg <= endAngleDeg);
+            }
+
+            // If target is within the arc and closer than previous closest
             if (inArc) {
-                closestDistanceSq = distanceSq;
-                closestTargetInfo = { distance: Math.sqrt(distanceSq), direction: angleToTargetDeg, id: targetRobot.id, name: targetRobot.name };
+                closestDistanceSq = distanceSq; // Update closest distance squared
+                // Store target info (calculate sqrt distance only for the final result)
+                closestTargetInfo = {
+                    distance: Math.sqrt(distanceSq),
+                    direction: angleToTargetDeg,
+                    id: targetRobot.id,
+                    name: targetRobot.name // Include target name
+                };
             }
         });
-        return closestTargetInfo;
+
+        return closestTargetInfo; // Return null or the closest target's info
     }
 
-    // --- triggerSelfDestruct (No changes needed) ---
+
+    // --- triggerSelfDestruct ---
+    /** Marks a specific robot for destruction. */
     triggerSelfDestruct(robotId) {
          const playerData = this.players.get(robotId);
+         // Check if player data and robot exist, and robot is currently active
          if (playerData?.robot?.state === 'active') {
              const robot = playerData.robot;
              console.log(`[${this.gameId}] Triggering self-destruct for ${robot.name} (${robot.id}).`);
-             const result = robot.takeDamage(1000, 'selfDestruct');
-             this.createExplosion(robot.x, robot.y, 5);
+             // Apply lethal damage
+             const result = robot.takeDamage(1000, 'selfDestruct'); // Cause massive damage
+             // Create a visual explosion effect
+             this.createExplosion(robot.x, robot.y, 5); // Use max power explosion visual
              console.log(`[${this.gameId}] Self-destruct applied. Destroyed: ${result.destroyed}`);
-         } else { console.warn(`[${this.gameId}] Self-destruct failed for ${robotId}: Not found or not active.`); }
+         } else {
+             console.warn(`[${this.gameId}] Self-destruct failed for ${robotId}: Not found or not active.`);
+         }
     }
 
-    // --- removePlayer (No changes needed) ---
+    // --- removePlayer ---
+    /** Handles removing a player (e.g., on disconnect) from the game instance. */
     removePlayer(robotId) {
         const playerData = this.players.get(robotId);
-        const playerName = playerData?.loadout?.name || robotId.substring(0,8)+'...'; // Use name from loadout
+        // Use the robot's name from the loadout if available
+        const playerName = playerData?.loadout?.name || robotId.substring(0,8)+'...';
         console.log(`[${this.gameId}] Handling removal of participant ${playerName} (${robotId}).`);
+
+        // Mark the robot as destroyed immediately if it exists
         if (playerData?.robot) {
              playerData.robot.state = 'destroyed';
-             if (!playerData.robot.destructionTime) playerData.robot.destructionTime = Date.now();
-             playerData.robot.damage = 100;
-             playerData.robot.speed = 0; playerData.robot.targetSpeed = 0;
-             console.log(`[${this.gameId}] Marked robot for ${playerName} as destroyed.`);
+             if (!playerData.robot.destructionTime) {
+                // Set destruction time if not already set (e.g., disconnected before being hit)
+                playerData.robot.destructionTime = Date.now();
+             }
+             playerData.robot.damage = 100; // Ensure damage is maxed
+             playerData.robot.speed = 0; playerData.robot.targetSpeed = 0; // Stop movement
+             console.log(`[${this.gameId}] Marked robot for ${playerName} as destroyed due to removal.`);
         }
+
+        // Remove the player entry from the game's map
         this.players.delete(robotId);
-        // this.playerNames.delete(robotId); // No longer needed?
+
+        // Note: The game over check in the main tick loop will handle ending the game
+        // if this removal results in only one or zero active players remaining.
     }
 
-    // --- isEmpty (No changes needed) ---
-    isEmpty() { return Array.from(this.players.values()).every(p => p.socket === null); }
+    // --- isEmpty ---
+    /** Checks if the game has any connected human players left. */
+    isEmpty() {
+        // Check if all entries in the players map have a null socket
+        return Array.from(this.players.values()).every(p => p.socket === null);
+    }
 
-    // --- cleanup (No changes needed) ---
+    // --- cleanup ---
+    /** Performs cleanup tasks when the game instance is no longer needed. */
     cleanup() {
         console.log(`[${this.gameId}] Cleaning up instance.`);
+        // Make all connected sockets leave the game-specific rooms
         this.io.socketsLeave(this.spectatorRoom);
         this.io.socketsLeave(this.gameId);
-        if(this.interpreter) this.interpreter.stop();
+        // Stop the interpreter if it's running
+        if(this.interpreter) {
+            this.interpreter.stop();
+        }
+        // Clear internal references (helps garbage collection)
+        this.players.clear();
+        this.robots = [];
+        this.interpreter = null;
+        this.collisionSystem = null;
     }
 
 } // End GameInstance
@@ -6999,6 +7082,21 @@ if (!sessionSecret) {
     }
 }
 
+// --- START: Define cookie options separately ---
+const cookieOptions = {
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week validity for the session cookie
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (requires HTTPS)
+    httpOnly: true,                  // Prevents client-side JS from reading the cookie
+    sameSite: 'lax'                  // Basic CSRF protection
+};
+
+// --- START: Perform the check HERE ---
+// Check the cookie options *before* creating the session middleware
+if (process.env.NODE_ENV !== 'production' && cookieOptions.secure) {
+    console.warn("Warning: Secure cookies enabled but NODE_ENV is not 'production'. Cookies may not work over HTTP.");
+}
+// --- END: Perform the check HERE ---
+
 const sessionMiddleware = session({
     store: new pgSession({
         pool: db.pool,                // Use the exported pool from db.js
@@ -7008,12 +7106,7 @@ const sessionMiddleware = session({
     secret: sessionSecret || 'default_insecure_secret_for_dev', // Use loaded secret or fallback
     resave: false,                     // Don't save session if unmodified
     saveUninitialized: false,          // Don't create session until something stored
-    cookie: {
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week validity for the session cookie
-        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (requires HTTPS)
-        httpOnly: true,                  // Prevents client-side JS from reading the cookie
-        sameSite: 'lax'                  // Basic CSRF protection
-    }
+    cookie: cookieOptions // --- Use the defined cookie options object ---
 });
 
 // --- Express Middleware ---
@@ -7072,9 +7165,11 @@ server.listen(PORT, () => {
   if (!process.env.SESSION_SECRET && process.env.NODE_ENV !== 'development') {
       console.warn("Reminder: SESSION_SECRET environment variable not set.");
   }
-  if (process.env.NODE_ENV !== 'production' && sessionMiddleware.options.cookie.secure) {
-       console.warn("Warning: Secure cookies enabled but NODE_ENV is not 'production'. Cookies may not work over HTTP.");
-  }
+
+  // --- START: Removed the problematic check from here ---
+  // The check is now performed earlier when cookieOptions are defined
+  // --- END: Removed the problematic check from here ---
+
   // Verify trust proxy setting after server start
   if (app.get('trust proxy')) {
     console.log(`Express 'trust proxy' setting is enabled (Value: ${app.get('trust proxy')}).`);
@@ -7138,7 +7233,7 @@ const defaultSnippets = [
     {
         name: 'Aggressive Bot',
         code: `// Aggressive Bot (using state object)\n// Seeks out enemies and fires continuously\n\n// Initialize state ONCE\nif (typeof state.targetDirection === 'undefined') {\n    state.targetDirection = null;\n    state.searchDirection = 0;\n    state.searchMode = true;\n    state.timeSinceScan = 0;\n    console.log('Aggressive Bot Initialized');\n}\n\nstate.timeSinceScan++;\n\n// If we have a target, track and fire\nif (!state.searchMode && state.targetDirection !== null) {\n    if (state.timeSinceScan > 5) {\n        // scanResult is correctly scoped here with 'const'\n        const scanResult = robot.scan(state.targetDirection, 15);\n        state.timeSinceScan = 0;\n\n        if (scanResult) {\n            state.targetDirection = scanResult.direction;\n        } else {\n            console.log('Aggro Bot lost target, returning to search.');\n            state.searchMode = true;\n            state.targetDirection = null;\n        }\n    }\n    if (state.targetDirection !== null) {\n        robot.drive(state.targetDirection, 4);\n        robot.fire(state.targetDirection, 3);\n    }\n\n} else { // In search mode\n    if (state.timeSinceScan > 2) {\n        state.searchDirection = (state.searchDirection + 15) % 360;\n        // scanResult is correctly scoped here with 'const'\n        const scanResult = robot.scan(state.searchDirection, 30);\n        state.timeSinceScan = 0;\n\n        if (scanResult) {\n            console.log('Aggro Bot found target!');\n            state.targetDirection = scanResult.direction;\n            state.searchMode = false;\n            robot.drive(state.targetDirection, 4);\n            robot.fire(state.targetDirection, 3);\n        } else {\n            robot.drive(state.searchDirection, 1);\n        }\n    } else {\n         robot.drive(state.searchDirection, 1);\n    }\n}`
-    }
+    },
     {
     name: 'Spider Bot',
     code: `// Spider Bot AI - Ambush Tactician
@@ -8989,14 +9084,14 @@ class ServerMissile {
         const moveSpeed = this.speed * deltaTime * 60;
         const radians = this.direction * Math.PI / 180;
         this.x += Math.cos(radians) * moveSpeed;
-        this.y -= Math.sin(radians) * moveSpeed;
+        this.y -= Math.sin(radians) * moveSpeed; // Correct for canvas Y-down
     }
 }
 
 
 /**
  * Represents a Robot's state and behavior on the server side.
- * Stores visual configuration and name provided during initialization. // <-- Updated description
+ * Stores visual configuration and name provided during initialization.
  */
 class ServerRobot {
     /**
@@ -9018,10 +9113,9 @@ class ServerRobot {
         this.targetDirection = direction;
         this._damage = 0;
         this.radius = 15; // Base radius, could potentially be modified by chassis type later
-        // this.color = this.generateColor(); // Removed old color generation
         this.cooldown = 0;
         this.missiles = [];
-        this.state = 'active';
+        this.state = 'active'; // 'active', 'destroyed'
         this.destructionTime = null;
         this.destructionNotified = false;
         this.lastDamageCause = null;
@@ -9034,8 +9128,6 @@ class ServerRobot {
         };
         this.name = name || `Robot_${id.substring(0, 4)}`; // Use provided name or generate default
         // --- End Store ---
-
-        // Removed this.appearance property
     }
 
     get damage() {
@@ -9046,76 +9138,163 @@ class ServerRobot {
         return this.state === 'active';
     }
 
-    // Removed generateColor() method
-
-    // --- update (No changes needed) ---
+    // --- update ---
     update(deltaTime, arenaWidth, arenaHeight) {
+        // Update missiles first
         for (let i = this.missiles.length - 1; i >= 0; i--) {
             const missile = this.missiles[i];
             missile.update(deltaTime);
+            // Remove missiles that go out of bounds
             if (missile.x < 0 || missile.x > arenaWidth || missile.y < 0 || missile.y > arenaHeight) {
                 this.missiles.splice(i, 1);
             }
         }
+
+        // Don't update robot physics if not active
         if (this.state !== 'active') return;
-        if (this.cooldown > 0) this.cooldown = Math.max(0, this.cooldown - 1);
+
+        // Update cooldown
+        if (this.cooldown > 0) {
+            this.cooldown = Math.max(0, this.cooldown - 1); // Decrease cooldown, ensuring it doesn't go below 0
+        }
+
+        // Update speed and direction based on targets set by drive()
         this.speed = this.targetSpeed;
         this.direction = this.targetDirection;
+
+        // Apply movement if speed is not zero
         if (this.speed !== 0) {
-            const moveSpeed = this.speed * deltaTime * 60;
+            const moveSpeed = this.speed * deltaTime * 60; // Scale speed by delta time and factor (60 for ~pixels/sec)
             const radians = this.direction * Math.PI / 180;
             const dx = Math.cos(radians) * moveSpeed;
-            const dy = Math.sin(radians) * moveSpeed;
+            const dy = Math.sin(radians) * moveSpeed; // Note: positive dy moves DOWN in canvas coords
+
             let newX = this.x + dx;
-            let newY = this.y - dy;
+            let newY = this.y - dy; // Subtract dy because positive Y is down on canvas
+
+            // Clamp position to arena boundaries, considering robot radius
             newX = Math.max(this.radius, Math.min(arenaWidth - this.radius, newX));
             newY = Math.max(this.radius, Math.min(arenaHeight - this.radius, newY));
+
             this.x = newX;
             this.y = newY;
         }
     }
 
-    // --- drive (No changes needed) ---
+    // --- drive ---
     drive(direction, speed) {
-        if (this.state !== 'active') return;
+        if (this.state !== 'active') return; // Cannot drive if destroyed
+
+        // Normalize direction to 0-359 degrees
+        // Use Number() to handle potential non-numeric inputs gracefully (becomes NaN)
         this.targetDirection = ((Number(direction) % 360) + 360) % 360;
+        if (isNaN(this.targetDirection)) this.targetDirection = 0; // Default direction if input was invalid
+
+        // Clamp speed between -5 and 5
+        // Use Number() to handle potential non-numeric inputs
         this.targetSpeed = Math.max(-5, Math.min(5, Number(speed)));
+        if (isNaN(this.targetSpeed)) this.targetSpeed = 0; // Default speed if input was invalid
     }
 
-    // --- fire (No changes needed) ---
+    // --- fire ---
     fire(direction, power = 1) {
-        if (this.state !== 'active' || this.cooldown > 0) return { success: false };
+        // Cannot fire if destroyed or on cooldown
+        if (this.state !== 'active' || this.cooldown > 0) {
+             return { success: false }; // Indicate failure, no event data needed
+        }
+
+        // Validate and clamp power
+        // Use Number() to handle non-numeric inputs
         const clampedPower = Math.max(1, Math.min(3, Number(power)));
-        this.cooldown = clampedPower * 10 + 10;
+        if(isNaN(clampedPower) || clampedPower < 1) {
+             console.warn(`[${this.id}] Invalid fire power: ${power}. Defaulting to 1.`);
+             power = 1; // Use validated 'power' variable now
+        } else {
+            power = clampedPower; // Use the validated value
+        }
+
+
+        // Set cooldown based on power
+        this.cooldown = power * 10 + 10; // Example: Power 1=20 ticks, Power 3=40 ticks
+
+        // Validate and normalize direction
+        // Use Number() to handle non-numeric inputs
         const fireDirection = ((Number(direction) % 360) + 360) % 360;
-        const radians = fireDirection * Math.PI / 180;
-        const missileSpeed = 7 + clampedPower;
-        const startOffset = this.radius + 5;
+         if (isNaN(fireDirection)) {
+              console.warn(`[${this.id}] Invalid fire direction: ${direction}. Defaulting to 0.`);
+              direction = 0; // Use validated 'direction' variable now
+         } else {
+             direction = fireDirection; // Use the validated value
+         }
+
+
+        // Calculate missile properties
+        const radians = direction * Math.PI / 180;
+        const missileSpeed = 7 + power; // Speed increases with power
+        const startOffset = this.radius + 5; // Start missile just outside the robot's radius
+
         const missileStartX = this.x + Math.cos(radians) * startOffset;
-        const missileStartY = this.y - Math.sin(radians) * startOffset;
-        const missile = new ServerMissile(missileStartX, missileStartY, fireDirection, missileSpeed, clampedPower, this.id);
+        const missileStartY = this.y - Math.sin(radians) * startOffset; // Correct for canvas Y-down
+
+        // Create and add the missile
+        const missile = new ServerMissile(missileStartX, missileStartY, direction, missileSpeed, power, this.id);
         this.missiles.push(missile);
-        const fireEventData = { type: 'fire', x: missileStartX, y: missileStartY, ownerId: this.id };
+
+        // --- Prepare event data, INCLUDING direction ---
+        const fireEventData = {
+            type: 'fire',
+            x: missileStartX, // Where the missile appears
+            y: missileStartY,
+            ownerId: this.id,
+            direction: direction // Direction the missile/flash should face
+        };
+        // --- End Modification ---
+
+        // Return success and the event data
         return { success: true, eventData: fireEventData };
     }
 
-    // --- takeDamage (No changes needed) ---
+
+    // --- takeDamage ---
+    /**
+     * Applies damage to the robot.
+     * @param {number} amount - The amount of damage to apply.
+     * @param {string} [cause='missile'] - The cause of the damage ('missile', 'collision', 'selfDestruct', etc.).
+     * @returns {{destroyed: boolean, hit: boolean, x?: number, y?: number, cause?: string}} Object indicating if destroyed, if hit occurred, and details.
+     */
     takeDamage(amount, cause = 'missile') {
-        if (this.state !== 'active') return { destroyed: false, hit: false };
-        const damageAmount = Math.max(0, Number(amount));
-        if (damageAmount <= 0) return { destroyed: false, hit: false };
+        // Cannot take damage if already destroyed
+        if (this.state !== 'active') {
+            return { destroyed: false, hit: false }; // No hit occurred if already destroyed
+        }
+
+        const damageAmount = Math.max(0, Number(amount)); // Ensure damage is non-negative number
+        if (damageAmount <= 0 || isNaN(damageAmount)) {
+            return { destroyed: false, hit: false }; // No damage applied, so no hit
+        }
+
+        // Store the cause for potential game logic or logging
         this.lastDamageCause = cause;
+
+        // Store current position BEFORE applying damage, useful for hit events
+        const hitX = this.x;
+        const hitY = this.y;
+
+        // Apply damage, clamped to 100
         this._damage = Math.min(100, this._damage + damageAmount);
+
         if (this._damage >= 100) {
-            this._damage = 100;
-            this.state = 'destroyed';
-            this.destructionTime = Date.now();
-            this.speed = 0; this.targetSpeed = 0;
-            console.log(`[${this.id}] Robot destroyed by ${damageAmount} damage via ${cause}!`);
-            return { destroyed: true, hit: true, x: this.x, y: this.y, cause: cause };
+            this._damage = 100; // Ensure it doesn't exceed 100
+            this.state = 'destroyed'; // Update state
+            this.destructionTime = Date.now(); // Record time of destruction
+            this.speed = 0; // Stop movement immediately
+            this.targetSpeed = 0;
+            console.log(`[${this.id}] Robot destroyed by ${damageAmount.toFixed(1)} damage via ${cause}!`);
+            return { destroyed: true, hit: true, x: hitX, y: hitY, cause: cause }; // Return hit details
         } else {
-            console.log(`[${this.id}] Took ${damageAmount} damage via ${cause}. Current health: ${100 - this._damage}`);
-            return { destroyed: false, hit: true, x: this.x, y: this.y };
+            // Damage taken, but not destroyed
+            console.log(`[${this.id}] Took ${damageAmount.toFixed(1)} damage via ${cause}. Current health: ${(100 - this._damage).toFixed(1)}%`);
+            return { destroyed: false, hit: true, x: hitX, y: hitY }; // Return hit details
         }
     }
 }

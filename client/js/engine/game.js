@@ -1,306 +1,432 @@
 // client/js/engine/game.js
 
-const MUZZLE_FLASH_DURATION_MS = 150; // How long flashes last (in milliseconds)
-
+/**
+ * Main client-side game logic class.
+ * Manages the game loop, state updates from the server, robot data,
+ * client-side effects (muzzle flashes, PARTICLE EXPLOSIONS, screen shake),
+ * sound triggering, and coordinates with the renderer (Arena.js).
+ */
 class Game {
-    /**
-     * Manages the client-side game state, rendering loop, and interactions.
-     * @param {string} canvasId - The ID of the HTML canvas element for the arena.
-     */
     constructor(canvasId) {
-        // Renderer for the arena, robots, effects
-        this.renderer = new Arena(canvasId); // Use Arena class for rendering
-
-        // Interpreter for running local robot code (currently not used for gameplay logic)
-        this.interpreter = new RobotInterpreter();
-
-        // Collision system (currently not used client-side for primary logic)
-        this.collisionSystem = new CollisionSystem(this);
-
-        // Game State Data (populated by server updates)
-        this.robots = [];           // Array of robot data objects {id, x, y, direction, damage, isAlive, name, visuals}
-        this.missiles = [];         // Array of missile data objects {id, x, y, radius, ownerId, direction}
-        this.activeExplosions = []; // Array for explosion effects {x, y, maxRadius, startTime, duration, colorSequence}
-        this.activeFlashes = [];    // Array for muzzle flash effects {id, x, y, direction, type, startTime, duration}
-
-        // Game Context
-        this.gameId = null;         // ID of the current game
-        this.gameName = null;       // Display name of the current game
-        this.playerId = null;       // This client's robot ID in the current game
-        this.isRunning = false;     // Is the game loop active?
-        this.lastGameStateTime = 0; // Timestamp of the last received state update
-        this.isSpectating = false;  // Is the client spectating?
-        this.spectatingGameId = null; // ID of the game being spectated
-        this.spectatingGameName = null; // Name of the game being spectated
-
-        // Helper map for quick lookup of robot data (especially visuals) by ID
-        this.robotDataMap = new Map();
-
-        console.log("Client Game engine initialized.");
-    }
-
-    /** Sets the client's player ID for the current game */
-    setPlayerId(id) {
-        this.playerId = id;
-        console.log(`[Game] Player ID set to: ${id}`);
-    }
-
-    /** Handles starting spectating a game */
-    handleSpectateStart(data) {
-        console.log(`[Game] Starting spectate mode for game: ${data.gameName} (ID: ${data.gameId})`);
-        this.gameId = null; // Not playing in this game
-        this.playerId = null; // Not a player in this game
-        this.spectatingGameId = data.gameId;
-        this.spectatingGameName = data.gameName || data.gameId;
-        this.isSpectating = true;
-        this.isRunning = false; // Not running own game logic
-        this.robots = []; // Clear local state
-        this.missiles = [];
-        this.activeExplosions = [];
-        this.activeFlashes = [];
-        this.robotDataMap.clear();
-
-        if (window.controls) window.controls.setState('spectating');
-        if (window.dashboard?.updateStats) window.dashboard.updateStats([], { gameName: this.spectatingGameName });
-
-        // Start rendering loop for spectating if not already running
-        requestAnimationFrame(this.gameLoop.bind(this));
-    }
-
-    /** Handles stopping spectating a game */
-    handleSpectateEnd(data) {
-        console.log(`[Game] Ending spectate mode for game: ${data.gameId}`);
-        if (this.spectatingGameId === data.gameId) {
-            this.isSpectating = false;
-            this.spectatingGameId = null;
-            this.spectatingGameName = null;
-            this.activeFlashes = []; // Clear flashes
-            // Transition back to lobby state
-            if (window.controls) window.controls.setState('lobby');
-            if (window.dashboard?.updateStats) window.dashboard.updateStats([], {}); // Clear stats
-            // The gameLoop will stop itself as isSpectating is now false
-        }
-    }
-
-    /** Handles robot destruction event (visual effect trigger) */
-    handleRobotDestroyed(data) {
-        console.log(`[Game] Robot ${data.robotId} destroyed at (${data.x.toFixed(0)}, ${data.y.toFixed(0)}) due to ${data.cause}.`);
-        // Trigger a larger, longer-lasting explosion effect here visually
-        this.createExplosion(data.x, data.y, 5); // Trigger a large explosion on destruction
-        // Sound for destruction is handled by the general explosion sound trigger below
-    }
-
-    /** Initializes the game state when a match starts */
-    handleGameStart(data) {
-        console.log(`[Game] Starting game: ${data.gameName} (ID: ${data.gameId}), Test: ${data.isTestGame}`);
-        this.gameId = data.gameId;
-        this.gameName = data.gameName;
-        this.isRunning = true;
-        this.isSpectating = false; // Ensure not spectating
-        this.robots = []; // Clear previous game data
-        this.missiles = [];
-        this.activeExplosions = [];
-        this.activeFlashes = []; // Clear flashes
-        this.robotDataMap.clear(); // Clear map
-
-        // Initial population of robotDataMap for visual lookup
-        if (data.players && Array.isArray(data.players)) {
-            data.players.forEach(p => {
-                if (p.id && p.visuals) {
-                    this.robotDataMap.set(p.id, { id: p.id, name: p.name, visuals: p.visuals });
-                    console.log(`[Game Start] Stored initial data for robot ${p.id} (${p.name})`);
-                } else {
-                     console.warn(`[Game Start] Incomplete player data received for ID ${p.id}:`, p);
-                }
-            });
-        } else {
-             console.warn("[Game Start] No initial player data received in gameStart event.");
-        }
-
-        // Update UI state
-        if (window.controls) window.controls.setState('playing');
-        if (window.dashboard?.updateStats) window.dashboard.updateStats([], { gameName: this.gameName }); // Clear stats initially, show title
-        if (this.renderer?.redrawArenaBackground) this.renderer.redrawArenaBackground(); // Clear scorch marks
-
-        // Start the rendering loop
-        requestAnimationFrame(this.gameLoop.bind(this));
-    }
-
-    /** Cleans up game state when a match ends */
-    handleGameOver(data) {
-        console.log(`[Game] Game Over: ${data.gameId}. Winner: ${data.winnerName}. Reason: ${data.reason}`);
-        this.isRunning = false; // Stop the game loop flag
+        console.log("Initializing Game...");
+        this.canvasId = canvasId;
+        this.renderer = null; // Will be initialized in start()
+        this.robots = []; // Array of robot data from server
+        this.missiles = []; // Array of missile data from server
+        this.activeFlashes = []; // Muzzle flashes
+        this.activeExplosions = []; // OLD simple explosions (maybe keep for non-death impacts?)
+        this.activeParticleEffects = []; // NEW particle explosions (for robot deaths)
         this.gameId = null;
         this.gameName = null;
-        this.activeFlashes = []; // Clear flashes on game over
-        this.robotDataMap.clear(); // Clear robot data map
+        this.playerId = null; // Client's own player ID
+        this.isRunning = false;
+        this.isSpectating = false;
+        this.lastUpdateTime = 0;
+        this.animationFrameId = null;
 
-        // Update UI state
-        if (window.controls) window.controls.setState('lobby');
-        // Dashboard update will happen naturally as gameStateUpdate sends empty robot array soon
-        // The gameLoop will stop itself as isRunning is now false
+        // --- START: Screen Shake Properties ---
+        this.shakeEndTime = 0;
+        this.shakeMagnitude = 0;
+        this.baseShakeMagnitude = 5; // How intense the shake is
+        this.shakeDuration = 200; // How long the shake lasts in ms
+        // --- END: Screen Shake Properties ---
+
+        // Attempt to initialize renderer immediately
+        try {
+            this.renderer = new Arena(this.canvasId);
+            console.log("Game: Arena renderer initialized successfully.");
+        } catch (error) {
+            console.error("Game: Failed to initialize Arena renderer:", error);
+            // Handle initialization failure (e.g., show error message)
+            alert(`Fatal Error: Could not initialize game graphics. ${error.message}`);
+        }
+
+        console.log("Game initialized.");
     }
 
-    /**
-     * Updates the client-side game state based on data received from the server.
-     * @param {object} gameState - The game state object from the server.
-     */
+    setPlayerId(id) {
+        this.playerId = id;
+        console.log(`Game: Player ID set to ${id}`);
+    }
+
+    /** Starts the game loop */
+    start() {
+        if (this.isRunning) return;
+        console.log(`Game: Starting loop for game: ${this.gameName || this.gameId || 'Unknown'}`);
+        this.isRunning = true;
+        this.lastUpdateTime = performance.now();
+        this.loop(); // Start the loop
+    }
+
+    /** Stops the game loop */
+    stop() {
+        if (!this.isRunning) return;
+        console.log("Game: Stopping loop.");
+        this.isRunning = false;
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+        // Clear transient game state? (Optional)
+        this.robots = [];
+        this.missiles = [];
+        this.activeFlashes = [];
+        this.activeExplosions = [];
+        this.activeParticleEffects = []; // Clear particle effects too
+        this.shakeMagnitude = 0; // Reset shake
+        // Optionally clear the dashboard/logs via their handlers
+        if (window.dashboard?.updateStats) window.dashboard.updateStats([], {});
+        if (window.clearRobotLog) window.clearRobotLog();
+        if (window.clearOpponentLog) window.clearOpponentLog();
+    }
+
+    /** The main game loop, using requestAnimationFrame */
+    loop() {
+        if (!this.isRunning) return;
+
+        const now = performance.now();
+        const deltaTime = (now - this.lastUpdateTime) / 1000.0; // Delta time in seconds
+        this.lastUpdateTime = now;
+
+        // Update effects before drawing
+        this.updateEffects(deltaTime);
+        this.updateParticleEffects(deltaTime); // <<< ADDED: Update particle effects
+
+        // Update screen shake state
+        this.updateScreenShake(); // <<< ADDED: Update shake effect
+
+        // Draw the current state
+        if (this.renderer) {
+            // Pass current shake magnitude to the renderer
+            this.renderer.draw(
+                this.missiles,
+                this.activeExplosions, // Keep for potential non-death explosions
+                this.activeFlashes,
+                this.activeParticleEffects, // <<< ADDED: Pass particle effects
+                this.shakeMagnitude         // <<< ADDED: Pass shake magnitude
+            );
+        }
+
+        // Request the next frame
+        this.animationFrameId = requestAnimationFrame(() => this.loop());
+    }
+
+    /** Update state based on data received from the server */
     updateFromServer(gameState) {
-        // Ignore updates if the client isn't in an active game or spectating mode
-        if (!this.isRunning && !this.isSpectating) return;
+        if (!gameState) return;
 
-        // Ignore updates for a different game unless spectating that specific game
-        const relevantGameId = this.isSpectating ? this.spectatingGameId : this.gameId;
-        if (!relevantGameId || gameState.gameId !== relevantGameId) {
-            return;
-        }
+        // Update core game entities
+        this.robots = gameState.robots || [];
+        this.missiles = gameState.missiles || [];
+        this.gameId = gameState.gameId || this.gameId; // Keep existing if not provided
+        this.gameName = gameState.gameName || this.gameName;
 
-        this.lastGameStateTime = gameState.timestamp || Date.now(); // Use server time if available
-
-        // Update core game objects
-        this.robots = gameState.robots;
-        this.missiles = gameState.missiles; // Missiles now have direction
-
-        // --- Update robot data map (crucial for looking up visuals) ---
-        this.robotDataMap.clear(); // Clear previous frame's map
-        this.robots.forEach(robot => {
-            // Store the entire robot data object received from the server
-            this.robotDataMap.set(robot.id, robot);
-        });
-        // --- End robot data map update ---
-
-        // --- Process Explosions (Visuals + Sound) ---
-        if (gameState.explosions && Array.isArray(gameState.explosions)) {
-            gameState.explosions.forEach(explosionData => {
-                // Create the visual effect locally
-                this.createExplosion(explosionData.x, explosionData.y, explosionData.size);
-                // Add scorch marks
-                 if (this.renderer?.addScorchMark) {
-                    const scorchRadius = Math.max(5, explosionData.size * 8);
-                    this.renderer.addScorchMark(explosionData.x, explosionData.y, scorchRadius);
-                 }
-                 // --- ADD SOUND CALL for EXPLOSIONS ---
-                 if (window.audioManager) {
-                     window.audioManager.playSound('explode'); // Play explosion sound
-                 }
-                 // --- END SOUND CALL for EXPLOSIONS ---
-            });
-        }
-
-        // --- Process Fire Events (Visuals + Sound) ---
-        if (gameState.fireEvents && Array.isArray(gameState.fireEvents)) {
-            gameState.fireEvents.forEach(event => {
-                const ownerData = this.robotDataMap.get(event.ownerId);
-                const turretType = ownerData?.visuals?.turret?.type || 'standard';
-
-                // Create visual muzzle flash
-                this.activeFlashes.push({
-                    id: `f-${event.ownerId}-${Date.now()}`,
-                    x: event.x,
-                    y: event.y,
-                    direction: event.direction,
-                    type: turretType,
-                    startTime: Date.now(),
-                    duration: MUZZLE_FLASH_DURATION_MS
-                });
-                // --- ADD SOUND CALL for FIRING ---
-                if (window.audioManager) {
-                    // Potential future enhancement: different sound per turret type
-                    // const soundKey = turretType === 'laser' ? 'fire_laser' : 'fire';
-                    // window.audioManager.playSound(soundKey);
-                    window.audioManager.playSound('fire'); // Play fire sound
-                }
-                // --- END SOUND CALL for FIRING ---
-            });
-        }
-
-        // --- Process Hit Events (Sound Only for now) ---
-        if (gameState.hitEvents && Array.isArray(gameState.hitEvents)) {
-            gameState.hitEvents.forEach(event => {
-                // --- ADD SOUND CALL for HITS ---
-                 if (window.audioManager) {
-                     window.audioManager.playSound('hit'); // Play hit sound
-                 }
-                 // --- END SOUND CALL for HITS ---
-                 // TODO: Could potentially add visual hit sparks here later
-            });
-        }
-        // --- End Hit Event Processing ---
-
-
-        // Update the dashboard UI
-        if (window.dashboard?.updateStats) {
-            const currentContextName = this.isSpectating ? this.spectatingGameName : this.gameName;
-            window.dashboard.updateStats(this.robots, { gameName: currentContextName });
-        }
-
-        // Make the latest robot data available to the renderer
-        if(this.renderer) {
+        // Update renderer's robot data copy
+        if (this.renderer) {
             this.renderer.robots = this.robots;
         }
+
+        // Update dashboard stats
+        if (window.dashboard?.updateStats) {
+            window.dashboard.updateStats(this.robots, { gameName: this.gameName });
+        }
+
+        // --- Process Events for Sound and Visual Effects ---
+
+        // Handle Firing Events (Muzzle Flash + Sound)
+        if (Array.isArray(gameState.fireEvents)) {
+            gameState.fireEvents.forEach(fireEvent => {
+                // Add muzzle flash visual effect
+                this.activeFlashes.push({
+                    id: `f-${Date.now()}-${Math.random()}`,
+                    type: fireEvent.turretType, // Use turretType from event
+                    x: fireEvent.x,
+                    y: fireEvent.y,
+                    direction: fireEvent.direction,
+                    startTime: Date.now(),
+                    duration: 150 // Muzzle flash duration in ms
+                });
+                // Play fire sound
+                if (window.audioManager?.playSound) {
+                    window.audioManager.playSound('fire');
+                }
+            });
+        }
+
+        // Handle Hit Events (Sound Only Currently)
+        if (Array.isArray(gameState.hitEvents)) {
+            gameState.hitEvents.forEach(hitEvent => {
+                // Play hit sound
+                if (window.audioManager?.playSound) {
+                    window.audioManager.playSound('hit');
+                }
+                 // TODO: Add visual impact spark effect here?
+                 // e.g., this.createImpactSpark(hitEvent.x, hitEvent.y);
+            });
+        }
+
+        // Handle OLD Explosion Events (Sound Only Currently)
+        // These might be missile impacts on walls or other non-death explosions
+        if (Array.isArray(gameState.explosions)) {
+             gameState.explosions.forEach(explosionData => {
+                // Play explosion sound
+                if (window.audioManager?.playSound) {
+                    window.audioManager.playSound('explode');
+                }
+                 // If using old simple explosions for impacts, add them here:
+                 // this.activeExplosions.push({ ...explosionData, startTime: Date.now(), duration: 500, maxRadius: 10 + explosionData.size * 5, colorSequence: [...] });
+            });
+        }
+
+        // Ensure the loop is running if it wasn't (e.g., after spectate ends and game starts)
+        if (!this.isRunning && (this.robots.length > 0 || this.missiles.length > 0)) {
+             console.log("Game: State received, ensuring loop is running.");
+             this.start();
+        }
     }
 
+    /** Update lifetimes and remove completed effects */
+    updateEffects(deltaTime) {
+        const now = Date.now();
 
-    /** Creates a local explosion effect object */
-    createExplosion(x, y, power = 1) {
-        const baseRadius = 10;
-        const maxRadius = baseRadius * (2 + power * 1.5); // Scale radius with power
-        const duration = 300 + power * 100; // Duration scales with power
+        // Update Muzzle Flashes
+        this.activeFlashes = this.activeFlashes.filter(flash => {
+            return now < flash.startTime + flash.duration;
+        });
 
-        // Different color sequences based on power for more visual variety
-        const colorSequence = power >= 3 ? ['#FFFFFF', '#FFA500', '#FF4500', '#8B0000', '#2c2c2c'] : // High power
-                              power >= 2 ? ['#FFFFE0', '#FFD700', '#FFA500', '#FF0000', '#333333'] : // Medium power
-                                           ['#FFFACD', '#FFF000', '#FFA500', '#444444'];              // Low power
-
-        this.activeExplosions.push({
-            x: x,
-            y: y,
-            maxRadius: maxRadius,
-            startTime: Date.now(),
-            duration: duration,
-            colorSequence: colorSequence
+        // Update OLD Explosions (if still used for impacts)
+        this.activeExplosions = this.activeExplosions.filter(explosion => {
+             return now < explosion.startTime + explosion.duration;
         });
     }
 
-
-    /** The main rendering loop */
-    gameLoop() {
-        // Stop the loop if the game isn't running or spectating
-        if (!this.isRunning && !this.isSpectating) {
-             // console.log("[GameLoop] Stopping (not running or spectating)."); // Optional log
-             return;
-        }
-
+    // --- START: New Particle Effect Update ---
+    /** Update lifetimes and positions of particles in explosions */
+    updateParticleEffects(deltaTime) {
         const now = Date.now();
+        const gravity = 0; // Optional: Add downward acceleration
+        const friction = 0.99; // Optional: Air resistance
 
-        // --- Update and remove expired flashes ---
-        this.activeFlashes = this.activeFlashes.filter(flash => now < flash.startTime + flash.duration);
+        // Iterate backwards for safe removal of effects
+        for (let i = this.activeParticleEffects.length - 1; i >= 0; i--) {
+            const effect = this.activeParticleEffects[i];
 
-        // Update and remove expired explosions (existing logic)
-        this.activeExplosions = this.activeExplosions.filter(exp => now < exp.startTime + exp.duration);
+            // Iterate backwards for safe removal of particles
+            for (let j = effect.particles.length - 1; j >= 0; j--) {
+                const p = effect.particles[j];
+                const elapsed = (now - p.startTime) / 1000.0; // Time in seconds
+                p.lifespan = Math.max(0, p.maxLifespan - elapsed);
 
-        // Tell the renderer to draw the current state
-        if (this.renderer) {
-            // Pass all relevant game objects and effects to the renderer's draw method
-            this.renderer.draw(this.missiles, this.activeExplosions, this.activeFlashes); // Pass flashes
+                if (p.lifespan <= 0) {
+                    effect.particles.splice(j, 1); // Remove dead particle
+                    continue; // Skip further updates for this particle
+                }
+
+                // Update position based on velocity and deltaTime
+                // Scale velocity by 60 to approximate pixels per second if velocity is per-tick
+                p.x += p.vx * deltaTime * 60;
+                p.y += p.vy * deltaTime * 60;
+
+                // Apply optional physics
+                // p.vy += gravity * deltaTime * 60;
+                // p.vx *= friction;
+                // p.vy *= friction;
+            }
+
+            // Check if the effect has any particles left
+            if (effect.particles.length === 0) {
+                effect.isComplete = true; // Mark effect for removal
+            }
         }
 
-        // Request the next animation frame to continue the loop ONLY if still running/spectating
-        if (this.isRunning || this.isSpectating) {
-            requestAnimationFrame(this.gameLoop.bind(this));
+        // Filter out completed effects
+        this.activeParticleEffects = this.activeParticleEffects.filter(effect => !effect.isComplete);
+    }
+    // --- END: New Particle Effect Update ---
+
+    // --- START: New Screen Shake Update ---
+    /** Updates the screen shake magnitude based on time */
+    updateScreenShake() {
+        const now = Date.now();
+        if (now >= this.shakeEndTime) {
+            this.shakeMagnitude = 0; // Shake duration ended
+        } else {
+            // Optional: Could add easing (e.g., fade out shake)
+            // const timeLeft = this.shakeEndTime - now;
+            // const progress = timeLeft / this.shakeDuration;
+            // this.shakeMagnitude = this.baseShakeMagnitude * progress; // Linear fade
         }
     }
+    // --- END: New Screen Shake Update ---
 
-    /** Stops the game loop and interpreter */
-    stop() {
-        console.log("[Game] Stopping game loop.");
-        this.isRunning = false; // Set flag to stop the loop
-        this.interpreter.stop(); // Stop the interpreter if it was running code locally
+
+    // --- START: New Particle Explosion Creation ---
+    /**
+     * Creates a particle explosion effect at the specified coordinates.
+     * @param {number} x - Center X coordinate.
+     * @param {number} y - Center Y coordinate.
+     * @returns {object} The particle effect object to be added to activeParticleEffects.
+     */
+    createParticleExplosion(x, y) {
+        const particles = [];
+        const numSparks = 30 + Math.floor(Math.random() * 20); // 30-49 sparks
+        const numSmoke = 5 + Math.floor(Math.random() * 5);   // 5-9 smoke puffs
+        const baseSpeed = 3;
+        const maxLifeSpark = 0.8; // seconds
+        const maxLifeSmoke = 1.5; // seconds
+
+        // Add initial flash (simple particle)
+        particles.push({
+            x: x, y: y, vx: 0, vy: 0,
+            startTime: Date.now(),
+            lifespan: 0.15, // short bright flash
+            maxLifespan: 0.15,
+            color: '#FFFFFF',
+            size: 25 + Math.random() * 10,
+            type: 'flash'
+        });
+
+        // Add sparks/debris
+        for (let i = 0; i < numSparks; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = baseSpeed + Math.random() * baseSpeed * 1.5; // Vary speed
+            const life = maxLifeSpark * (0.5 + Math.random() * 0.5);
+            const colorVal = Math.floor(150 + Math.random() * 105); // 150-255
+            const color = `rgb(${colorVal}, ${Math.floor(colorVal * 0.7)}, ${Math.floor(colorVal * 0.2)})`; // Yellow/Orange/Red range
+
+            particles.push({
+                x: x, y: y,
+                vx: Math.cos(angle) * speed,
+                vy: -Math.sin(angle) * speed, // Y-down
+                startTime: Date.now(),
+                lifespan: life,
+                maxLifespan: life,
+                color: color,
+                size: 2 + Math.random() * 3,
+                type: 'spark'
+                // Optional: Add gravity vy += gravity * dt
+            });
+        }
+
+        // Add smoke puffs
+        for (let i = 0; i < numSmoke; i++) {
+             const angle = Math.random() * Math.PI * 2;
+             const speed = baseSpeed * 0.3 + Math.random() * baseSpeed * 0.5; // Slower smoke
+             const life = maxLifeSmoke * (0.7 + Math.random() * 0.3);
+             const greyVal = Math.floor(80 + Math.random() * 40); // Darker grey range
+             const color = `rgba(${greyVal}, ${greyVal}, ${greyVal}, 0.7)`; // Semi-transparent
+
+             particles.push({
+                 x: x, y: y,
+                 vx: Math.cos(angle) * speed,
+                 vy: -Math.sin(angle) * speed, // Y-down
+                 startTime: Date.now(),
+                 lifespan: life,
+                 maxLifespan: life,
+                 color: color,
+                 size: 8 + Math.random() * 8, // Larger smoke
+                 type: 'smoke'
+             });
+        }
+
+        return {
+            id: `pExpl-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+            x: x, y: y, // Center (not really needed if particles have coords)
+            particles: particles,
+            startTime: Date.now(), // Effect start time (for potential grouping)
+            isComplete: false // Flag to mark for removal
+        };
+    }
+    // --- END: New Particle Explosion Creation ---
+
+    /** Handles the 'gameStart' event from the server */
+    handleGameStart(data) {
+        console.log(`Game: handleGameStart received for game ${data.gameId} ('${data.gameName}')`);
+        this.gameId = data.gameId;
+        this.gameName = data.gameName || data.gameId;
+        this.isSpectating = false;
+        // Update controls state via global controls object
+        if (window.controls?.setState) window.controls.setState('playing');
+        this.start(); // Start the game loop
     }
 
-    /** Placeholder for client-side scan logic (if needed, usually server handles scans) */
-    performScan(robot, direction, resolution) {
-        console.warn("[Game] performScan called on client - Scans are server-authoritative.");
-        return null;
+    /** Handles the 'gameOver' event from the server */
+    handleGameOver(data) {
+        console.log(`Game: handleGameOver received for game ${data.gameId}. Winner: ${data.winnerName}`);
+        this.stop(); // Stop the game loop
+        this.gameId = null; // Clear game ID
+        this.gameName = null;
+        this.isSpectating = false;
+        // Update controls state via global controls object
+        if (window.controls?.setState) window.controls.setState('lobby');
+        // Optionally display winner message in event log
+        if (window.addEventLogMessage) window.addEventLogMessage(`--- Game Over! Winner: ${data.winnerName || 'None'} ---`, 'event');
     }
-}
+
+    /** Handles the 'spectateStart' event */
+    handleSpectateStart(data) {
+        console.log(`Game: handleSpectateStart received for game ${data.gameId} ('${data.gameName}')`);
+        this.stop(); // Stop any current local loop
+        this.gameId = data.gameId;
+        this.gameName = data.gameName || data.gameId;
+        this.isSpectating = true;
+        // Update controls state via global controls object
+        if (window.controls?.setState) window.controls.setState('spectating');
+        if (window.updateLobbyStatus) window.updateLobbyStatus(`Spectating: ${this.gameName}`);
+        this.start(); // Start the loop to render received spectate updates
+    }
+
+    /** Handles the 'spectateGameOver' event */
+    handleSpectateEnd(data) {
+        console.log(`Game: handleSpectateEnd received for game ${data.gameId}. Winner: ${data.winnerName}`);
+        this.stop();
+        this.gameId = null;
+        this.gameName = null;
+        this.isSpectating = false;
+        // Update controls state via global controls object
+        if (window.controls?.setState) window.controls.setState('lobby');
+        if (window.updateLobbyStatus) window.updateLobbyStatus('Spectated game finished. Ready Up or Test Code!');
+    }
+
+    // --- START: Modified handleRobotDestroyed ---
+    /**
+     * Handles the 'robotDestroyed' event from the server.
+     * Creates a particle explosion and triggers screen shake.
+     */
+    handleRobotDestroyed(data) {
+        // data should contain { robotId, x, y, cause }
+        if (!data) return;
+        console.log(`Game: Robot ${data.robotId} destroyed at (${data.x}, ${data.y}) by ${data.cause}`);
+
+        // Create and add the new particle explosion
+        const particleEffect = this.createParticleExplosion(data.x, data.y);
+        this.activeParticleEffects.push(particleEffect);
+
+        // Trigger screen shake
+        this.shakeEndTime = Date.now() + this.shakeDuration;
+        this.shakeMagnitude = this.baseShakeMagnitude;
+
+        // Play explosion sound (if not already handled by an explosion event)
+        // Check if an explosion event for this robot death was already processed via updateFromServer
+        // This is a bit tricky. For now, let's assume robotDestroyed is the primary trigger
+        // for the death sound AND the visual effect.
+        if (window.audioManager?.playSound) {
+            window.audioManager.playSound('explode');
+        }
+
+        // *** REMOVED adding to this.activeExplosions for robot death ***
+        // // Example of adding to the OLD simple explosion system (if needed)
+        // this.activeExplosions.push({
+        //     id: `expl-${data.robotId}-${Date.now()}`,
+        //     x: data.x,
+        //     y: data.y,
+        //     startTime: Date.now(),
+        //     duration: 800, // Longer duration for robot death
+        //     maxRadius: 40, // Bigger radius
+        //     // Example color sequence for robot death
+        //     colorSequence: ['#FFFFFF', '#FFFACD', '#FFD700', '#FFA500', '#FF8C00', '#FF4500', '#DC143C', '#A0522D', '#808080', '#404040']
+        // });
+    }
+    // --- END: Modified handleRobotDestroyed ---
+
+} // End Game Class
