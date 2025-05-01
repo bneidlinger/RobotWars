@@ -1,225 +1,272 @@
 // client/js/engine/audio.js
 
 /**
- * Manages loading and playback of sound effects and background music.
- * Handles user mute preferences via localStorage.
- * Initiates background music playback upon user interaction trigger.
+ * Manages loading and playing audio assets (sound effects and background music).
+ * Handles mute states and user interaction requirements for playback.
  */
 class AudioManager {
     constructor() {
-        this.sounds = {}; // Cache for loaded sound effects
-        this.soundPath = '/assets/sounds/'; // <<< CONFIRMED CORRECT PATH
-        this.soundEnabled = true; // Basic toggle (can be expanded)
-
-        // --- Background Music Elements ---
+        this.audioContext = null;
+        this.soundBuffers = {}; // Stores decoded audio buffers
         this.musicElement = document.getElementById('background-music');
-        this.volumeButton = document.getElementById('btn-toggle-volume');
-        this.isMusicMuted = false; // <<< Default to UNMUTED
-        this._musicPlaybackAttempted = false; // Flag to prevent multiple start attempts
-        this._musicActuallyPlaying = false; // Flag to track if play() succeeded
+        this.volumeToggleButton = document.getElementById('btn-toggle-volume');
+        this.isMusicMuted = true; // Default to muted initially? Let's start unmuted based on testcodeissues.md
+        this.canPlaySound = false; // Flag to track if AudioContext is unlocked
 
-        // Basic check for music elements
-        if (!this.musicElement) {
-            console.error("AudioManager: Background music element '#background-music' not found!");
-        }
-        if (!this.volumeButton) {
-             console.error("AudioManager: Volume toggle button '#btn-toggle-volume' not found!");
-        }
+        // Define sound file paths relative to the client root
+        // Using .mp3 based on previous troubleshooting, confirm file types
+        this.sounds = {
+            'fire': '/assets/sounds/fire.mp3',
+            'hit': '/assets/sounds/hit.mp3',
+            'explode': '/assets/sounds/explosion.mp3', // Generic explosion
+            'robotDeath': '/assets/sounds/robotdeath.wav' // <<< ADDED NEW SOUND
+            // Add more sounds here as needed
+        };
 
-        this._loadMutePreference();
-        this._setupVolumeButton();
-
-        console.log(`AudioManager initialized. Music default state: ${this.isMusicMuted ? 'Muted' : 'Unmuted'}`);
+        this._initialize();
+        this._loadSounds(); // Start loading sounds defined above
+        this._setupUIListeners();
     }
 
-    /** Loads mute preference from localStorage */
-    _loadMutePreference() {
-        try {
-            const storedMutePref = localStorage.getItem('robotWarsMusicMuted');
-            if (storedMutePref !== null) {
-                this.isMusicMuted = storedMutePref === 'true';
-                console.log(`AudioManager: Loaded mute preference from localStorage: ${this.isMusicMuted}`);
-            }
-            // Apply initial state to element and button
-            if (this.musicElement) {
-                 this.musicElement.muted = this.isMusicMuted;
-            }
-             this._updateVolumeButtonIcon();
+    /** Initialize the Audio Context after user interaction */
+    _initialize() {
+        // Check localStorage for persisted mute state
+        const storedMutePref = localStorage.getItem('robotWarsMusicMuted');
+        // Default to NOT muted if no preference is stored
+        this.isMusicMuted = storedMutePref === 'true'; // Note: localStorage stores strings
+        console.log(`[Audio] Initial music mute state from localStorage: ${this.isMusicMuted}`);
 
-        } catch (e) {
-            console.error("AudioManager: Error reading mute preference from localStorage:", e);
-        }
+        // Update button state immediately based on loaded preference
+        this._updateVolumeButtonState();
+
+        // We don't create AudioContext here anymore, wait for user interaction
+        console.log("[Audio] Waiting for user interaction to initialize AudioContext.");
     }
 
-    /** Saves mute preference to localStorage */
-    _saveMutePreference() {
-        try {
-            localStorage.setItem('robotWarsMusicMuted', this.isMusicMuted);
-             // console.log(`AudioManager: Saved mute preference to localStorage: ${this.isMusicMuted}`);
-        } catch (e) {
-            console.error("AudioManager: Error saving mute preference to localStorage:", e);
-        }
-    }
-
-    /** Sets up the volume toggle button listener */
-    _setupVolumeButton() {
-        if (!this.volumeButton) return;
-        this.volumeButton.addEventListener('click', () => {
-            this.toggleMusic();
-        });
-        this._updateVolumeButtonIcon(); // Set initial icon
-    }
-
-    /** Updates the visual state of the volume button */
-    _updateVolumeButtonIcon() {
-        if (!this.volumeButton) return;
-        if (this.isMusicMuted) {
-            this.volumeButton.textContent = '🔇'; // Muted icon
-            this.volumeButton.classList.add('muted');
-            this.volumeButton.title = "Unmute Music";
-        } else {
-            this.volumeButton.textContent = '🔊'; // Unmuted icon
-            this.volumeButton.classList.remove('muted');
-            this.volumeButton.title = "Mute Music";
-        }
-    }
-
-    /** Toggles background music mute state */
-    toggleMusic() {
-        if (!this.musicElement) return;
-
-        this.isMusicMuted = !this.isMusicMuted;
-        this.musicElement.muted = this.isMusicMuted;
-        this._saveMutePreference();
-        this._updateVolumeButtonIcon();
-        console.log(`AudioManager: Music ${this.isMusicMuted ? 'muted' : 'unmuted'}.`);
-
-        // --- START: Attempt playback if unmuting for the first time ---
-        // If we are unmuting AND music hasn't been successfully started/attempted yet, try now.
-        if (!this.isMusicMuted && !this._musicPlaybackAttempted) {
-             console.log("AudioManager: Attempting music start via volume toggle (first unmute).");
-             this.requestMusicStart();
-        }
-        // --- END ---
-    }
-
-    /**
-     * Attempts to start background music playback.
-     * Should be called from a user interaction context (e.g., button click).
-     * Will only attempt to play once. Respects the current mute state.
-     */
-    async requestMusicStart() {
-        if (!this.musicElement) {
-            console.error("AudioManager: Cannot start music, element not found.");
-            return;
-        }
-        // Prevent multiple attempts and don't try if muted
-        if (this._musicPlaybackAttempted) {
-             // console.log("AudioManager: Music playback already attempted/started."); // Optional: Less verbose log
-             return;
-        }
-        if (this.isMusicMuted) {
-             console.log("AudioManager: Music start requested, but currently muted by preference.");
-             this._musicPlaybackAttempted = true; // Mark as attempted even if muted
-             return;
+    /** Attempts to create and unlock the Audio Context */
+    _unlockAudioContext() {
+        if (this.audioContext && this.audioContext.state === 'running') {
+             // console.log("[Audio] AudioContext already running."); // DEBUG: Optional logging
+            this.canPlaySound = true;
+            return true; // Already unlocked
         }
 
-        this._musicPlaybackAttempted = true; // Mark that we are trying now
-
-        try {
-            // Ensure the element is explicitly unmuted before playing
-            this.musicElement.muted = false;
-            await this.musicElement.play();
-            this._musicActuallyPlaying = true; // Flag that play() succeeded
-            console.log("AudioManager: Background music playback initiated successfully.");
-        } catch (error) {
-            this._musicActuallyPlaying = false; // Playback failed
-            if (error.name === 'NotAllowedError') {
-                console.warn("AudioManager: Background music playback failed (likely requires user interaction). Error:", error.message);
-                // Don't reset _musicPlaybackAttempted here, the attempt *was* made.
-                // The user might need to click the volume toggle again if this initial attempt failed.
-            } else {
-                console.error("AudioManager: Error attempting to play background music:", error);
-            }
-        }
-    }
-
-    /**
-     * Loads a sound effect into the cache.
-     * @param {string} soundName - The name of the sound (e.g., 'fire', 'hit').
-     * @param {function} [callback] - Optional callback function when loading finishes.
-     */
-    loadSound(soundName, callback) {
-        if (this.sounds[soundName]) { // Already loaded or loading
-            if (this.sounds[soundName] instanceof Audio) {
-                if (callback) callback(null, this.sounds[soundName]); // Already loaded
-            } else {
-                // Still loading, add callback to queue (if implementing queue)
-            }
-            return;
-        }
-
-        // Mark as loading (can use a placeholder object or boolean)
-        this.sounds[soundName] = true; // Simple loading flag
-
-        const sound = new Audio();
-        sound.addEventListener('canplaythrough', () => {
-            this.sounds[soundName] = sound; // Replace flag with loaded Audio object
-            console.log(`AudioManager: Sound '${soundName}' loaded successfully.`);
-            if (callback) callback(null, sound);
-        }, { once: true }); // Use 'once' to prevent multiple calls if event fires again
-
-        sound.addEventListener('error', (e) => {
-            console.error(`AudioManager: Error loading sound '${soundName}' from ${sound.src}:`, e);
-            delete this.sounds[soundName]; // Remove loading flag on error
-            if (callback) callback(new Error(`Failed to load sound: ${soundName}`), null);
-        });
-
-        // Construct the full path
-        sound.src = `${this.soundPath}${soundName}.mp3`; // Use mp3 extension
-        sound.preload = 'auto'; // Suggest browser to load
-        sound.load(); // Explicitly call load
-    }
-
-    /**
-     * Plays a preloaded sound effect.
-     * @param {string} soundName - The name of the sound to play.
-     * @param {number} [volume=0.5] - Volume level (0.0 to 1.0).
-     */
-    playSound(soundName, volume = 0.5) {
-        if (!this.soundEnabled) return; // Check if sound effects are globally enabled
-
-        const sound = this.sounds[soundName];
-        if (sound instanceof Audio) {
-            // Create a new audio element for concurrent playback if needed
-            // Or reset the current one if overlap is okay
+        if (!this.audioContext) {
             try {
-                 // Simple approach: reset and play
-                 sound.currentTime = 0;
-                 sound.volume = Math.max(0, Math.min(1, volume)); // Clamp volume
-                 sound.play().catch(e => {
-                     // NotAllowedError can sometimes happen here too if the *very first* sound
-                     // effect play isn't tied to interaction. Usually less strict than background music.
-                     if (e.name !== 'NotAllowedError') {
-                         console.error(`AudioManager: Error playing sound '${soundName}':`, e);
-                     } else {
-                         // console.warn(`AudioManager: Sound effect '${soundName}' blocked by autoplay policy.`);
-                     }
-                 });
-            } catch (error) {
-                 console.error(`AudioManager: Exception playing sound '${soundName}':`, error);
+                console.log("[Audio] Attempting to create AudioContext...");
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log(`[Audio] AudioContext created. Initial state: ${this.audioContext.state}`);
+            } catch (e) {
+                console.error("[Audio] Error creating AudioContext:", e);
+                alert("Audio Error: Could not initialize audio playback.");
+                return false;
             }
-        } else if (sound === true) {
-            console.warn(`AudioManager: Sound '${soundName}' is still loading. Cannot play yet.`);
-            // Optionally queue the sound play request
-        } else {
-            console.warn(`AudioManager: Sound '${soundName}' not loaded. Attempting to load now.`);
-            // Attempt to load on the fly (might have delay)
-            this.loadSound(soundName, (err, loadedSound) => {
-                if (!err && loadedSound) {
-                    this.playSound(soundName, volume); // Retry playing after load
+        }
+
+        // Check if we need to resume the context (required after user interaction)
+        if (this.audioContext.state === 'suspended') {
+             console.log("[Audio] AudioContext is suspended, attempting resume...");
+             this.audioContext.resume().then(() => {
+                console.log("[Audio] AudioContext resumed successfully.");
+                this.canPlaySound = true;
+                 // Try playing music again if it was requested while suspended
+                 this._checkAndPlayMusic();
+             }).catch(e => {
+                console.error("[Audio] Error resuming AudioContext:", e);
+             });
+        } else if (this.audioContext.state === 'running') {
+            console.log("[Audio] AudioContext already running.");
+            this.canPlaySound = true;
+        }
+
+        return this.canPlaySound;
+    }
+
+    /** Load all defined sound effects */
+    _loadSounds() {
+        if (!this.sounds) return;
+
+        console.log("[Audio] Loading sound effects...");
+        Object.keys(this.sounds).forEach(key => {
+            const path = this.sounds[key];
+            // Use fetch API to load sound files
+            fetch(path)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status} for ${path}`);
+                    }
+                    return response.arrayBuffer(); // Get audio data as ArrayBuffer
+                })
+                .then(arrayBuffer => {
+                    // Decode audio data asynchronously
+                    // We need the context first, so maybe defer decoding?
+                    // OR, store the ArrayBuffer and decode on first play/unlock?
+                    // Let's store the ArrayBuffer for now.
+                    this.soundBuffers[key] = { buffer: arrayBuffer, decoded: null };
+                    // console.log(`[Audio] Loaded ArrayBuffer for sound: ${key}`); // DEBUG: Optional logging
+                })
+                .catch(error => {
+                    console.error(`[Audio] Error loading sound '${key}' from ${path}:`, error);
+                    this.soundBuffers[key] = { error: error }; // Mark as errored
+                });
+        });
+         console.log("[Audio] Sound effect loading initiated.");
+    }
+
+     /** Decode a stored ArrayBuffer on demand */
+    _decodeSound(key) {
+        return new Promise((resolve, reject) => {
+            if (!this.audioContext) {
+                return reject(new Error("AudioContext not available for decoding."));
+            }
+            if (!this.soundBuffers[key] || !this.soundBuffers[key].buffer || this.soundBuffers[key].decoded) {
+                // Already decoded or no buffer exists
+                return resolve(this.soundBuffers[key]?.decoded);
+            }
+
+            // console.log(`[Audio] Decoding sound buffer for: ${key}`); // DEBUG: Optional logging
+            this.audioContext.decodeAudioData(this.soundBuffers[key].buffer.slice(0)) // Decode a copy
+                .then(decodedBuffer => {
+                    // console.log(`[Audio] Successfully decoded: ${key}`); // DEBUG: Optional logging
+                    this.soundBuffers[key].decoded = decodedBuffer;
+                    // Clear the original buffer to save memory? Optional.
+                    // this.soundBuffers[key].buffer = null;
+                    resolve(decodedBuffer);
+                })
+                .catch(error => {
+                    console.error(`[Audio] Error decoding sound '${key}':`, error);
+                    this.soundBuffers[key].error = error;
+                    reject(error);
+                });
+        });
+    }
+
+
+    /** Play a loaded sound effect */
+    async playSound(key) {
+        // Ensure context is unlocked and sound exists
+        if (!this.canPlaySound || !this.audioContext || !this.soundBuffers[key]) {
+            // console.warn(`[Audio] Cannot play sound '${key}'. CanPlay: ${this.canPlaySound}, Context: ${!!this.audioContext}, Buffer Exists: ${!!this.soundBuffers[key]}`);
+            return;
+        }
+        if (this.soundBuffers[key].error) {
+            // console.warn(`[Audio] Cannot play sound '${key}' due to previous loading/decoding error.`);
+            return;
+        }
+
+        try {
+             // Ensure the buffer is decoded before playing
+            let decodedBuffer = this.soundBuffers[key].decoded;
+            if (!decodedBuffer) {
+                decodedBuffer = await this._decodeSound(key);
+            }
+
+            if (!decodedBuffer) { // Check again after await
+                console.warn(`[Audio] Failed to get decoded buffer for '${key}'. Cannot play.`);
+                return;
+            }
+
+            // Create buffer source node
+            const source = this.audioContext.createBufferSource();
+            source.buffer = decodedBuffer;
+            // Connect source to the destination (speakers)
+            source.connect(this.audioContext.destination);
+            // Play the sound
+            source.start(0); // Play immediately
+
+        } catch (error) {
+            console.error(`[Audio] Error playing sound '${key}':`, error);
+        }
+    }
+
+
+    /** Set up listeners for volume toggle */
+    _setupUIListeners() {
+        if (this.volumeToggleButton) {
+            this.volumeToggleButton.addEventListener('click', () => {
+                // Attempt to unlock audio context on first UI interaction with button
+                if (!this.canPlaySound) {
+                    console.log("[Audio] Volume button clicked, attempting to unlock AudioContext.");
+                    this._unlockAudioContext();
                 }
+
+                this.toggleMusicMute();
             });
+        } else {
+            console.warn("[Audio] Volume toggle button not found.");
+        }
+    }
+
+    /** Toggle music mute state and update UI/localStorage */
+    toggleMusicMute() {
+        this.isMusicMuted = !this.isMusicMuted;
+        console.log(`[Audio] Music mute toggled to: ${this.isMusicMuted}`);
+        localStorage.setItem('robotWarsMusicMuted', this.isMusicMuted.toString()); // Persist preference
+        this._updateVolumeButtonState();
+        this._checkAndPlayMusic(); // Apply mute/unmute to playback
+    }
+
+    /** Update the visual state of the volume button */
+    _updateVolumeButtonState() {
+        if (this.volumeToggleButton) {
+            if (this.isMusicMuted) {
+                this.volumeToggleButton.textContent = '🔇';
+                this.volumeToggleButton.title = 'Unmute Music';
+                this.volumeToggleButton.classList.add('muted');
+            } else {
+                this.volumeToggleButton.textContent = '🔊';
+                this.volumeToggleButton.title = 'Mute Music';
+                this.volumeToggleButton.classList.remove('muted');
+            }
+        }
+    }
+
+     /** Checks mute state and attempts to play or pause music */
+     _checkAndPlayMusic() {
+         if (!this.musicElement) return;
+
+         try {
+            if (this.isMusicMuted) {
+                if (!this.musicElement.paused) {
+                    this.musicElement.pause();
+                     console.log("[Audio] Music paused due to mute state.");
+                }
+            } else {
+                // Only try to play if context is unlocked (or attempt unlock)
+                 if (!this.canPlaySound) {
+                    console.log("[Audio] Trying to play music, but context not unlocked. Attempting unlock.");
+                    this._unlockAudioContext(); // Attempt unlock again
+                     // Play will be triggered by resume() callback if successful
+                } else if (this.musicElement.paused) {
+                    this.musicElement.play().then(() => {
+                         console.log("[Audio] Background music playback started/resumed.");
+                    }).catch(e => {
+                        if (e.name === 'NotAllowedError') {
+                            console.warn("[Audio] Music play() failed - likely needs more user interaction.");
+                             // No need to alert here, will try again on next interaction
+                        } else {
+                            console.error("[Audio] Error playing music:", e);
+                        }
+                    });
+                }
+            }
+         } catch (error) {
+             console.error("[Audio] Error in _checkAndPlayMusic:", error);
+         }
+    }
+
+
+    /** Public method called by other modules (like AuthHandler or LoadoutBuilder) */
+    requestMusicStart() {
+        console.log("[Audio] Music start requested.");
+        // Attempt to unlock context (might be redundant, but safe)
+        const unlocked = this._unlockAudioContext();
+        // If unlocked or already running, attempt to play based on mute state
+        if (unlocked) {
+            this._checkAndPlayMusic();
+        } else {
+             console.log("[Audio] Music start requested, but context needs user interaction to unlock.");
+             // Playback will be handled by context resume if successful later
         }
     }
 

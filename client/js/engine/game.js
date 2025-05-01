@@ -90,10 +90,10 @@ class Game {
 
         // Update effects before drawing
         this.updateEffects(deltaTime);
-        this.updateParticleEffects(deltaTime); // <<< ADDED: Update particle effects
+        this.updateParticleEffects(deltaTime); // Update particle effects
 
         // Update screen shake state
-        this.updateScreenShake(); // <<< ADDED: Update shake effect
+        this.updateScreenShake(); // Update shake effect
 
         // Draw the current state
         if (this.renderer) {
@@ -102,8 +102,8 @@ class Game {
                 this.missiles,
                 this.activeExplosions, // Keep for potential non-death explosions
                 this.activeFlashes,
-                this.activeParticleEffects, // <<< ADDED: Pass particle effects
-                this.shakeMagnitude         // <<< ADDED: Pass shake magnitude
+                this.activeParticleEffects, // Pass particle effects
+                this.shakeMagnitude         // Pass shake magnitude
             );
         }
 
@@ -167,9 +167,10 @@ class Game {
 
         // Handle OLD Explosion Events (Sound Only Currently)
         // These might be missile impacts on walls or other non-death explosions
+        // NOTE: Robot deaths are now handled by 'robotDestroyed' event
         if (Array.isArray(gameState.explosions)) {
              gameState.explosions.forEach(explosionData => {
-                // Play explosion sound
+                // Play generic explosion sound ONLY FOR THESE non-death explosions
                 if (window.audioManager?.playSound) {
                     window.audioManager.playSound('explode');
                 }
@@ -200,7 +201,6 @@ class Game {
         });
     }
 
-    // --- START: New Particle Effect Update ---
     /** Update lifetimes and positions of particles in explosions */
     updateParticleEffects(deltaTime) {
         const now = Date.now();
@@ -242,9 +242,7 @@ class Game {
         // Filter out completed effects
         this.activeParticleEffects = this.activeParticleEffects.filter(effect => !effect.isComplete);
     }
-    // --- END: New Particle Effect Update ---
 
-    // --- START: New Screen Shake Update ---
     /** Updates the screen shake magnitude based on time */
     updateScreenShake() {
         const now = Date.now();
@@ -257,10 +255,8 @@ class Game {
             // this.shakeMagnitude = this.baseShakeMagnitude * progress; // Linear fade
         }
     }
-    // --- END: New Screen Shake Update ---
 
 
-    // --- START: New Particle Explosion Creation ---
     /**
      * Creates a particle explosion effect at the specified coordinates.
      * @param {number} x - Center X coordinate.
@@ -337,7 +333,6 @@ class Game {
             isComplete: false // Flag to mark for removal
         };
     }
-    // --- END: New Particle Explosion Creation ---
 
     /** Handles the 'gameStart' event from the server */
     handleGameStart(data) {
@@ -388,10 +383,9 @@ class Game {
         if (window.updateLobbyStatus) window.updateLobbyStatus('Spectated game finished. Ready Up or Test Code!');
     }
 
-    // --- START: Modified handleRobotDestroyed ---
     /**
      * Handles the 'robotDestroyed' event from the server.
-     * Creates a particle explosion and triggers screen shake.
+     * Creates a particle explosion, triggers screen shake, and PLAYS THE NEW ROBOT DEATH SOUND.
      */
     handleRobotDestroyed(data) {
         // data should contain { robotId, x, y, cause }
@@ -406,27 +400,14 @@ class Game {
         this.shakeEndTime = Date.now() + this.shakeDuration;
         this.shakeMagnitude = this.baseShakeMagnitude;
 
-        // Play explosion sound (if not already handled by an explosion event)
-        // Check if an explosion event for this robot death was already processed via updateFromServer
-        // This is a bit tricky. For now, let's assume robotDestroyed is the primary trigger
-        // for the death sound AND the visual effect.
+        // --- START: Play specific robot death sound ---
+        // Play the new 'robotDeath' sound instead of the generic 'explode'
         if (window.audioManager?.playSound) {
-            window.audioManager.playSound('explode');
+            window.audioManager.playSound('robotDeath'); // <<< Use the new sound key
         }
+        // --- END: Play specific robot death sound ---
 
-        // *** REMOVED adding to this.activeExplosions for robot death ***
-        // // Example of adding to the OLD simple explosion system (if needed)
-        // this.activeExplosions.push({
-        //     id: `expl-${data.robotId}-${Date.now()}`,
-        //     x: data.x,
-        //     y: data.y,
-        //     startTime: Date.now(),
-        //     duration: 800, // Longer duration for robot death
-        //     maxRadius: 40, // Bigger radius
-        //     // Example color sequence for robot death
-        //     colorSequence: ['#FFFFFF', '#FFFACD', '#FFD700', '#FFA500', '#FF8C00', '#FF4500', '#DC143C', '#A0522D', '#808080', '#404040']
-        // });
+        // NOTE: We are no longer playing 'explode' sound here or adding to activeExplosions for robot death.
     }
-    // --- END: Modified handleRobotDestroyed ---
 
 } // End Game Class
