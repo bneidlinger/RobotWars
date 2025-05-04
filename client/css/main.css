@@ -340,26 +340,127 @@ input#loadout-name-input, input#builder-player-name {
     overflow: visible; /* Allow pseudo-elements to extend outside */
 }
 
-/* Main neon border - clean, defined line */
-#arena::before {
-    content: '';
+/* Neon edge elements - making these more visible and properly aligned with corners */
+/* Top edge */
+.neon-edge-top {
     position: absolute;
-    top: -4px;
-    left: -4px;
-    right: -4px;
-    bottom: -4px;
-    z-index: -1;
-    border-radius: 10px;
-    background-color: transparent; /* No background color */
-    border: 3px solid #ff00de; /* Bright pink neon color */
+    top: -8px;
+    /* Adjusted left/right to align perfectly with corner elements */
+    left: 44px;
+    right: 44px;
+    height: 4px;
+    background-color: #ff00de; /* Bright pink neon */
+    border-radius: 2px;
     box-shadow: 
         0 0 2px #ffffff, /* White inner glow */
-        0 0 4px #ff00de, /* Pink glow, close to border */
-        0 0 8px #ff00de, /* Medium distance glow */
-        0 0 12px #ff00de, /* Outer glow */
-        inset 0 0 2px #ff00de; /* Subtle inner glow */
+        0 0 4px #ff00de, /* Pink glow, close */
+        0 0 8px #ff00de, /* Medium distance */
+        0 0 12px #ff00de; /* Outer glow */
+    z-index: 1;
     pointer-events: none;
-    animation: neon-border-flicker 2s linear infinite;
+    /* Each edge has slightly different timing to create a more natural effect */
+    animation: neon-edge-flicker 4.2s linear infinite;
+}
+
+/* Right edge */
+.neon-edge-right {
+    position: absolute;
+    /* Adjusted top/bottom to align perfectly with corner elements */
+    top: 44px;
+    right: -8px;
+    bottom: 44px;
+    width: 4px;
+    background-color: #ff00de;
+    border-radius: 2px;
+    box-shadow: 
+        0 0 2px #ffffff,
+        0 0 4px #ff00de,
+        0 0 8px #ff00de,
+        0 0 12px #ff00de;
+    z-index: 1;
+    pointer-events: none;
+    /* Different timing for each edge */
+    animation: neon-edge-flicker 3.7s linear infinite;
+}
+
+/* Bottom edge */
+.neon-edge-bottom {
+    position: absolute;
+    bottom: -8px;
+    /* Adjusted left/right to align perfectly with corner elements */
+    left: 44px;
+    right: 44px;
+    height: 4px;
+    background-color: #ff00de;
+    border-radius: 2px;
+    box-shadow: 
+        0 0 2px #ffffff,
+        0 0 4px #ff00de,
+        0 0 8px #ff00de,
+        0 0 12px #ff00de;
+    z-index: 1;
+    pointer-events: none;
+    /* Different timing for each edge */
+    animation: neon-edge-flicker 4.5s linear infinite;
+}
+
+/* Left edge */
+.neon-edge-left {
+    position: absolute;
+    /* Adjusted top/bottom to align perfectly with corner elements */
+    top: 44px;
+    left: -8px;
+    bottom: 44px;
+    width: 4px;
+    background-color: #ff00de;
+    border-radius: 2px;
+    box-shadow: 
+        0 0 2px #ffffff,
+        0 0 4px #ff00de,
+        0 0 8px #ff00de,
+        0 0 12px #ff00de;
+    z-index: 1;
+    pointer-events: none;
+    /* Different timing for each edge */
+    animation: neon-edge-flicker 3.9s linear infinite;
+}
+
+/* Animation for the edges - enhanced flicker effect */
+@keyframes neon-edge-flicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+        opacity: 1;
+        background-color: #ff00de;
+        box-shadow: 
+            0 0 2px #ffffff,
+            0 0 4px #ff00de,
+            0 0 8px #ff00de,
+            0 0 12px #ff00de;
+    }
+    20%, 24%, 55% {
+        opacity: 0.7;
+        background-color: #d400bf;
+        box-shadow: 
+            0 0 1px #ffffff,
+            0 0 2px #d400bf,
+            0 0 4px #d400bf;
+    }
+    57%, 80% {
+        opacity: 1;
+        background-color: #ff00de;
+        box-shadow: 
+            0 0 2px #ffffff,
+            0 0 4px #ff00de,
+            0 0 8px #ff00de,
+            0 0 12px #ff00de;
+    }
+    81%, 83%, 85% {
+        opacity: 0.8;
+        background-color: #d400bf;
+        box-shadow: 
+            0 0 1px #ffffff,
+            0 0 2px #d400bf,
+            0 0 4px #d400bf;
+    }
 }
 
 /* Segmented corner markers - more defined and visible */
@@ -547,9 +648,21 @@ input#loadout-name-input, input#builder-player-name {
     }
 }
 
-/* Animation for the corner elements */
-.neon-corner-tl, .neon-corner-tr, .neon-corner-bl, .neon-corner-br {
-    animation: neon-corner-flicker 3s ease-in-out infinite alternate;
+/* Animation for the corner elements - enhanced flicker effect */
+.neon-corner-tl {
+    animation: neon-corner-flicker 3.5s ease-in-out infinite alternate;
+}
+
+.neon-corner-tr {
+    animation: neon-corner-flicker 3.2s ease-in-out infinite alternate;
+}
+
+.neon-corner-bl {
+    animation: neon-corner-flicker 3.7s ease-in-out infinite alternate;
+}
+
+.neon-corner-br {
+    animation: neon-corner-flicker 3.3s ease-in-out infinite alternate;
 }
 
 @keyframes neon-corner-flicker {
@@ -557,7 +670,13 @@ input#loadout-name-input, input#builder-player-name {
         opacity: 1;
     }
     20%, 24%, 55% {
-        opacity: 0.6;
+        opacity: 0.5;
+    }
+    57%, 80% {
+        opacity: 0.9;
+    }
+    81%, 83%, 85% {
+        opacity: 0.7;
     }
 }
 
@@ -1205,21 +1324,6 @@ input#loadout-name-input, input#builder-player-name {
         margin: 0 auto;
     }
     
-    /* Adjust neon border for medium screens */
-    #arena::before {
-        top: -3px;
-        left: -3px;
-        right: -3px;
-        bottom: -3px;
-        border-width: 3px;
-        box-shadow: 
-            0 0 2px #ffffff,
-            0 0 3px #ff00de,
-            0 0 6px #ff00de,
-            0 0 9px #ff00de,
-            inset 0 0 2px #ff00de;
-    }
-    
     /* Adjust corner styles for medium screens */
     .neon-corner-tl, .neon-corner-tr, .neon-corner-bl, .neon-corner-br {
         width: 40px;
@@ -1249,6 +1353,19 @@ input#loadout-name-input, input#builder-player-name {
     
     .neon-corner-br::before { bottom: 8px; right: 3px; }
     .neon-corner-br::after { bottom: 3px; right: 8px; }
+    
+    /* Adjust edge elements for medium screens */
+    .neon-edge-top, .neon-edge-bottom {
+        left: 35px;
+        right: 35px;
+        height: 3px;
+    }
+    
+    .neon-edge-left, .neon-edge-right {
+        top: 35px;
+        bottom: 35px;
+        width: 3px;
+    }
 }
     .consoles-row {
         flex-direction: column;
@@ -1299,21 +1416,6 @@ input#loadout-name-input, input#builder-player-name {
         height: 500px;
     }
     
-    /* Adjust neon border for small screens */
-    #arena::before {
-        top: -3px;
-        left: -3px;
-        right: -3px;
-        bottom: -3px;
-        border-width: 2px;
-        box-shadow: 
-            0 0 1px #ffffff,
-            0 0 2px #ff00de,
-            0 0 4px #ff00de,
-            0 0 6px #ff00de,
-            inset 0 0 1px #ff00de;
-    }
-    
     /* Adjust corner styles for small screens */
     .neon-corner-tl, .neon-corner-tr, .neon-corner-bl, .neon-corner-br {
         width: 35px;
@@ -1343,6 +1445,29 @@ input#loadout-name-input, input#builder-player-name {
     
     .neon-corner-br::before { bottom: 7px; right: 3px; }
     .neon-corner-br::after { bottom: 3px; right: 7px; }
+    
+    /* Adjust edge elements for small screens */
+    .neon-edge-top, .neon-edge-bottom {
+        left: 30px;
+        right: 30px;
+        height: 3px;
+        /* Reduce glow intensity for small screens */
+        box-shadow: 
+            0 0 1px #ffffff,
+            0 0 3px #ff00de,
+            0 0 6px #ff00de;
+    }
+    
+    .neon-edge-left, .neon-edge-right {
+        top: 30px;
+        bottom: 30px;
+        width: 3px;
+        /* Reduce glow intensity for small screens */
+        box-shadow: 
+            0 0 1px #ffffff,
+            0 0 3px #ff00de,
+            0 0 6px #ff00de;
+    }
 }
 
     .consoles-row { max-height: 35vh; }
@@ -1400,20 +1525,6 @@ input#loadout-name-input, input#builder-player-name {
         height: 350px;
     }
     
-    /* Adjust neon border for extra small screens */
-    #arena::before {
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        border-width: 2px;
-        box-shadow: 
-            0 0 1px #ffffff,
-            0 0 2px #ff00de,
-            0 0 3px #ff00de,
-            0 0 5px #ff00de;
-    }
-    
     /* Adjust corner styles for extra small screens */
     .neon-corner-tl, .neon-corner-tr, .neon-corner-bl, .neon-corner-br {
         width: 25px;
@@ -1443,6 +1554,29 @@ input#loadout-name-input, input#builder-player-name {
     
     .neon-corner-br::before { bottom: 5px; right: 2px; }
     .neon-corner-br::after { bottom: 2px; right: 5px; }
+    
+    /* Adjust edge elements for extra small screens */
+    .neon-edge-top, .neon-edge-bottom {
+        left: 22px;
+        right: 22px;
+        height: 2px;
+        /* Further reduce glow intensity for extra small screens */
+        box-shadow: 
+            0 0 1px #ffffff,
+            0 0 2px #ff00de,
+            0 0 4px #ff00de;
+    }
+    
+    .neon-edge-left, .neon-edge-right {
+        top: 22px;
+        bottom: 22px;
+        width: 2px;
+        /* Further reduce glow intensity for extra small screens */
+        box-shadow: 
+            0 0 1px #ffffff,
+            0 0 2px #ff00de,
+            0 0 4px #ff00de;
+    }
 }
     
     .code-editor-wrapper { height: 360px; } /* Increased by 20% from 300px */

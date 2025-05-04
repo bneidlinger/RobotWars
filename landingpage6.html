@@ -333,58 +333,154 @@
             background-color: #2c2c2c;
             margin: 20px auto;
             max-width: 450px;
+            overflow: visible; /* Allow neon elements to extend beyond the container */
         }
-
-        .neon-border-demo::before {
-            content: '';
+        
+        /* Demo corner elements */
+        .demo-corner-tl, .demo-corner-tr, .demo-corner-bl, .demo-corner-br {
             position: absolute;
-            top: -5px;
-            left: -5px;
-            right: -5px;
-            bottom: -5px;
-            border-radius: 12px;
-            background: transparent;
-            border: 3px solid #ff00de;
-            box-shadow: 
-                0 0 5px #ff00de,
-                0 0 10px #ff00de,
-                0 0 15px #ff00de,
-                inset 0 0 5px rgba(255, 0, 222, 0.3);
-            animation: neon-demo-flicker 3s linear infinite;
+            width: 50px;
+            height: 50px;
             z-index: 1;
+            pointer-events: none;
         }
-
-        .neon-border-demo::after {
+        
+        .demo-corner-tl {
+            top: -8px;
+            left: -8px;
+        }
+        
+        .demo-corner-tr {
+            top: -8px;
+            right: -8px;
+        }
+        
+        .demo-corner-bl {
+            bottom: -8px;
+            left: -8px;
+        }
+        
+        .demo-corner-br {
+            bottom: -8px;
+            right: -8px;
+        }
+        
+        /* L-shaped elements for corners */
+        .demo-corner-tl::before, .demo-corner-tr::before, 
+        .demo-corner-bl::before, .demo-corner-br::before,
+        .demo-corner-tl::after, .demo-corner-tr::after, 
+        .demo-corner-bl::after, .demo-corner-br::after {
             content: '';
             position: absolute;
-            top: -12px;
-            left: -12px;
-            right: -12px;
-            bottom: -12px;
-            border-radius: 16px;
-            background: none;
-            background:
-                /* Top Left */
-                linear-gradient(to right, #00ffff 40%, transparent 40%) top left/50px 4px no-repeat,
-                linear-gradient(to bottom, #00ffff 40%, transparent 40%) top left/4px 50px no-repeat,
-                
-                /* Top Right */
-                linear-gradient(to left, #00ffff 40%, transparent 40%) top right/50px 4px no-repeat,
-                linear-gradient(to bottom, #00ffff 40%, transparent 40%) top right/4px 50px no-repeat,
-                
-                /* Bottom Left */
-                linear-gradient(to right, #00ffff 40%, transparent 40%) bottom left/50px 4px no-repeat,
-                linear-gradient(to top, #00ffff 40%, transparent 40%) bottom left/4px 50px no-repeat,
-                
-                /* Bottom Right */
-                linear-gradient(to left, #00ffff 40%, transparent 40%) bottom right/50px 4px no-repeat,
-                linear-gradient(to top, #00ffff 40%, transparent 40%) bottom right/4px 50px no-repeat;
-            
+            background-color: #00ffff;
             box-shadow: 
-                0 0 10px rgba(0, 255, 255, 0.8),
-                0 0 20px rgba(0, 255, 255, 0.5);
-            animation: neon-corners-demo-pulse 2s ease-in-out infinite alternate;
-            z-index: 0;
+                0 0 2px #ffffff,
+                0 0 4px #00ffff,
+                0 0 8px #00ffff;
+        }
+        
+        /* Horizontal segments */
+        .demo-corner-tl::before {
+            width: 40px;
+            height: 4px;
+            top: 10px;
+            left: 4px;
+        }
+        
+        .demo-corner-tr::before {
+            width: 40px;
+            height: 4px;
+            top: 10px;
+            right: 4px;
+        }
+        
+        .demo-corner-bl::before {
+            width: 40px;
+            height: 4px;
+            bottom: 10px;
+            left: 4px;
+        }
+        
+        .demo-corner-br::before {
+            width: 40px;
+            height: 4px;
+            bottom: 10px;
+            right: 4px;
+        }
+        
+        /* Vertical segments */
+        .demo-corner-tl::after {
+            width: 4px;
+            height: 40px;
+            top: 4px;
+            left: 10px;
+        }
+        
+        .demo-corner-tr::after {
+            width: 4px;
+            height: 40px;
+            top: 4px;
+            right: 10px;
+        }
+        
+        .demo-corner-bl::after {
+            width: 4px;
+            height: 40px;
+            bottom: 4px;
+            left: 10px;
+        }
+        
+        .demo-corner-br::after {
+            width: 4px;
+            height: 40px;
+            bottom: 4px;
+            right: 10px;
+        }
+        
+        /* Edge elements */
+        .demo-edge-top, .demo-edge-right, .demo-edge-bottom, .demo-edge-left {
+            position: absolute;
+            background-color: #ff00de;
+            border-radius: 2px;
+            box-shadow: 
+                0 0 2px #ffffff,
+                0 0 4px #ff00de,
+                0 0 8px #ff00de,
+                0 0 12px #ff00de;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .demo-edge-top {
+            top: -8px;
+            left: 44px;
+            right: 44px;
+            height: 4px;
+            animation: neon-demo-flicker 4.2s linear infinite;
+        }
+        
+        .demo-edge-right {
+            top: 44px;
+            right: -8px;
+            bottom: 44px;
+            width: 4px;
+            animation: neon-demo-flicker 3.7s linear infinite;
+        }
+        
+        .demo-edge-bottom {
+            bottom: -8px;
+            left: 44px;
+            right: 44px;
+            height: 4px;
+            animation: neon-demo-flicker 4.5s linear infinite;
+        }
+        
+        .demo-edge-left {
+            top: 44px;
+            left: -8px;
+            bottom: 44px;
+            width: 4px;
+            animation: neon-demo-flicker 3.9s linear infinite;
         }
 
         .neon-border-text {
@@ -400,37 +496,61 @@
             text-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
         }
 
+        /* Animation for the demo edges */
         @keyframes neon-demo-flicker {
             0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
-                opacity: 0.95;
-                border-color: #ff00de;
+                opacity: 1;
+                background-color: #ff00de;
                 box-shadow: 
-                    0 0 5px #ff00de,
-                    0 0 10px #ff00de,
-                    0 0 15px #ff00de,
-                    inset 0 0 5px rgba(255, 0, 222, 0.3);
+                    0 0 2px #ffffff,
+                    0 0 4px #ff00de,
+                    0 0 8px #ff00de,
+                    0 0 12px #ff00de;
             }
             20%, 24%, 55% {
-                opacity: 0.6;
-                border-color: #d400bf;
+                opacity: 0.7;
+                background-color: #d400bf;
                 box-shadow: 
+                    0 0 1px #ffffff,
                     0 0 2px #d400bf,
-                    0 0 5px #d400bf,
-                    inset 0 0 3px rgba(212, 0, 191, 0.2);
+                    0 0 4px #d400bf;
+            }
+            57%, 80% {
+                opacity: 1;
+                background-color: #ff00de;
+                box-shadow: 
+                    0 0 2px #ffffff,
+                    0 0 4px #ff00de,
+                    0 0 8px #ff00de,
+                    0 0 12px #ff00de;
+            }
+            81%, 83%, 85% {
+                opacity: 0.8;
+                background-color: #d400bf;
+                box-shadow: 
+                    0 0 1px #ffffff,
+                    0 0 2px #d400bf,
+                    0 0 4px #d400bf;
             }
         }
-
-        @keyframes neon-corners-demo-pulse {
-            0% {
-                box-shadow: 
-                    0 0 5px rgba(0, 255, 255, 0.5),
-                    0 0 10px rgba(0, 255, 255, 0.3);
+        
+        /* Animation for demo corner elements */
+        .demo-corner-tl, .demo-corner-tr, .demo-corner-bl, .demo-corner-br {
+            animation: neon-corner-demo-flicker 3.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes neon-corner-demo-flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+                opacity: 1;
             }
-            100% {
-                box-shadow: 
-                    0 0 10px rgba(0, 255, 255, 0.8),
-                    0 0 20px rgba(0, 255, 255, 0.5),
-                    0 0 30px rgba(0, 255, 255, 0.3);
+            20%, 24%, 55% {
+                opacity: 0.5;
+            }
+            57%, 80% {
+                opacity: 0.9;
+            }
+            81%, 83%, 85% {
+                opacity: 0.7;
             }
         }
 
@@ -542,6 +662,89 @@
             .neon-border-demo {
                 height: 180px;
             }
+            
+            /* Responsive styles for demo elements on medium screens */
+            .demo-corner-tl, .demo-corner-tr, .demo-corner-bl, .demo-corner-br {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .demo-corner-tl::before, .demo-corner-tr::before, 
+            .demo-corner-bl::before, .demo-corner-br::before {
+                width: 30px;
+                height: 3px;
+            }
+            
+            .demo-corner-tl::after, .demo-corner-tr::after, 
+            .demo-corner-bl::after, .demo-corner-br::after {
+                width: 3px;
+                height: 30px;
+            }
+            
+            .demo-edge-top, .demo-edge-bottom {
+                left: 35px;
+                right: 35px;
+                height: 3px;
+            }
+            
+            .demo-edge-left, .demo-edge-right {
+                top: 35px;
+                bottom: 35px;
+                width: 3px;
+            }
+        }
+        
+        /* Additional styles for small mobile screens */
+        @media (max-width: 480px) {
+            /* Responsive styles for demo elements on small screens */
+            .demo-corner-tl, .demo-corner-tr, .demo-corner-bl, .demo-corner-br {
+                width: 25px;
+                height: 25px;
+            }
+            
+            .demo-corner-tl::before, .demo-corner-tr::before, 
+            .demo-corner-bl::before, .demo-corner-br::before {
+                width: 18px;
+                height: 2px;
+            }
+            
+            .demo-corner-tl::after, .demo-corner-tr::after, 
+            .demo-corner-bl::after, .demo-corner-br::after {
+                width: 2px;
+                height: 18px;
+            }
+            
+            .demo-corner-tl::before { top: 5px; left: 2px; }
+            .demo-corner-tl::after { top: 2px; left: 5px; }
+            
+            .demo-corner-tr::before { top: 5px; right: 2px; }
+            .demo-corner-tr::after { top: 2px; right: 5px; }
+            
+            .demo-corner-bl::before { bottom: 5px; left: 2px; }
+            .demo-corner-bl::after { bottom: 2px; left: 5px; }
+            
+            .demo-corner-br::before { bottom: 5px; right: 2px; }
+            .demo-corner-br::after { bottom: 2px; right: 5px; }
+            
+            .demo-edge-top, .demo-edge-bottom {
+                left: 22px;
+                right: 22px;
+                height: 2px;
+                box-shadow: 
+                    0 0 1px #ffffff,
+                    0 0 2px #ff00de,
+                    0 0 4px #ff00de;
+            }
+            
+            .demo-edge-left, .demo-edge-right {
+                top: 22px;
+                bottom: 22px;
+                width: 2px;
+                box-shadow: 
+                    0 0 1px #ffffff,
+                    0 0 2px #ff00de,
+                    0 0 4px #ff00de;
+            }
         }
     </style>
 </head>
@@ -576,20 +779,33 @@
                 <p>The advanced boundary system employs a dual-layer approach for optimal spatial awareness and tactical feedback:</p>
                 
                 <div class="neon-border-demo">
+                    <!-- Neon corner elements -->
+                    <div class="demo-corner-tl"></div>
+                    <div class="demo-corner-tr"></div>
+                    <div class="demo-corner-bl"></div>
+                    <div class="demo-corner-br"></div>
+                    
+                    <!-- Neon edge elements -->
+                    <div class="demo-edge-top"></div>
+                    <div class="demo-edge-right"></div>
+                    <div class="demo-edge-bottom"></div>
+                    <div class="demo-edge-left"></div>
+                    
+                    <!-- Arena text -->
                     <div class="neon-border-text">COMBAT<br>ARENA</div>
                 </div>
                 
                 <div class="visual-changes">
                     <div class="change-item">
-                        <h4>PRIMARY NEON PERIMETER</h4>
-                        <p>High-intensity pink perimeter with authentic neon flicker effect provides constant boundary awareness.</p>
+                        <h4>NEON EDGE ELEMENTS</h4>
+                        <p>High-intensity pink edge elements with authentic neon flicker effect provides constant boundary awareness.</p>
                         <div class="code-block">
-                            border: 5px solid <span class="color-value" style="background-color: #ff00de;"></span>#ff00de;<br>
+                            background-color: <span class="color-value" style="background-color: #ff00de;"></span>#ff00de;<br>
                             box-shadow: <br>
-                            &nbsp;&nbsp;0 0 5px #ff00de,<br>
-                            &nbsp;&nbsp;0 0 10px #ff00de,<br>
-                            &nbsp;&nbsp;0 0 20px #ff00de,<br>
-                            &nbsp;&nbsp;0 0 30px #ff00de;
+                            &nbsp;&nbsp;0 0 2px #ffffff,<br>
+                            &nbsp;&nbsp;0 0 4px #ff00de,<br>
+                            &nbsp;&nbsp;0 0 8px #ff00de,<br>
+                            &nbsp;&nbsp;0 0 12px #ff00de;
                         </div>
                     </div>
                     
@@ -597,10 +813,11 @@
                         <h4>SEGMENTED CORNER MARKERS</h4>
                         <p>L-shaped cyan corner indicators provide additional positional reference points, inspired by classic arcade machine aesthetics.</p>
                         <div class="code-block">
-                            background-image: linear-gradient(...)<br>
+                            background-color: <span class="color-value" style="background-color: #00ffff;"></span>#00ffff;<br>
                             box-shadow: <br>
-                            &nbsp;&nbsp;0 0 15px rgba(0, 255, 255, 0.9),<br>
-                            &nbsp;&nbsp;0 0 30px rgba(0, 255, 255, 0.6);
+                            &nbsp;&nbsp;0 0 2px #ffffff,<br>
+                            &nbsp;&nbsp;0 0 4px #00ffff,<br>
+                            &nbsp;&nbsp;0 0 8px #00ffff;
                         </div>
                     </div>
                 </div>
@@ -654,38 +871,63 @@
         <h2>TECHNICAL IMPLEMENTATION</h2>
         <p>The boundary enhancement system employs advanced CSS techniques to create an authentic retro arcade experience:</p>
         
-        <code>/* Primary Neon Border */
-#arena::before {
-    content: '';
+        <code>/* Neon edge elements - top edge example */
+.neon-edge-top {
     position: absolute;
-    top: -8px; left: -8px; right: -8px; bottom: -8px;
-    border-radius: 12px;
-    border: 5px solid #ff00de;
+    top: -8px;
+    left: 44px;
+    right: 44px;
+    height: 4px;
+    background-color: #ff00de; /* Bright pink neon */
+    border-radius: 2px;
     box-shadow: 
-        0 0 5px #ff00de,
-        0 0 10px #ff00de,
-        0 0 20px #ff00de,
-        0 0 30px #ff00de,
-        inset 0 0 10px rgba(255, 0, 222, 0.5);
-    animation: neon-border-flicker 3s linear infinite;
-    z-index: -1;
+        0 0 2px #ffffff, /* White inner glow */
+        0 0 4px #ff00de, /* Pink glow, close */
+        0 0 8px #ff00de, /* Medium distance */
+        0 0 12px #ff00de; /* Outer glow */
+    z-index: 1;
+    pointer-events: none;
+    animation: neon-edge-flicker 4.2s linear infinite;
 }
 
-/* Segmented Corner Markers */
-#arena::after {
+/* Corner elements - top left example */
+.neon-corner-tl {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    width: 50px;
+    height: 50px;
+    z-index: 1;
+    pointer-events: none;
+    animation: neon-corner-flicker 3.5s ease-in-out infinite alternate;
+}
+
+.neon-corner-tl::before {
     content: '';
     position: absolute;
-    top: -16px; left: -16px; right: -16px; bottom: -16px;
-    border-radius: 16px;
-    background:
-        /* Top Left */
-        linear-gradient(to right, #00ffff 40%, transparent 40%) top left/65px 5px no-repeat,
-        linear-gradient(to bottom, #00ffff 40%, transparent 40%) top left/5px 65px no-repeat,
-        /* ...other corners... */;
+    width: 40px;
+    height: 4px;
+    background-color: #00ffff;
+    top: 10px;
+    left: 4px;
     box-shadow: 
-        0 0 15px rgba(0, 255, 255, 0.9),
-        0 0 30px rgba(0, 255, 255, 0.6);
-    animation: neon-corners-pulse 2s ease-in-out infinite alternate;
+        0 0 2px #ffffff,
+        0 0 4px #00ffff,
+        0 0 8px #00ffff;
+}
+
+.neon-corner-tl::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 40px;
+    background-color: #00ffff;
+    top: 4px;
+    left: 10px;
+    box-shadow: 
+        0 0 2px #ffffff,
+        0 0 4px #00ffff,
+        0 0 8px #00ffff;
 }</code>
 
         <div class="screenshots">
