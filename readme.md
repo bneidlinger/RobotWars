@@ -15,7 +15,7 @@ Robot Wars is a programming game where players write JavaScript code to control 
 Learn how to program your combat robot with our comprehensive guide! From basic movement to advanced tactical strategies, this resource will help you dominate in the arena.
 
 [![Access Programming Guide](https://img.shields.io/badge/Access%20Programming%20Guide-Click%20Here-brightgreen)](https://bneidlinger.github.io/RobotWars/BotProgrammingGuide.html)
-[![Play on Render](https://img.shields.io/badge/Play%20on%20Render-Robot%20Wars-blue)](https://robotwars-c198.onrender.com)
+[![Play on Render](https://img.shields.io/badge/Play%20on%20Render-Robot%20Wars-blue)](https://robotwars-fq6c.onrender.com)
 [![View on GitHub](https://img.shields.io/badge/View%20on%20GitHub-Repository-lightgrey)](https://github.com/bneidlinger/RobotWars)
 
 ## Features
@@ -53,7 +53,7 @@ npm start
 
 Alternatively, you can access the latest version directly at:
 - GitHub Pages: https://bneidlinger.github.io/RobotWars
-- Render Deployment: https://robotwars-c198.onrender.com
+- Render Deployment: https://robotwars-fq6c.onrender.com
 
 ## How to Play
 
@@ -155,7 +155,7 @@ This project is inspired by the original [CROBOTS](https://github.com/tpoindex/c
 ## Links
 
 - [Play Now on GitHub Pages](https://bneidlinger.github.io/RobotWars)
-- [Play on Render](https://robotwars-c198.onrender.com) (Always up-to-date with latest features)
+- [Play on Render](https://robotwars-fq6c.onrender.com) (Always up-to-date with latest features)
 - [GitHub Repository](https://github.com/bneidlinger/RobotWars)
 - [Leave Feedback](https://github.com/bneidlinger/RobotWars/issues)
 

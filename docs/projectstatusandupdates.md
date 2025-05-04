@@ -9,7 +9,7 @@
 *   **State Synchronization:** The server regularly broadcasts the authoritative `gameState` (robot positions, health, missiles, appearance, explosions) to clients in the correct game room.
 *   **Client Refactoring:** The client (`game.js`, `arena.js`) now focuses primarily on rendering the game state received from the server, rather than running its own simulation.
 *   **Visual Enhancements:** Added multiple selectable robot appearances, rendered using the Canvas API based on server state, and included a textured arena background.
-*   **Deployment:** Successfully deployed the application to **Render** (`https://robotwars-c198.onrender.com`), allowing for live online testing.
+*   **Deployment:** Successfully deployed the application to **Render** (`https://robotwars-fq6c.onrender.com`), allowing for live online testing.
 *   **Debugging:** Added server-side logging to investigate coordinate clamping.
 
 ## Current Issue Under Investigation

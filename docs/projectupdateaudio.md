@@ -44,6 +44,6 @@ Fixed an unrelated LocalStorageManager not available error in editor.js.
 Current Status: Audio file loading errors persist in the console. No audio is functional.
 Next Troubleshooting Steps:
 Verify Files: Confirm the exact existence, spelling, and case of fire.mp3, hit.mp3, explosion.mp3, and soundtrack.mp3 within the client/assets/audio directory of the deployed application on Render.
-Test Direct URL Access: Attempt to access each .mp3 file directly in the browser using the full Render URL (e.g., https://robotwars-c198.onrender.com/assets/audio/fire.mp3). Note whether it results in a 404 error or successfully plays/downloads the file.
+Test Direct URL Access: Attempt to access each .mp3 file directly in the browser using the full Render URL (e.g., https://robotwars-fq6c.onrender.com/assets/audio/fire.mp3). Note whether it results in a 404 error or successfully plays/downloads the file.
 Confirm Code Paths: Double-check the file paths in AudioManager.js and index.html against the verified filenames.
 Verify Static Serving: Ensure the express.static middleware in server/index.js is correctly configured to serve the client directory.
