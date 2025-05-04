@@ -54,6 +54,7 @@ header h1 {
     display: inline-block;
     vertical-align: middle;
     flex-shrink: 0;
+    position: relative; /* Add relative positioning for the birthday message */
 }
 
 /* --- Header Player Info Area Styles --- */
@@ -740,6 +741,36 @@ input#loadout-name-input, input#builder-player-name {
     text-decoration: underline;
 }
 /* --- END: Authentication Modal Styles --- */
+
+/* === Happy Birthday JN Styles === */
+.bday-message {
+    position: absolute;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.5rem;
+    top: -5px;
+    right: -125px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    color: transparent;
+    text-shadow: 0 0 5px #ff00de, 0 0 10px #ff00de;
+    animation: neon-flicker 2s infinite alternate;
+    transform: rotate(-2deg);
+}
+
+@keyframes neon-flicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+        color: #ff00de;
+        text-shadow: 0 0 5px #ff00de, 
+                     0 0 10px #ff00de, 
+                     0 0 15px #ff00de,
+                     0 0 20px #ff00de, 
+                     0 0 30px #ff00de;
+    }
+    20%, 24%, 55% {
+        color: #222;
+        text-shadow: none;
+    }
+}
 
 
 /* --- Responsive Adjustments --- */
