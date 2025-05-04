@@ -358,8 +358,9 @@ input#loadout-name-input, input#builder-player-name {
         0 0 12px #ff00de; /* Outer glow */
     z-index: 1;
     pointer-events: none;
-    /* Each edge has slightly different timing to create a more natural effect */
-    animation: neon-edge-flicker 4.2s linear infinite;
+    /* State-switching animation system (3 minute cycle: 1 min high flicker, 2 min steady) */
+    animation: high-flicker 4.2s linear infinite, neon-state-transition 180s infinite alternate;
+    animation-play-state: running, running;
 }
 
 /* Right edge */
@@ -379,8 +380,11 @@ input#loadout-name-input, input#builder-player-name {
         0 0 12px #ff00de;
     z-index: 1;
     pointer-events: none;
-    /* Different timing for each edge */
-    animation: neon-edge-flicker 3.7s linear infinite;
+    /* Different timing for each edge but same state cycle */
+    animation: high-flicker 3.7s linear infinite, neon-state-transition 180s infinite alternate;
+    animation-play-state: running, running;
+    /* Slight offset so edges don't all change state simultaneously */
+    animation-delay: 0s, 10s;
 }
 
 /* Bottom edge */
@@ -400,8 +404,11 @@ input#loadout-name-input, input#builder-player-name {
         0 0 12px #ff00de;
     z-index: 1;
     pointer-events: none;
-    /* Different timing for each edge */
-    animation: neon-edge-flicker 4.5s linear infinite;
+    /* Different timing for each edge but same state cycle */
+    animation: high-flicker 4.5s linear infinite, neon-state-transition 180s infinite alternate;
+    animation-play-state: running, running;
+    /* Slight offset so edges don't all change state simultaneously */
+    animation-delay: 0s, 20s;
 }
 
 /* Left edge */
@@ -421,12 +428,38 @@ input#loadout-name-input, input#builder-player-name {
         0 0 12px #ff00de;
     z-index: 1;
     pointer-events: none;
-    /* Different timing for each edge */
-    animation: neon-edge-flicker 3.9s linear infinite;
+    /* Different timing for each edge but same state cycle */
+    animation: high-flicker 3.9s linear infinite, neon-state-transition 180s infinite alternate;
+    animation-play-state: running, running;
+    /* Slight offset so edges don't all change state simultaneously */
+    animation-delay: 0s, 30s;
 }
 
-/* Animation for the edges - enhanced flicker effect */
-@keyframes neon-edge-flicker {
+/* State-switching animation system that alternates between high flicker and steady state */
+@keyframes neon-state-transition {
+    /* First minute (0-33.3%): High flicker rate */
+    0% {
+        animation-timing-function: linear;
+        animation-name: high-flicker;
+    }
+    33.3% {
+        animation-timing-function: ease-out;
+        animation-name: high-flicker;
+    }
+    
+    /* Next two minutes (33.3-100%): Steady state with minimal flickering */
+    33.4% {
+        animation-timing-function: ease-in;
+        animation-name: steady-state;
+    }
+    100% {
+        animation-timing-function: linear;
+        animation-name: steady-state;
+    }
+}
+
+/* High flicker rate animation */
+@keyframes high-flicker {
     0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
         opacity: 1;
         background-color: #ff00de;
@@ -460,6 +493,28 @@ input#loadout-name-input, input#builder-player-name {
             0 0 1px #ffffff,
             0 0 2px #d400bf,
             0 0 4px #d400bf;
+    }
+}
+
+/* Steady state animation with 75% less flickering */
+@keyframes steady-state {
+    0%, 24.75%, 25.25%, 49.75%, 50.25%, 74.75%, 75.25%, 100% {
+        opacity: 1;
+        background-color: #ff00de;
+        box-shadow: 
+            0 0 2px #ffffff,
+            0 0 4px #ff00de,
+            0 0 8px #ff00de,
+            0 0 12px #ff00de;
+    }
+    25%, 50%, 75% {
+        opacity: 0.9;
+        background-color: #f500d5;
+        box-shadow: 
+            0 0 2px #ffffff,
+            0 0 3px #f500d5,
+            0 0 7px #f500d5,
+            0 0 10px #f500d5;
     }
 }
 
@@ -648,24 +703,56 @@ input#loadout-name-input, input#builder-player-name {
     }
 }
 
-/* Animation for the corner elements - enhanced flicker effect */
+/* Animation for the corner elements - enhanced flicker effect with state switching */
 .neon-corner-tl {
-    animation: neon-corner-flicker 3.5s ease-in-out infinite alternate;
+    animation: corner-high-flicker 3.5s ease-in-out infinite alternate, corner-state-transition 180s infinite alternate;
+    animation-play-state: running, running;
+    animation-delay: 0s, 5s; /* Offset timing */
 }
 
 .neon-corner-tr {
-    animation: neon-corner-flicker 3.2s ease-in-out infinite alternate;
+    animation: corner-high-flicker 3.2s ease-in-out infinite alternate, corner-state-transition 180s infinite alternate;
+    animation-play-state: running, running;
+    animation-delay: 0s, 15s; /* Offset timing */
 }
 
 .neon-corner-bl {
-    animation: neon-corner-flicker 3.7s ease-in-out infinite alternate;
+    animation: corner-high-flicker 3.7s ease-in-out infinite alternate, corner-state-transition 180s infinite alternate;
+    animation-play-state: running, running;
+    animation-delay: 0s, 25s; /* Offset timing */
 }
 
 .neon-corner-br {
-    animation: neon-corner-flicker 3.3s ease-in-out infinite alternate;
+    animation: corner-high-flicker 3.3s ease-in-out infinite alternate, corner-state-transition 180s infinite alternate;
+    animation-play-state: running, running;
+    animation-delay: 0s, 35s; /* Offset timing */
 }
 
-@keyframes neon-corner-flicker {
+/* State transition for corners (matches edges but with different keyframe animations) */
+@keyframes corner-state-transition {
+    /* First minute (0-33.3%): High flicker rate */
+    0% {
+        animation-timing-function: linear;
+        animation-name: corner-high-flicker;
+    }
+    33.3% {
+        animation-timing-function: ease-out;
+        animation-name: corner-high-flicker;
+    }
+    
+    /* Next two minutes (33.3-100%): Steady state with minimal flickering */
+    33.4% {
+        animation-timing-function: ease-in;
+        animation-name: corner-steady-state;
+    }
+    100% {
+        animation-timing-function: linear;
+        animation-name: corner-steady-state;
+    }
+}
+
+/* High flicker rate animation for corners */
+@keyframes corner-high-flicker {
     0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
         opacity: 1;
     }
@@ -677,6 +764,16 @@ input#loadout-name-input, input#builder-player-name {
     }
     81%, 83%, 85% {
         opacity: 0.7;
+    }
+}
+
+/* Steady state animation for corners (75% less flickering) */
+@keyframes corner-steady-state {
+    0%, 24.75%, 25.25%, 49.75%, 50.25%, 74.75%, 75.25%, 100% {
+        opacity: 1;
+    }
+    25%, 50%, 75% {
+        opacity: 0.9;
     }
 }
 
@@ -1359,12 +1456,16 @@ input#loadout-name-input, input#builder-player-name {
         left: 35px;
         right: 35px;
         height: 3px;
+        /* Keep animations the same, just adjust dimensions */
+        animation: high-flicker 4.2s linear infinite, neon-state-transition 180s infinite alternate;
     }
     
     .neon-edge-left, .neon-edge-right {
         top: 35px;
         bottom: 35px;
         width: 3px;
+        /* Keep animations the same, just adjust dimensions */
+        animation: high-flicker 3.9s linear infinite, neon-state-transition 180s infinite alternate;
     }
 }
     .consoles-row {
@@ -1451,11 +1552,13 @@ input#loadout-name-input, input#builder-player-name {
         left: 30px;
         right: 30px;
         height: 3px;
-        /* Reduce glow intensity for small screens */
+        /* Reduce glow intensity for small screens but keep timing pattern */
         box-shadow: 
             0 0 1px #ffffff,
             0 0 3px #ff00de,
             0 0 6px #ff00de;
+        /* Preserve animation state system for small screens */
+        animation: small-high-flicker 4.2s linear infinite, small-state-transition 180s infinite alternate;
     }
     
     .neon-edge-left, .neon-edge-right {
@@ -1467,6 +1570,51 @@ input#loadout-name-input, input#builder-player-name {
             0 0 1px #ffffff,
             0 0 3px #ff00de,
             0 0 6px #ff00de;
+        /* Preserve animation state system for small screens */
+        animation: small-high-flicker 3.9s linear infinite, small-state-transition 180s infinite alternate;
+    }
+    
+    /* Small screen optimized animations with reduced complexity */
+    @keyframes small-high-flicker {
+        0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+            opacity: 1;
+            box-shadow: 
+                0 0 1px #ffffff,
+                0 0 3px #ff00de,
+                0 0 6px #ff00de;
+        }
+        20%, 24%, 55% {
+            opacity: 0.7;
+            box-shadow: 
+                0 0 1px #ffffff,
+                0 0 2px #d400bf,
+                0 0 4px #d400bf;
+        }
+    }
+    
+    @keyframes small-state-transition {
+        /* Same timing as main state transition but with small-specific animations */
+        0% { animation-name: small-high-flicker; }
+        33.3% { animation-name: small-high-flicker; }
+        33.4% { animation-name: small-steady-state; }
+        100% { animation-name: small-steady-state; }
+    }
+    
+    @keyframes small-steady-state {
+        0%, 49.9%, 50.1%, 100% {
+            opacity: 0.95;
+            box-shadow: 
+                0 0 1px #ffffff,
+                0 0 3px #ff00de,
+                0 0 5px #ff00de;
+        }
+        50% {
+            opacity: 0.85;
+            box-shadow: 
+                0 0 1px #ffffff,
+                0 0 2px #f500d5,
+                0 0 4px #f500d5;
+        }
     }
 }
 
@@ -1565,6 +1713,8 @@ input#loadout-name-input, input#builder-player-name {
             0 0 1px #ffffff,
             0 0 2px #ff00de,
             0 0 4px #ff00de;
+        /* Extra simplified animation for mobile performance */
+        animation: xs-high-flicker 4.5s linear infinite, xs-state-transition 180s infinite alternate;
     }
     
     .neon-edge-left, .neon-edge-right {
@@ -1576,6 +1726,43 @@ input#loadout-name-input, input#builder-player-name {
             0 0 1px #ffffff,
             0 0 2px #ff00de,
             0 0 4px #ff00de;
+        /* Extra simplified animation for mobile performance */
+        animation: xs-high-flicker 4.5s linear infinite, xs-state-transition 180s infinite alternate;
+    }
+    
+    /* Extra small screen animations with minimal complexity for battery preservation */
+    @keyframes xs-high-flicker {
+        0%, 20%, 40%, 60%, 80%, 100% {
+            opacity: 1;
+            box-shadow: 
+                0 0 1px #ffffff,
+                0 0 2px #ff00de,
+                0 0 4px #ff00de;
+        }
+        10%, 30%, 50%, 70%, 90% {
+            opacity: 0.8;
+            box-shadow: 
+                0 0 1px #ffffff,
+                0 0 2px #d400bf;
+        }
+    }
+    
+    @keyframes xs-state-transition {
+        /* Same timing as main state transition but with xs-specific animations */
+        0% { animation-name: xs-high-flicker; }
+        33.3% { animation-name: xs-high-flicker; }
+        33.4% { animation-name: xs-steady-state; }
+        100% { animation-name: xs-steady-state; }
+    }
+    
+    @keyframes xs-steady-state {
+        0%, 100% {
+            opacity: 0.95;
+            box-shadow: 
+                0 0 1px #ffffff,
+                0 0 2px #ff00de,
+                0 0 3px #ff00de;
+        }
     }
 }
     

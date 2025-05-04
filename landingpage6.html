@@ -456,7 +456,8 @@
             left: 44px;
             right: 44px;
             height: 4px;
-            animation: neon-demo-flicker 4.2s linear infinite;
+            animation: neon-demo-high-flicker 4.2s linear infinite, demo-state-transition 30s infinite alternate;
+            animation-play-state: running, running;
         }
         
         .demo-edge-right {
@@ -464,7 +465,9 @@
             right: -8px;
             bottom: 44px;
             width: 4px;
-            animation: neon-demo-flicker 3.7s linear infinite;
+            animation: neon-demo-high-flicker 3.7s linear infinite, demo-state-transition 30s infinite alternate;
+            animation-play-state: running, running;
+            animation-delay: 0s, 3s; /* Offset for demo */
         }
         
         .demo-edge-bottom {
@@ -472,7 +475,9 @@
             left: 44px;
             right: 44px;
             height: 4px;
-            animation: neon-demo-flicker 4.5s linear infinite;
+            animation: neon-demo-high-flicker 4.5s linear infinite, demo-state-transition 30s infinite alternate;
+            animation-play-state: running, running;
+            animation-delay: 0s, 6s; /* Offset for demo */
         }
         
         .demo-edge-left {
@@ -480,7 +485,9 @@
             left: -8px;
             bottom: 44px;
             width: 4px;
-            animation: neon-demo-flicker 3.9s linear infinite;
+            animation: neon-demo-high-flicker 3.9s linear infinite, demo-state-transition 30s infinite alternate;
+            animation-play-state: running, running;
+            animation-delay: 0s, 9s; /* Offset for demo */
         }
 
         .neon-border-text {
@@ -496,8 +503,20 @@
             text-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
         }
 
-        /* Animation for the demo edges */
-        @keyframes neon-demo-flicker {
+        /* Demo animation system that showcases both states */
+        /* State switching for demo - 30 second cycle instead of 180s for better demonstration */
+        @keyframes demo-state-transition {
+            /* First 10 seconds (0-33.3%): High flicker rate */
+            0% { animation-name: neon-demo-high-flicker; }
+            33.3% { animation-name: neon-demo-high-flicker; }
+            
+            /* Next 20 seconds (33.3-100%): Steady state */
+            33.4% { animation-name: neon-demo-steady-state; }
+            100% { animation-name: neon-demo-steady-state; }
+        }
+        
+        /* High flicker animation for demo */
+        @keyframes neon-demo-high-flicker {
             0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
                 opacity: 1;
                 background-color: #ff00de;
@@ -534,12 +553,66 @@
             }
         }
         
-        /* Animation for demo corner elements */
-        .demo-corner-tl, .demo-corner-tr, .demo-corner-bl, .demo-corner-br {
-            animation: neon-corner-demo-flicker 3.5s ease-in-out infinite alternate;
+        /* Steady state animation for demo */
+        @keyframes neon-demo-steady-state {
+            0%, 24.75%, 25.25%, 49.75%, 50.25%, 74.75%, 75.25%, 100% {
+                opacity: 1;
+                background-color: #ff00de;
+                box-shadow: 
+                    0 0 2px #ffffff,
+                    0 0 4px #ff00de,
+                    0 0 8px #ff00de,
+                    0 0 12px #ff00de;
+            }
+            25%, 50%, 75% {
+                opacity: 0.9;
+                background-color: #f500d5;
+                box-shadow: 
+                    0 0 2px #ffffff,
+                    0 0 3px #f500d5,
+                    0 0 7px #f500d5,
+                    0 0 10px #f500d5;
+            }
         }
         
-        @keyframes neon-corner-demo-flicker {
+        /* State switching for demo corners - 30 second cycle for demonstration */
+        @keyframes demo-corner-state-transition {
+            /* First 10 seconds (0-33.3%): High flicker rate */
+            0% { animation-name: corner-demo-high-flicker; }
+            33.3% { animation-name: corner-demo-high-flicker; }
+            
+            /* Next 20 seconds (33.3-100%): Steady state */
+            33.4% { animation-name: corner-demo-steady-state; }
+            100% { animation-name: corner-demo-steady-state; }
+        }
+        
+        /* Animation for demo corner elements */
+        .demo-corner-tl {
+            animation: corner-demo-high-flicker 3.5s ease-in-out infinite alternate, demo-corner-state-transition 30s infinite alternate;
+            animation-play-state: running, running;
+            animation-delay: 0s, 2s; /* Offset timing */
+        }
+        
+        .demo-corner-tr {
+            animation: corner-demo-high-flicker 3.2s ease-in-out infinite alternate, demo-corner-state-transition 30s infinite alternate;
+            animation-play-state: running, running;
+            animation-delay: 0s, 5s; /* Offset timing */
+        }
+        
+        .demo-corner-bl {
+            animation: corner-demo-high-flicker 3.7s ease-in-out infinite alternate, demo-corner-state-transition 30s infinite alternate;
+            animation-play-state: running, running;
+            animation-delay: 0s, 8s; /* Offset timing */
+        }
+        
+        .demo-corner-br {
+            animation: corner-demo-high-flicker 3.3s ease-in-out infinite alternate, demo-corner-state-transition 30s infinite alternate;
+            animation-play-state: running, running;
+            animation-delay: 0s, 11s; /* Offset timing */
+        }
+        
+        /* High flicker animation for demo corners */
+        @keyframes corner-demo-high-flicker {
             0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
                 opacity: 1;
             }
@@ -551,6 +624,16 @@
             }
             81%, 83%, 85% {
                 opacity: 0.7;
+            }
+        }
+        
+        /* Steady state animation for demo corners */
+        @keyframes corner-demo-steady-state {
+            0%, 24.75%, 25.25%, 49.75%, 50.25%, 74.75%, 75.25%, 100% {
+                opacity: 1;
+            }
+            25%, 50%, 75% {
+                opacity: 0.9;
             }
         }
 
@@ -829,20 +912,22 @@
                 <h3>RETRO ANIMATION SYSTEM <span class="new-feature">New</span></h3>
                 <p>Advanced animation sequencing provides authentic neon aesthetics:</p>
                 <ul style="list-style-type: none; margin: 15px 0;">
+                    <li>→ <b>Adaptive State System:</b> Alternates between high flicker and steady state on 3-minute cycle</li>
                     <li>→ <b>Neon Flicker Effect:</b> Simulates authentic gas discharge tube behavior</li>
                     <li>→ <b>Random Variation Patterns:</b> Ensures realistic visual characteristics</li>
                     <li>→ <b>Color Shift Animation:</b> Subtle hue transitions during intensity changes</li>
-                    <li>→ <b>Corner Marker Pulsing:</b> Independent animation for segment indicators</li>
-                    <li>→ <b>Optimized Performance:</b> Hardware-accelerated CSS animations</li>
+                    <li>→ <b>Independent Animation:</b> Each edge and corner uses different timing cycles</li>
+                    <li>→ <b>Optimized Performance:</b> Scaled complexity for different device capabilities</li>
                 </ul>
                 
                 <div class="terminal-animation">
                     <div>> Initializing animation sequence modules</div>
-                    <div>> Loading neon flicker pattern: 3000ms, 7 sequence points</div>
-                    <div>> Loading corner pulse pattern: 2000ms, alternate direction</div>
+                    <div>> Loading state transition system: 180000ms cycle (60s high flicker, 120s steady)</div>
+                    <div>> Loading neon flicker pattern: 3000ms-4500ms range, 7 sequence points</div>
+                    <div>> Loading steady state pattern: 75% reduced flicker interval</div>
                     <div>> Setting base color: #ff00de (Pink Neon)</div>
                     <div>> Setting accent color: #00ffff (Cyan)</div>
-                    <div>> Animation system active</div>
+                    <div>> Adaptive animation system active</div>
                 </div>
             </div>
 
@@ -871,7 +956,18 @@
         <h2>TECHNICAL IMPLEMENTATION</h2>
         <p>The boundary enhancement system employs advanced CSS techniques to create an authentic retro arcade experience:</p>
         
-        <code>/* Neon edge elements - top edge example */
+        <code>/* State-switching animation system */
+@keyframes neon-state-transition {
+    /* First minute (0-33.3%): High flicker rate */
+    0% { animation-name: high-flicker; }
+    33.3% { animation-name: high-flicker; }
+    
+    /* Next two minutes (33.3-100%): Steady state with minimal flickering */
+    33.4% { animation-name: steady-state; }
+    100% { animation-name: steady-state; }
+}
+
+/* Neon edge elements - top edge example */
 .neon-edge-top {
     position: absolute;
     top: -8px;
@@ -887,7 +983,9 @@
         0 0 12px #ff00de; /* Outer glow */
     z-index: 1;
     pointer-events: none;
-    animation: neon-edge-flicker 4.2s linear infinite;
+    animation: 
+        high-flicker 4.2s linear infinite, 
+        neon-state-transition 180s infinite alternate;
 }
 
 /* Corner elements - top left example */
@@ -955,6 +1053,15 @@
         <div class="action-container">
             <a href="https://robotwars-fq6c.onrender.com" class="btn btn-neon">EXPERIENCE ENHANCED ARENA</a>
             <a href="https://github.com/bneidlinger/RobotWars" class="btn btn-play" style="margin-left: 15px;">VIEW SOURCE CODE</a>
+        </div>
+        
+        <div class="action-container" style="margin-top: 20px; display: flex; justify-content: center; gap: 15px;">
+            <a href="landingpage5.html" class="btn" style="background-color: #c41e3a; color: #fff; border: 1px solid #a01930; display: inline-block; font-size: 16px; padding: 10px 20px; box-shadow: 0 0 10px rgba(196, 30, 58, 0.5);">
+                ← Back to Combat Variants (v5.0)
+            </a>
+            <a href="index.html" class="btn" style="background-color: #4CAF50; color: #fff; border: 1px solid #388E3C; display: inline-block; font-size: 16px; padding: 10px 20px; box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);">
+                Return to Home
+            </a>
         </div>
 
         <div class="signature">
