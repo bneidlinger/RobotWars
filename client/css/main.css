@@ -429,33 +429,14 @@ input#loadout-name-input, input#builder-player-name {
     height: 100% !important; /* Set height relative to wrapper */
     font-family: 'VT323', monospace;
     font-size: 17px; /* Slightly larger editor font */
-    overflow: hidden !important; /* Hide overflow at container level */
-}
-
-.CodeMirror-scroll {
-    overflow-y: auto !important; /* Enable vertical scrolling */
-    overflow-x: auto !important; /* Enable horizontal scrolling */
-    margin-bottom: 0 !important; /* Remove margin that causes double scrollbar */
-    margin-right: 0 !important; /* Remove margin that causes double scrollbar */
 }
 .CodeMirror-readonly .CodeMirror-cursor { display: none !important; }
 .CodeMirror-readonly { background-color: #222 !important; }
-.CodeMirror-scrollbar-filler { display: none !important; } /* Hide scroll corner */
 
-/* Adjust native scrollbar appearance */
+/* Simple scrollbar styling for browsers that support it */
 .CodeMirror ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
-}
-.CodeMirror ::-webkit-scrollbar-track {
-    background: #333;
-}
-.CodeMirror ::-webkit-scrollbar-thumb {
-    background: #666;
-    border-radius: 4px;
-}
-.CodeMirror ::-webkit-scrollbar-thumb:hover {
-    background: #888;
 }
 
 .editor-controls {

@@ -42,9 +42,8 @@ if (scanResult) {
             lineNumbers: true,
             indentUnit: 4,
             autoCloseBrackets: true,
-            matchBrackets: true,
-            viewportMargin: 20 // Reduced from Infinity to prevent rendering issues
-            // Removed scrollbarStyle option since the addon isn't included
+            matchBrackets: true
+            // No custom viewport margin or scrollbar settings
         });
 
         // Set the default code defined above
