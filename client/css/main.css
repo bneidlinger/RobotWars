@@ -328,7 +328,7 @@ input#loadout-name-input, input#builder-player-name {
     background-color: #2c2c2c;
     border: 2px solid #444;
     border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 0 30px rgba(255, 0, 255, 0.3);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     display: block;
     width: 900px;
     height: 900px;
@@ -336,130 +336,228 @@ input#loadout-name-input, input#builder-player-name {
     flex-shrink: 0; /* Prevent shrinking */
     align-self: center;
     position: relative; /* For neon border positioning */
+    z-index: 0; /* Ensure proper stacking context */
+    overflow: visible; /* Allow pseudo-elements to extend outside */
 }
 
-/* Neon border around the arena */
+/* Main neon border - clean, defined line */
 #arena::before {
     content: '';
     position: absolute;
-    top: -8px;
-    left: -8px;
-    right: -8px;
-    bottom: -8px;
-    border-radius: 12px;
-    background: transparent;
-    border: 5px solid #ff00de;
-    box-shadow: 
-        0 0 5px #ff00de,
-        0 0 10px #ff00de,
-        0 0 20px #ff00de,
-        0 0 30px #ff00de,
-        inset 0 0 10px rgba(255, 0, 222, 0.5);
-    pointer-events: none;
-    animation: neon-border-flicker 3s linear infinite;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
     z-index: -1;
+    border-radius: 10px;
+    background-color: transparent; /* No background color */
+    border: 3px solid #ff00de; /* Bright pink neon color */
+    box-shadow: 
+        0 0 2px #ffffff, /* White inner glow */
+        0 0 4px #ff00de, /* Pink glow, close to border */
+        0 0 8px #ff00de, /* Medium distance glow */
+        0 0 12px #ff00de, /* Outer glow */
+        inset 0 0 2px #ff00de; /* Subtle inner glow */
+    pointer-events: none;
+    animation: neon-border-flicker 2s linear infinite;
 }
 
-/* Segmented border corners */
+/* Segmented corner markers - more defined and visible */
 #arena::after {
     content: '';
     position: absolute;
-    top: -16px;
-    left: -16px;
-    right: -16px;
-    bottom: -16px;
-    border-radius: 16px;
-    background: none;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    z-index: -2;
+    border-radius: 10px;
     pointer-events: none;
-    background:
-        /* Top Left */
-        linear-gradient(to right, #00ffff 40%, transparent 40%) top left/65px 5px no-repeat,
-        linear-gradient(to bottom, #00ffff 40%, transparent 40%) top left/5px 65px no-repeat,
-        
-        /* Top Right */
-        linear-gradient(to left, #00ffff 40%, transparent 40%) top right/65px 5px no-repeat,
-        linear-gradient(to bottom, #00ffff 40%, transparent 40%) top right/5px 65px no-repeat,
-        
-        /* Bottom Left */
-        linear-gradient(to right, #00ffff 40%, transparent 40%) bottom left/65px 5px no-repeat,
-        linear-gradient(to top, #00ffff 40%, transparent 40%) bottom left/5px 65px no-repeat,
-        
-        /* Bottom Right */
-        linear-gradient(to left, #00ffff 40%, transparent 40%) bottom right/65px 5px no-repeat,
-        linear-gradient(to top, #00ffff 40%, transparent 40%) bottom right/5px 65px no-repeat;
-    
-    box-shadow: 
-        0 0 15px rgba(0, 255, 255, 0.9),
-        0 0 30px rgba(0, 255, 255, 0.6);
-    animation: neon-corners-pulse 2s ease-in-out infinite alternate;
-    z-index: -1;
 }
 
+/* Separate corner elements for better control */
+/* Top Left Corner */
+.neon-corner-tl {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    z-index: 1;
+    pointer-events: none;
+    width: 50px;
+    height: 50px;
+}
+.neon-corner-tl::before {
+    content: '';
+    position: absolute;
+    width: 40px;
+    height: 4px;
+    background-color: #00ffff;
+    top: 10px;
+    left: 4px;
+    box-shadow: 
+        0 0 2px #ffffff,
+        0 0 4px #00ffff,
+        0 0 8px #00ffff;
+}
+.neon-corner-tl::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 40px;
+    background-color: #00ffff;
+    top: 4px;
+    left: 10px;
+    box-shadow: 
+        0 0 2px #ffffff,
+        0 0 4px #00ffff,
+        0 0 8px #00ffff;
+}
+
+/* Top Right Corner */
+.neon-corner-tr {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    z-index: 1;
+    pointer-events: none;
+    width: 50px;
+    height: 50px;
+}
+.neon-corner-tr::before {
+    content: '';
+    position: absolute;
+    width: 40px;
+    height: 4px;
+    background-color: #00ffff;
+    top: 10px;
+    right: 4px;
+    box-shadow: 
+        0 0 2px #ffffff,
+        0 0 4px #00ffff,
+        0 0 8px #00ffff;
+}
+.neon-corner-tr::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 40px;
+    background-color: #00ffff;
+    top: 4px;
+    right: 10px;
+    box-shadow: 
+        0 0 2px #ffffff,
+        0 0 4px #00ffff,
+        0 0 8px #00ffff;
+}
+
+/* Bottom Left Corner */
+.neon-corner-bl {
+    position: absolute;
+    bottom: -8px;
+    left: -8px;
+    z-index: 1;
+    pointer-events: none;
+    width: 50px;
+    height: 50px;
+}
+.neon-corner-bl::before {
+    content: '';
+    position: absolute;
+    width: 40px;
+    height: 4px;
+    background-color: #00ffff;
+    bottom: 10px;
+    left: 4px;
+    box-shadow: 
+        0 0 2px #ffffff,
+        0 0 4px #00ffff,
+        0 0 8px #00ffff;
+}
+.neon-corner-bl::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 40px;
+    background-color: #00ffff;
+    bottom: 4px;
+    left: 10px;
+    box-shadow: 
+        0 0 2px #ffffff,
+        0 0 4px #00ffff,
+        0 0 8px #00ffff;
+}
+
+/* Bottom Right Corner */
+.neon-corner-br {
+    position: absolute;
+    bottom: -8px;
+    right: -8px;
+    z-index: 1;
+    pointer-events: none;
+    width: 50px;
+    height: 50px;
+}
+.neon-corner-br::before {
+    content: '';
+    position: absolute;
+    width: 40px;
+    height: 4px;
+    background-color: #00ffff;
+    bottom: 10px;
+    right: 4px;
+    box-shadow: 
+        0 0 2px #ffffff,
+        0 0 4px #00ffff,
+        0 0 8px #00ffff;
+}
+.neon-corner-br::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 40px;
+    background-color: #00ffff;
+    bottom: 4px;
+    right: 10px;
+    box-shadow: 
+        0 0 2px #ffffff,
+        0 0 4px #00ffff,
+        0 0 8px #00ffff;
+}
+
+/* Animation for the border */
 @keyframes neon-border-flicker {
     0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
-        opacity: 0.95;
+        opacity: 1;
         border-color: #ff00de;
         box-shadow: 
-            0 0 5px #ff00de,
-            0 0 10px #ff00de,
-            0 0 20px #ff00de,
-            0 0 30px #ff00de,
-            inset 0 0 10px rgba(255, 0, 222, 0.5);
+            0 0 2px #ffffff, /* White inner glow */
+            0 0 4px #ff00de, /* Pink glow, close */
+            0 0 8px #ff00de, /* Medium distance */
+            0 0 12px #ff00de, /* Outer glow */
+            inset 0 0 2px #ff00de; /* Subtle inner */
+    }
+    20%, 24%, 55% {
+        opacity: 0.8;
+        border-color: #d400bf;
+        box-shadow: 
+            0 0 1px #ffffff,
+            0 0 2px #d400bf,
+            0 0 4px #d400bf,
+            inset 0 0 1px #d400bf;
+    }
+}
+
+/* Animation for the corner elements */
+.neon-corner-tl, .neon-corner-tr, .neon-corner-bl, .neon-corner-br {
+    animation: neon-corner-flicker 3s ease-in-out infinite alternate;
+}
+
+@keyframes neon-corner-flicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+        opacity: 1;
     }
     20%, 24%, 55% {
         opacity: 0.6;
-        border-color: #d400bf;
-        box-shadow: 
-            0 0 2px #d400bf,
-            0 0 5px #d400bf,
-            0 0 10px #d400bf,
-            inset 0 0 5px rgba(212, 0, 191, 0.3);
-    }
-}
-
-@keyframes neon-corners-pulse {
-    0% {
-        background-image:
-            /* Top Left */
-            linear-gradient(to right, #00ffff 40%, transparent 40%) top left/65px 5px no-repeat,
-            linear-gradient(to bottom, #00ffff 40%, transparent 40%) top left/5px 65px no-repeat,
-            
-            /* Top Right */
-            linear-gradient(to left, #00ffff 40%, transparent 40%) top right/65px 5px no-repeat,
-            linear-gradient(to bottom, #00ffff 40%, transparent 40%) top right/5px 65px no-repeat,
-            
-            /* Bottom Left */
-            linear-gradient(to right, #00ffff 40%, transparent 40%) bottom left/65px 5px no-repeat,
-            linear-gradient(to top, #00ffff 40%, transparent 40%) bottom left/5px 65px no-repeat,
-            
-            /* Bottom Right */
-            linear-gradient(to left, #00ffff 40%, transparent 40%) bottom right/65px 5px no-repeat,
-            linear-gradient(to top, #00ffff 40%, transparent 40%) bottom right/5px 65px no-repeat;
-        box-shadow: 
-            0 0 10px rgba(0, 255, 255, 0.7),
-            0 0 20px rgba(0, 255, 255, 0.5);
-    }
-    100% {
-        background-image:
-            /* Top Left */
-            linear-gradient(to right, #7bffff 40%, transparent 40%) top left/65px 5px no-repeat,
-            linear-gradient(to bottom, #7bffff 40%, transparent 40%) top left/5px 65px no-repeat,
-            
-            /* Top Right */
-            linear-gradient(to left, #7bffff 40%, transparent 40%) top right/65px 5px no-repeat,
-            linear-gradient(to bottom, #7bffff 40%, transparent 40%) top right/5px 65px no-repeat,
-            
-            /* Bottom Left */
-            linear-gradient(to right, #7bffff 40%, transparent 40%) bottom left/65px 5px no-repeat,
-            linear-gradient(to top, #7bffff 40%, transparent 40%) bottom left/5px 65px no-repeat,
-            
-            /* Bottom Right */
-            linear-gradient(to left, #7bffff 40%, transparent 40%) bottom right/65px 5px no-repeat,
-            linear-gradient(to top, #7bffff 40%, transparent 40%) bottom right/5px 65px no-repeat;
-        box-shadow: 
-            0 0 15px rgba(0, 255, 255, 0.9),
-            0 0 30px rgba(0, 255, 255, 0.7),
-            0 0 45px rgba(0, 255, 255, 0.5);
     }
 }
 
@@ -1109,32 +1207,49 @@ input#loadout-name-input, input#builder-player-name {
     
     /* Adjust neon border for medium screens */
     #arena::before {
-        top: -6px;
-        left: -6px;
-        right: -6px;
-        bottom: -6px;
-        border-width: 4px;
+        top: -3px;
+        left: -3px;
+        right: -3px;
+        bottom: -3px;
+        border-width: 3px;
         box-shadow: 
-            0 0 5px #ff00de,
-            0 0 15px #ff00de,
-            0 0 25px #ff00de,
-            inset 0 0 8px rgba(255, 0, 222, 0.5);
+            0 0 2px #ffffff,
+            0 0 3px #ff00de,
+            0 0 6px #ff00de,
+            0 0 9px #ff00de,
+            inset 0 0 2px #ff00de;
     }
     
-    #arena::after {
-        top: -12px;
-        left: -12px;
-        right: -12px;
-        bottom: -12px;
-        background-size: 
-            55px 4px, 4px 55px,  /* Top Left */
-            55px 4px, 4px 55px,  /* Top Right */
-            55px 4px, 4px 55px,  /* Bottom Left */
-            55px 4px, 4px 55px;  /* Bottom Right */
-        box-shadow: 
-            0 0 12px rgba(0, 255, 255, 0.9),
-            0 0 25px rgba(0, 255, 255, 0.6);
+    /* Adjust corner styles for medium screens */
+    .neon-corner-tl, .neon-corner-tr, .neon-corner-bl, .neon-corner-br {
+        width: 40px;
+        height: 40px;
     }
+    
+    .neon-corner-tl::before, .neon-corner-tr::before, 
+    .neon-corner-bl::before, .neon-corner-br::before {
+        width: 30px;
+        height: 3px;
+    }
+    
+    .neon-corner-tl::after, .neon-corner-tr::after, 
+    .neon-corner-bl::after, .neon-corner-br::after {
+        width: 3px;
+        height: 30px;
+    }
+    
+    .neon-corner-tl::before { top: 8px; left: 3px; }
+    .neon-corner-tl::after { top: 3px; left: 8px; }
+    
+    .neon-corner-tr::before { top: 8px; right: 3px; }
+    .neon-corner-tr::after { top: 3px; right: 8px; }
+    
+    .neon-corner-bl::before { bottom: 8px; left: 3px; }
+    .neon-corner-bl::after { bottom: 3px; left: 8px; }
+    
+    .neon-corner-br::before { bottom: 8px; right: 3px; }
+    .neon-corner-br::after { bottom: 3px; right: 8px; }
+}
     .consoles-row {
         flex-direction: column;
         max-height: 40vh;
@@ -1186,32 +1301,49 @@ input#loadout-name-input, input#builder-player-name {
     
     /* Adjust neon border for small screens */
     #arena::before {
-        top: -5px;
-        left: -5px;
-        right: -5px;
-        bottom: -5px;
-        border-width: 3px;
+        top: -3px;
+        left: -3px;
+        right: -3px;
+        bottom: -3px;
+        border-width: 2px;
         box-shadow: 
+            0 0 1px #ffffff,
+            0 0 2px #ff00de,
             0 0 4px #ff00de,
-            0 0 8px #ff00de,
-            0 0 15px #ff00de,
-            inset 0 0 6px rgba(255, 0, 222, 0.5);
+            0 0 6px #ff00de,
+            inset 0 0 1px #ff00de;
     }
     
-    #arena::after {
-        top: -10px;
-        left: -10px;
-        right: -10px;
-        bottom: -10px;
-        background-size: 
-            45px 3px, 3px 45px,  /* Top Left */
-            45px 3px, 3px 45px,  /* Top Right */
-            45px 3px, 3px 45px,  /* Bottom Left */
-            45px 3px, 3px 45px;  /* Bottom Right */
-        box-shadow: 
-            0 0 10px rgba(0, 255, 255, 0.9),
-            0 0 20px rgba(0, 255, 255, 0.6);
+    /* Adjust corner styles for small screens */
+    .neon-corner-tl, .neon-corner-tr, .neon-corner-bl, .neon-corner-br {
+        width: 35px;
+        height: 35px;
     }
+    
+    .neon-corner-tl::before, .neon-corner-tr::before, 
+    .neon-corner-bl::before, .neon-corner-br::before {
+        width: 25px;
+        height: 3px;
+    }
+    
+    .neon-corner-tl::after, .neon-corner-tr::after, 
+    .neon-corner-bl::after, .neon-corner-br::after {
+        width: 3px;
+        height: 25px;
+    }
+    
+    .neon-corner-tl::before { top: 7px; left: 3px; }
+    .neon-corner-tl::after { top: 3px; left: 7px; }
+    
+    .neon-corner-tr::before { top: 7px; right: 3px; }
+    .neon-corner-tr::after { top: 3px; right: 7px; }
+    
+    .neon-corner-bl::before { bottom: 7px; left: 3px; }
+    .neon-corner-bl::after { bottom: 3px; left: 7px; }
+    
+    .neon-corner-br::before { bottom: 7px; right: 3px; }
+    .neon-corner-br::after { bottom: 3px; right: 7px; }
+}
 
     .consoles-row { max-height: 35vh; }
     .consoles-row .console-panel { padding: 6px 8px; }
@@ -1270,32 +1402,48 @@ input#loadout-name-input, input#builder-player-name {
     
     /* Adjust neon border for extra small screens */
     #arena::before {
-        top: -4px;
-        left: -4px;
-        right: -4px;
-        bottom: -4px;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
         border-width: 2px;
         box-shadow: 
+            0 0 1px #ffffff,
+            0 0 2px #ff00de,
             0 0 3px #ff00de,
-            0 0 6px #ff00de,
-            0 0 10px #ff00de,
-            inset 0 0 4px rgba(255, 0, 222, 0.5);
+            0 0 5px #ff00de;
     }
     
-    #arena::after {
-        top: -8px;
-        left: -8px;
-        right: -8px;
-        bottom: -8px;
-        background-size: 
-            35px 2px, 2px 35px,  /* Top Left */
-            35px 2px, 2px 35px,  /* Top Right */
-            35px 2px, 2px 35px,  /* Bottom Left */
-            35px 2px, 2px 35px;  /* Bottom Right */
-        box-shadow: 
-            0 0 8px rgba(0, 255, 255, 0.9),
-            0 0 15px rgba(0, 255, 255, 0.6);
+    /* Adjust corner styles for extra small screens */
+    .neon-corner-tl, .neon-corner-tr, .neon-corner-bl, .neon-corner-br {
+        width: 25px;
+        height: 25px;
     }
+    
+    .neon-corner-tl::before, .neon-corner-tr::before, 
+    .neon-corner-bl::before, .neon-corner-br::before {
+        width: 18px;
+        height: 2px;
+    }
+    
+    .neon-corner-tl::after, .neon-corner-tr::after, 
+    .neon-corner-bl::after, .neon-corner-br::after {
+        width: 2px;
+        height: 18px;
+    }
+    
+    .neon-corner-tl::before { top: 5px; left: 2px; }
+    .neon-corner-tl::after { top: 2px; left: 5px; }
+    
+    .neon-corner-tr::before { top: 5px; right: 2px; }
+    .neon-corner-tr::after { top: 2px; right: 5px; }
+    
+    .neon-corner-bl::before { bottom: 5px; left: 2px; }
+    .neon-corner-bl::after { bottom: 2px; left: 5px; }
+    
+    .neon-corner-br::before { bottom: 5px; right: 2px; }
+    .neon-corner-br::after { bottom: 2px; right: 5px; }
+}
     
     .code-editor-wrapper { height: 360px; } /* Increased by 20% from 300px */
     .CodeMirror { font-size: 14px; }
