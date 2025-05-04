@@ -23,14 +23,66 @@ class GameManager {
         this.gameIdCounter = 0;
         this.recentlyCompletedGames = new Map();
         this.maxCompletedGames = 10;
-        try {
-             this.dummyBotCode = fs.readFileSync(path.join(__dirname, 'dummy-bot-ai.js'), 'utf8');
-             console.log("[GameManager] Dummy bot AI loaded successfully.");
-        } catch (err) {
-             console.error("[GameManager] FAILED TO LOAD dummy-bot-ai.js:", err);
-             this.dummyBotCode = "// Dummy Bot AI Load Failed\nconsole.log('AI Load Error!'); robot.drive(0,0);";
-        }
+        
+        // Bot profiles map
+        this.botProfiles = new Map();
+        
+        // Load all bot profiles
+        this.loadBotProfiles();
+        
         console.log("[GameManager] Initialized.");
+    }
+    
+    /**
+     * Loads all bot AI profiles from the bot-profiles directory
+     */
+    loadBotProfiles() {
+        try {
+            // Load standard bot (legacy location)
+            try {
+                this.botProfiles.set('standard', fs.readFileSync(path.join(__dirname, 'dummy-bot-ai.js'), 'utf8'));
+                console.log("[GameManager] Standard bot AI loaded from legacy location.");
+            } catch (err) {
+                console.error("[GameManager] FAILED TO LOAD standard bot from legacy location:", err);
+            }
+            
+            // Load from bot-profiles directory
+            const profilesDir = path.join(__dirname, 'bot-profiles');
+            
+            // Check if directory exists
+            if (!fs.existsSync(profilesDir)) {
+                console.error(`[GameManager] Bot profiles directory not found: ${profilesDir}`);
+                return;
+            }
+            
+            // Get all .js files in the profiles directory
+            const profileFiles = fs.readdirSync(profilesDir).filter(file => file.endsWith('.js'));
+            
+            // Read each profile file
+            profileFiles.forEach(file => {
+                try {
+                    const profileName = file.replace('.js', '');
+                    const profileCode = fs.readFileSync(path.join(profilesDir, file), 'utf8');
+                    this.botProfiles.set(profileName, profileCode);
+                    console.log(`[GameManager] Bot profile loaded: ${profileName}`);
+                } catch (err) {
+                    console.error(`[GameManager] FAILED TO LOAD bot profile ${file}:`, err);
+                }
+            });
+            
+            // Fallback for standard if not found
+            if (!this.botProfiles.has('standard')) {
+                this.botProfiles.set('standard', "// Fallback Bot AI\nconsole.log('Fallback Bot AI Active'); robot.drive(Math.random() * 360, 2);");
+                console.error("[GameManager] Using fallback code for standard bot profile!");
+            }
+            
+            console.log(`[GameManager] Loaded ${this.botProfiles.size} bot profiles.`);
+            
+        } catch (err) {
+            console.error("[GameManager] Error loading bot profiles:", err);
+            // Set fallback standard bot
+            this.botProfiles.set('standard', "// Fallback Bot AI\nconsole.log('Fallback Bot AI Active'); robot.drive(Math.random() * 360, 2);");
+        }
     }
 
     /** Adds player to pending list with default/empty loadout */
@@ -216,11 +268,12 @@ class GameManager {
      * Starts a single-player test game using the player's submitted loadout.
      * Called by socket-handler when 'requestTestGame' is received.
      * @param {SocketIO.Socket} playerSocket - The socket of the player requesting the test.
-     * @param {object} playerLoadout - The complete loadout object { name, visuals, code }.
+     * @param {object} playerLoadout - The complete loadout object { name, visuals, code, botProfile }.
      */
     startTestGameForPlayer(playerSocket, playerLoadout) { // Updated parameter
         const playerId = playerSocket.id;
-        console.log(`[GameManager] Starting test game for player ${playerLoadout.name} (${playerId})`);
+        const botProfile = playerLoadout.botProfile || 'standard';
+        console.log(`[GameManager] Starting test game for player ${playerLoadout.name} (${playerId}) against bot profile "${botProfile}"`);
 
         if (!this.pendingPlayers.delete(playerId)) {
              console.warn(`[GameManager] Player ${playerLoadout.name} (${playerId}) requested test game but wasn't pending. Aborting.`);
@@ -238,19 +291,74 @@ class GameManager {
             isReady: true
         };
 
-        // 2. Prepare Dummy Bot Data
+        // 2. Get the bot profile code
+        let botCode = this.botProfiles.get(botProfile);
+        if (!botCode) {
+            console.warn(`[GameManager] Bot profile "${botProfile}" not found, using standard profile.`);
+            botCode = this.botProfiles.get('standard');
+            // If standard not found either, use simple fallback
+            if (!botCode) {
+                botCode = "// Fallback Bot AI\nconsole.log('Fallback Bot AI Active'); robot.drive(Math.random() * 360, 2);";
+            }
+        }
+
+        // 3. Configure bot visuals based on profile
+        let botVisuals;
+        switch (botProfile) {
+            case 'aggressive':
+                botVisuals = {
+                    turret: { type: 'cannon', color: '#842c1c' },
+                    chassis: { type: 'heavy', color: '#c63926' },
+                    mobility: { type: 'treads' }
+                };
+                break;
+            case 'defensive':
+                botVisuals = {
+                    turret: { type: 'dual', color: '#1a3c6b' },
+                    chassis: { type: 'heavy', color: '#2c5aa0' },
+                    mobility: { type: 'treads' }
+                };
+                break;
+            case 'sniper':
+                botVisuals = {
+                    turret: { type: 'laser', color: '#1e4334' },
+                    chassis: { type: 'light', color: '#3a7563' },
+                    mobility: { type: 'hover' }
+                };
+                break;
+            case 'erratic':
+                botVisuals = {
+                    turret: { type: 'missile', color: '#5b2c75' },
+                    chassis: { type: 'triangular', color: '#8e44ad' },
+                    mobility: { type: 'legs' }
+                };
+                break;
+            case 'stationary':
+                botVisuals = {
+                    turret: { type: 'standard', color: '#566566' },
+                    chassis: { type: 'medium', color: '#7e8c8d' },
+                    mobility: { type: 'wheels' }
+                };
+                break;
+            case 'standard':
+            default:
+                botVisuals = {
+                    turret: { type: 'standard', color: '#888888' },
+                    chassis: { type: 'medium', color: '#555555' },
+                    mobility: { type: 'treads' }
+                };
+                break;
+        }
+
+        // 4. Prepare Dummy Bot Data with the selected profile
         const dummyBotId = `dummy-bot-${gameId}`;
         const dummyBotGameData = {
             socket: null,
             // Define the dummy bot's loadout structure
             loadout: {
-                name: "Test Bot Alpha",
-                visuals: { // Define default visuals for the bot
-                     turret: { type: 'standard', color: '#888888' },
-                     chassis: { type: 'medium', color: '#555555' },
-                     mobility: { type: 'treads' }
-                },
-                code: this.dummyBotCode
+                name: `${botProfile.charAt(0).toUpperCase() + botProfile.slice(1)} Bot`,
+                visuals: botVisuals,
+                code: botCode
             },
             isReady: true
         };

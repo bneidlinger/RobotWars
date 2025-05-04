@@ -78,12 +78,21 @@ function initializeSocketHandler(io, db) { // db might be needed by GameManager 
                  socket.emit('lobbyEvent', { message: 'Invalid loadout data received for test game. Please try again.', type: 'error' });
                  return;
             }
-
-            console.log(`[Socket ${socket.id}] User ${username} requested test game (Robot: ${loadoutData.name})`);
-            // --- START: Corrected Call ---
+            
+            // Check for bot profile selection (default to 'standard' if missing)
+            const botProfile = loadoutData.botProfile || 'standard';
+            
+            // Validate bot profile is one of the allowed options
+            const validProfiles = ['standard', 'aggressive', 'defensive', 'sniper', 'erratic', 'stationary'];
+            if (!validProfiles.includes(botProfile)) {
+                console.warn(`[Socket ${socket.id}] Received invalid bot profile "${botProfile}" from user ${username}, defaulting to standard`);
+                loadoutData.botProfile = 'standard';
+            } else {
+                console.log(`[Socket ${socket.id}] User ${username} requested test game (Robot: ${loadoutData.name}) against "${loadoutData.botProfile}" bot`);
+            }
+            
             // Pass the socket object and the full loadoutData object received from the client
             gameManager.startTestGameForPlayer(socket, loadoutData);
-            // --- END: Corrected Call ---
         });
 
         // Handles Chat Messages

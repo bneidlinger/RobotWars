@@ -203,6 +203,110 @@
     <!-- === END: Loadout Builder Overlay Markup === -->
     <!-- ============================================ -->
 
+    <!-- ============================================== -->
+    <!-- === START: Test Bot Selection Modal Markup === -->
+    <!-- ============================================== -->
+    <div id="test-bot-modal" style="display: none;">
+        <div id="test-bot-content">
+            <h2>Select Test Bot</h2>
+            <p class="test-bot-description">Choose an opponent AI profile to test your robot against:</p>
+
+            <div class="test-bot-grid">
+                <!-- Standard Test Bot -->
+                <div class="test-bot-card" data-profile="standard">
+                    <div class="bot-preview-icon" style="background-color: #888888;">
+                        <div class="bot-turret" style="background-color: #aaaaaa;"></div>
+                    </div>
+                    <h3>Standard Bot</h3>
+                    <p>Basic AI with balanced scanning and movement</p>
+                    <div class="bot-stats">
+                        <span class="stat-item"><span class="stat-label">Aggression:</span> <span class="stat-value">Medium</span></span>
+                        <span class="stat-item"><span class="stat-label">Movement:</span> <span class="stat-value">Wandering</span></span>
+                        <span class="stat-item"><span class="stat-label">Firing:</span> <span class="stat-value">Low Power</span></span>
+                    </div>
+                </div>
+
+                <!-- Aggressive Test Bot -->
+                <div class="test-bot-card" data-profile="aggressive">
+                    <div class="bot-preview-icon" style="background-color: #c63926;">
+                        <div class="bot-turret" style="background-color: #842c1c;"></div>
+                    </div>
+                    <h3>Aggressive Bot</h3>
+                    <p>Relentlessly pursues and fires high-power shots</p>
+                    <div class="bot-stats">
+                        <span class="stat-item"><span class="stat-label">Aggression:</span> <span class="stat-value">High</span></span>
+                        <span class="stat-item"><span class="stat-label">Movement:</span> <span class="stat-value">Pursuit</span></span>
+                        <span class="stat-item"><span class="stat-label">Firing:</span> <span class="stat-value">High Power</span></span>
+                    </div>
+                </div>
+
+                <!-- Defensive Test Bot -->
+                <div class="test-bot-card" data-profile="defensive">
+                    <div class="bot-preview-icon" style="background-color: #2c5aa0;">
+                        <div class="bot-turret" style="background-color: #1a3c6b;"></div>
+                    </div>
+                    <h3>Defensive Bot</h3>
+                    <p>Evades and only shoots when threatened</p>
+                    <div class="bot-stats">
+                        <span class="stat-item"><span class="stat-label">Aggression:</span> <span class="stat-value">Low</span></span>
+                        <span class="stat-item"><span class="stat-label">Movement:</span> <span class="stat-value">Evasive</span></span>
+                        <span class="stat-item"><span class="stat-label">Firing:</span> <span class="stat-value">Reactive</span></span>
+                    </div>
+                </div>
+
+                <!-- Sniper Test Bot -->
+                <div class="test-bot-card" data-profile="sniper">
+                    <div class="bot-preview-icon" style="background-color: #3a7563;">
+                        <div class="bot-turret" style="background-color: #1e4334;"></div>
+                    </div>
+                    <h3>Sniper Bot</h3>
+                    <p>Stays at distance, precise with high-power shots</p>
+                    <div class="bot-stats">
+                        <span class="stat-item"><span class="stat-label">Aggression:</span> <span class="stat-value">Medium</span></span>
+                        <span class="stat-item"><span class="stat-label">Movement:</span> <span class="stat-value">Distancing</span></span>
+                        <span class="stat-item"><span class="stat-label">Firing:</span> <span class="stat-value">High Power</span></span>
+                    </div>
+                </div>
+
+                <!-- Erratic Test Bot -->
+                <div class="test-bot-card" data-profile="erratic">
+                    <div class="bot-preview-icon" style="background-color: #8e44ad;">
+                        <div class="bot-turret" style="background-color: #5b2c75;"></div>
+                    </div>
+                    <h3>Erratic Bot</h3>
+                    <p>Unpredictable movement and firing patterns</p>
+                    <div class="bot-stats">
+                        <span class="stat-item"><span class="stat-label">Aggression:</span> <span class="stat-value">Random</span></span>
+                        <span class="stat-item"><span class="stat-label">Movement:</span> <span class="stat-value">Chaotic</span></span>
+                        <span class="stat-item"><span class="stat-label">Firing:</span> <span class="stat-value">Unpredictable</span></span>
+                    </div>
+                </div>
+
+                <!-- Stationary Target Bot -->
+                <div class="test-bot-card" data-profile="stationary">
+                    <div class="bot-preview-icon" style="background-color: #7e8c8d;">
+                        <div class="bot-turret" style="background-color: #566566;"></div>
+                    </div>
+                    <h3>Stationary Target</h3>
+                    <p>Doesn't move or fire - practice target</p>
+                    <div class="bot-stats">
+                        <span class="stat-item"><span class="stat-label">Aggression:</span> <span class="stat-value">None</span></span>
+                        <span class="stat-item"><span class="stat-label">Movement:</span> <span class="stat-value">None</span></span>
+                        <span class="stat-item"><span class="stat-label">Firing:</span> <span class="stat-value">None</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-bot-actions">
+                <button id="btn-cancel-test" class="btn-secondary">Cancel</button>
+                <button id="btn-start-test" class="btn-primary">Start Test Game</button>
+            </div>
+        </div>
+    </div>
+    <!-- ============================================ -->
+    <!-- === END: Test Bot Selection Modal Markup === -->
+    <!-- ============================================ -->
+
 
     <!-- Existing Main Application Container -->
     <!-- Initially hidden by auth.js until logged in -->
@@ -352,6 +456,7 @@
     <script src="js/ui/lobby.js"></script>
     <script src="js/ui/history.js"></script>
     <script src="js/network.js"></script> <!-- Defines Network -->
+    <script src="js/ui/testBotSelector.js"></script> <!-- Defines TestBotSelector -->
     <script src="js/ui/controls.js"></script> <!-- Defines Controls -->
     <script src="js/auth.js"></script> <!-- Defines AuthHandler, apiCall, uses controls -->
     <script src="js/main.js"></script> <!-- Instantiates globals, uses others -->

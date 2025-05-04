@@ -261,13 +261,48 @@ class Controls {
                  }
                  // --- END: Prepare Loadout ---
 
-                 // --- START: Send Request ---
-                 this.network.requestTestGame(loadoutData); // Use new name/structure
-                 if (window.updateLobbyStatus) window.updateLobbyStatus('Requesting Test Game...');
-                 this.updatePlayerHeaderDisplay(); // Reflect potentially changed name/visuals?
-                 this.updateLoadoutStatus("Test game requested...");
+                 // --- START: Show Bot Selection and Send Request ---
+                 // Initialize TestBotSelector if it doesn't exist
+                 if (!window.testBotSelector) {
+                     window.testBotSelector = new TestBotSelector(this.network);
+                 }
+                 
+                 try {
+                     // Show the test bot selection modal and wait for a response
+                     const result = await window.testBotSelector.show(loadoutData);
+                     
+                     if (result.confirmed) {
+                         // User confirmed, send test game request with selected profile
+                         this.updateLoadoutStatus(`Starting test against ${result.profile.charAt(0).toUpperCase() + result.profile.slice(1)} Bot...`);
+                         if (window.updateLobbyStatus) window.updateLobbyStatus('Requesting Test Game...');
+                         
+                         // Add bot profile to the request
+                         const testRequest = {
+                             ...loadoutData,
+                             botProfile: result.profile
+                         };
+                         
+                         // Send the enhanced request
+                         this.network.requestTestGame(testRequest);
+                         this.updatePlayerHeaderDisplay();
+                     } else {
+                         // User cancelled
+                         this.updateLoadoutStatus("Test game cancelled");
+                     }
+                 } catch (err) {
+                     console.error("Error showing test bot selector:", err);
+                     
+                     // Fallback to direct request with standard bot if modal fails
+                     this.updateLoadoutStatus("Using standard test bot (selector error)...");
+                     this.network.requestTestGame({
+                         ...loadoutData,
+                         botProfile: 'standard'
+                     });
+                     if (window.updateLobbyStatus) window.updateLobbyStatus('Requesting Test Game...');
+                     this.updatePlayerHeaderDisplay();
+                 }
                  // Note: State change to 'playing' happens via 'gameStart' event from server
-                 // --- END: Send Request ---
+                 // --- END: Show Bot Selection and Send Request ---
             });
         } else { console.warn("Test Code Button not found for listener."); }
 
