@@ -415,7 +415,7 @@ input#loadout-name-input, input#builder-player-name {
 }
 
 .code-editor-wrapper {
-    height: 650px; /* Increased height to use more vertical space */
+    height: 780px; /* Increased by 20% from 650px */
     position: relative;
     display: flex;
     border: 1px solid #444;
@@ -779,7 +779,7 @@ input#loadout-name-input, input#builder-player-name {
         min-height: 300px;
     }
     .code-editor-wrapper {
-        height: 500px; /* Adjusted height for medium screens */
+        height: 600px; /* Increased by 20% from 500px */
     }
     #lobby-area { flex-grow: 0; max-height: 300px; }
     .api-help { max-height: 180px; }
@@ -830,7 +830,7 @@ input#loadout-name-input, input#builder-player-name {
     .api-help li { font-size: 0.8rem; }
     .api-help code { font-size: 0.75rem; }
     .editor-section { min-height: 250px; }
-    .code-editor-wrapper { height: 400px; }
+    .code-editor-wrapper { height: 480px; } /* Increased by 20% from 400px */
     .CodeMirror { font-size: 15px; }
     #lobby-area { max-height: 250px; }
 
@@ -865,7 +865,7 @@ input#loadout-name-input, input#builder-player-name {
         height: 350px;
     }
     
-    .code-editor-wrapper { height: 300px; }
+    .code-editor-wrapper { height: 360px; } /* Increased by 20% from 300px */
     .CodeMirror { font-size: 14px; }
     .log-box, #game-history-list, #event-log, .robot-stat, .api-help li, .api-help code { font-size: 0.85rem; }
     .api-help h4 { font-size: 0.9rem; }
