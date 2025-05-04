@@ -136,6 +136,9 @@ class Robot {
         // Set cooldown based on power (higher power = longer cooldown)
         this.cooldown = power * 5;
 
+        // Get the turret type from robot's visuals if available
+        const turretType = this.visuals?.turret?.type || 'standard';
+
         // Create missile
         const radians = direction * Math.PI / 180;
         const missileSpeed = 7 + power;
@@ -144,7 +147,8 @@ class Robot {
             this.y - Math.sin(radians) * (this.radius + 5),
             direction,
             missileSpeed,
-            power
+            power,
+            turretType // Pass the turret type to the missile
         );
 
         this.missiles.push(missile);
@@ -162,13 +166,14 @@ class Robot {
 }
 
 class Missile {
-    constructor(x, y, direction, speed, power) {
+    constructor(x, y, direction, speed, power, turretType = 'standard') {
         this.x = x;
         this.y = y;
         this.direction = direction;
         this.speed = speed;
         this.power = power;
         this.radius = 3 + power;
+        this.turretType = turretType; // Store the turret type for rendering
     }
 
     update() {
