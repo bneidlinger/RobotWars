@@ -328,7 +328,7 @@ input#loadout-name-input, input#builder-player-name {
     background-color: #2c2c2c;
     border: 2px solid #444;
     border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 0 20px rgba(255, 0, 255, 0.2);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 0 30px rgba(255, 0, 255, 0.3);
     display: block;
     width: 900px;
     height: 900px;
@@ -348,12 +348,13 @@ input#loadout-name-input, input#builder-player-name {
     bottom: -8px;
     border-radius: 12px;
     background: transparent;
-    border: 4px solid transparent;
+    border: 5px solid #ff00de;
     box-shadow: 
         0 0 5px #ff00de,
         0 0 10px #ff00de,
-        0 0 15px #ff00de,
-        0 0 20px #ff00de;
+        0 0 20px #ff00de,
+        0 0 30px #ff00de,
+        inset 0 0 10px rgba(255, 0, 222, 0.5);
     pointer-events: none;
     animation: neon-border-flicker 3s linear infinite;
     z-index: -1;
@@ -372,46 +373,93 @@ input#loadout-name-input, input#builder-player-name {
     pointer-events: none;
     background:
         /* Top Left */
-        linear-gradient(to right, #00ffff 40%, transparent 40%) top left/60px 4px no-repeat,
-        linear-gradient(to bottom, #00ffff 40%, transparent 40%) top left/4px 60px no-repeat,
+        linear-gradient(to right, #00ffff 40%, transparent 40%) top left/65px 5px no-repeat,
+        linear-gradient(to bottom, #00ffff 40%, transparent 40%) top left/5px 65px no-repeat,
         
         /* Top Right */
-        linear-gradient(to left, #00ffff 40%, transparent 40%) top right/60px 4px no-repeat,
-        linear-gradient(to bottom, #00ffff 40%, transparent 40%) top right/4px 60px no-repeat,
+        linear-gradient(to left, #00ffff 40%, transparent 40%) top right/65px 5px no-repeat,
+        linear-gradient(to bottom, #00ffff 40%, transparent 40%) top right/5px 65px no-repeat,
         
         /* Bottom Left */
-        linear-gradient(to right, #00ffff 40%, transparent 40%) bottom left/60px 4px no-repeat,
-        linear-gradient(to top, #00ffff 40%, transparent 40%) bottom left/4px 60px no-repeat,
+        linear-gradient(to right, #00ffff 40%, transparent 40%) bottom left/65px 5px no-repeat,
+        linear-gradient(to top, #00ffff 40%, transparent 40%) bottom left/5px 65px no-repeat,
         
         /* Bottom Right */
-        linear-gradient(to left, #00ffff 40%, transparent 40%) bottom right/60px 4px no-repeat,
-        linear-gradient(to top, #00ffff 40%, transparent 40%) bottom right/4px 60px no-repeat;
+        linear-gradient(to left, #00ffff 40%, transparent 40%) bottom right/65px 5px no-repeat,
+        linear-gradient(to top, #00ffff 40%, transparent 40%) bottom right/5px 65px no-repeat;
     
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+    box-shadow: 
+        0 0 15px rgba(0, 255, 255, 0.9),
+        0 0 30px rgba(0, 255, 255, 0.6);
     animation: neon-corners-pulse 2s ease-in-out infinite alternate;
     z-index: -1;
 }
 
 @keyframes neon-border-flicker {
     0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
-        opacity: 0.8;
+        opacity: 0.95;
+        border-color: #ff00de;
+        box-shadow: 
+            0 0 5px #ff00de,
+            0 0 10px #ff00de,
+            0 0 20px #ff00de,
+            0 0 30px #ff00de,
+            inset 0 0 10px rgba(255, 0, 222, 0.5);
     }
     20%, 24%, 55% {
-        opacity: 0.3;
+        opacity: 0.6;
+        border-color: #d400bf;
+        box-shadow: 
+            0 0 2px #d400bf,
+            0 0 5px #d400bf,
+            0 0 10px #d400bf,
+            inset 0 0 5px rgba(212, 0, 191, 0.3);
     }
 }
 
 @keyframes neon-corners-pulse {
     0% {
+        background-image:
+            /* Top Left */
+            linear-gradient(to right, #00ffff 40%, transparent 40%) top left/65px 5px no-repeat,
+            linear-gradient(to bottom, #00ffff 40%, transparent 40%) top left/5px 65px no-repeat,
+            
+            /* Top Right */
+            linear-gradient(to left, #00ffff 40%, transparent 40%) top right/65px 5px no-repeat,
+            linear-gradient(to bottom, #00ffff 40%, transparent 40%) top right/5px 65px no-repeat,
+            
+            /* Bottom Left */
+            linear-gradient(to right, #00ffff 40%, transparent 40%) bottom left/65px 5px no-repeat,
+            linear-gradient(to top, #00ffff 40%, transparent 40%) bottom left/5px 65px no-repeat,
+            
+            /* Bottom Right */
+            linear-gradient(to left, #00ffff 40%, transparent 40%) bottom right/65px 5px no-repeat,
+            linear-gradient(to top, #00ffff 40%, transparent 40%) bottom right/5px 65px no-repeat;
         box-shadow: 
-            0 0 5px rgba(0, 255, 255, 0.2),
-            0 0 10px rgba(0, 255, 255, 0.3);
+            0 0 10px rgba(0, 255, 255, 0.7),
+            0 0 20px rgba(0, 255, 255, 0.5);
     }
     100% {
+        background-image:
+            /* Top Left */
+            linear-gradient(to right, #7bffff 40%, transparent 40%) top left/65px 5px no-repeat,
+            linear-gradient(to bottom, #7bffff 40%, transparent 40%) top left/5px 65px no-repeat,
+            
+            /* Top Right */
+            linear-gradient(to left, #7bffff 40%, transparent 40%) top right/65px 5px no-repeat,
+            linear-gradient(to bottom, #7bffff 40%, transparent 40%) top right/5px 65px no-repeat,
+            
+            /* Bottom Left */
+            linear-gradient(to right, #7bffff 40%, transparent 40%) bottom left/65px 5px no-repeat,
+            linear-gradient(to top, #7bffff 40%, transparent 40%) bottom left/5px 65px no-repeat,
+            
+            /* Bottom Right */
+            linear-gradient(to left, #7bffff 40%, transparent 40%) bottom right/65px 5px no-repeat,
+            linear-gradient(to top, #7bffff 40%, transparent 40%) bottom right/5px 65px no-repeat;
         box-shadow: 
-            0 0 10px rgba(0, 255, 255, 0.5),
-            0 0 20px rgba(0, 255, 255, 0.6),
-            0 0 30px rgba(0, 255, 255, 0.4);
+            0 0 15px rgba(0, 255, 255, 0.9),
+            0 0 30px rgba(0, 255, 255, 0.7),
+            0 0 45px rgba(0, 255, 255, 0.5);
     }
 }
 
@@ -1065,7 +1113,12 @@ input#loadout-name-input, input#builder-player-name {
         left: -6px;
         right: -6px;
         bottom: -6px;
-        border-width: 3px;
+        border-width: 4px;
+        box-shadow: 
+            0 0 5px #ff00de,
+            0 0 15px #ff00de,
+            0 0 25px #ff00de,
+            inset 0 0 8px rgba(255, 0, 222, 0.5);
     }
     
     #arena::after {
@@ -1074,10 +1127,13 @@ input#loadout-name-input, input#builder-player-name {
         right: -12px;
         bottom: -12px;
         background-size: 
-            50px 3px, 3px 50px,  /* Top Left */
-            50px 3px, 3px 50px,  /* Top Right */
-            50px 3px, 3px 50px,  /* Bottom Left */
-            50px 3px, 3px 50px;  /* Bottom Right */
+            55px 4px, 4px 55px,  /* Top Left */
+            55px 4px, 4px 55px,  /* Top Right */
+            55px 4px, 4px 55px,  /* Bottom Left */
+            55px 4px, 4px 55px;  /* Bottom Right */
+        box-shadow: 
+            0 0 12px rgba(0, 255, 255, 0.9),
+            0 0 25px rgba(0, 255, 255, 0.6);
     }
     .consoles-row {
         flex-direction: column;
@@ -1136,9 +1192,10 @@ input#loadout-name-input, input#builder-player-name {
         bottom: -5px;
         border-width: 3px;
         box-shadow: 
-            0 0 3px #ff00de,
-            0 0 6px #ff00de,
-            0 0 10px #ff00de;
+            0 0 4px #ff00de,
+            0 0 8px #ff00de,
+            0 0 15px #ff00de,
+            inset 0 0 6px rgba(255, 0, 222, 0.5);
     }
     
     #arena::after {
@@ -1147,10 +1204,13 @@ input#loadout-name-input, input#builder-player-name {
         right: -10px;
         bottom: -10px;
         background-size: 
-            40px 3px, 3px 40px,  /* Top Left */
-            40px 3px, 3px 40px,  /* Top Right */
-            40px 3px, 3px 40px,  /* Bottom Left */
-            40px 3px, 3px 40px;  /* Bottom Right */
+            45px 3px, 3px 45px,  /* Top Left */
+            45px 3px, 3px 45px,  /* Top Right */
+            45px 3px, 3px 45px,  /* Bottom Left */
+            45px 3px, 3px 45px;  /* Bottom Right */
+        box-shadow: 
+            0 0 10px rgba(0, 255, 255, 0.9),
+            0 0 20px rgba(0, 255, 255, 0.6);
     }
 
     .consoles-row { max-height: 35vh; }
@@ -1216,8 +1276,10 @@ input#loadout-name-input, input#builder-player-name {
         bottom: -4px;
         border-width: 2px;
         box-shadow: 
-            0 0 2px #ff00de,
-            0 0 4px #ff00de;
+            0 0 3px #ff00de,
+            0 0 6px #ff00de,
+            0 0 10px #ff00de,
+            inset 0 0 4px rgba(255, 0, 222, 0.5);
     }
     
     #arena::after {
@@ -1226,10 +1288,13 @@ input#loadout-name-input, input#builder-player-name {
         right: -8px;
         bottom: -8px;
         background-size: 
-            30px 2px, 2px 30px,  /* Top Left */
-            30px 2px, 2px 30px,  /* Top Right */
-            30px 2px, 2px 30px,  /* Bottom Left */
-            30px 2px, 2px 30px;  /* Bottom Right */
+            35px 2px, 2px 35px,  /* Top Left */
+            35px 2px, 2px 35px,  /* Top Right */
+            35px 2px, 2px 35px,  /* Bottom Left */
+            35px 2px, 2px 35px;  /* Bottom Right */
+        box-shadow: 
+            0 0 8px rgba(0, 255, 255, 0.9),
+            0 0 15px rgba(0, 255, 255, 0.6);
     }
     
     .code-editor-wrapper { height: 360px; } /* Increased by 20% from 300px */
