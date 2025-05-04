@@ -43,8 +43,8 @@ if (scanResult) {
             indentUnit: 4,
             autoCloseBrackets: true,
             matchBrackets: true,
-            viewportMargin: 20, // Reduced from Infinity to prevent rendering issues
-            scrollbarStyle: 'simple' // Use simple scrollbars to avoid conflicts
+            viewportMargin: 20 // Reduced from Infinity to prevent rendering issues
+            // Removed scrollbarStyle option since the addon isn't included
         });
 
         // Set the default code defined above
