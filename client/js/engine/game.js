@@ -258,79 +258,147 @@ class Game {
 
 
     /**
-     * Creates a particle explosion effect at the specified coordinates.
+     * Creates an enhanced particle explosion effect at the specified coordinates.
      * @param {number} x - Center X coordinate.
      * @param {number} y - Center Y coordinate.
      * @returns {object} The particle effect object to be added to activeParticleEffects.
      */
     createParticleExplosion(x, y) {
         const particles = [];
-        const numSparks = 30 + Math.floor(Math.random() * 20); // 30-49 sparks
-        const numSmoke = 5 + Math.floor(Math.random() * 5);   // 5-9 smoke puffs
-        const baseSpeed = 3;
-        const maxLifeSpark = 0.8; // seconds
-        const maxLifeSmoke = 1.5; // seconds
-
-        // Add initial flash (simple particle)
+        const numSparks = 50 + Math.floor(Math.random() * 30); // 50-79 sparks (more sparks!)
+        const numSmoke = 10 + Math.floor(Math.random() * 8);   // 10-17 smoke puffs (more smoke!)
+        const numDebris = 15 + Math.floor(Math.random() * 10); // 15-24 debris chunks
+        const baseSpeed = 4; // Faster particles
+        const maxLifeSpark = 1.0; // seconds (longer life)
+        const maxLifeSmoke = 2.0; // seconds (longer smoke trails)
+        const maxLifeDebris = 0.8; // seconds
+        
+        // Create multiple flashes for a more dramatic effect
+        // Main central flash
         particles.push({
             x: x, y: y, vx: 0, vy: 0,
             startTime: Date.now(),
-            lifespan: 0.15, // short bright flash
-            maxLifespan: 0.15,
+            lifespan: 0.2, // slightly longer flash
+            maxLifespan: 0.2,
             color: '#FFFFFF',
-            size: 25 + Math.random() * 10,
+            size: 40 + Math.random() * 15, // Larger initial flash
             type: 'flash'
         });
+        
+        // Secondary flashes
+        for (let i = 0; i < 3; i++) {
+            const flashAngle = Math.random() * Math.PI * 2;
+            const flashDistance = Math.random() * 20;
+            particles.push({
+                x: x + Math.cos(flashAngle) * flashDistance, 
+                y: y + Math.sin(flashAngle) * flashDistance,
+                vx: 0, vy: 0,
+                startTime: Date.now() + Math.random() * 100, // Staggered timing
+                lifespan: 0.1 + Math.random() * 0.1,
+                maxLifespan: 0.1 + Math.random() * 0.1,
+                color: '#FFDD99', // Slightly orange tint
+                size: 20 + Math.random() * 15,
+                type: 'flash'
+            });
+        }
 
-        // Add sparks/debris
+        // Add sparks/debris with varying colors
         for (let i = 0; i < numSparks; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = baseSpeed + Math.random() * baseSpeed * 1.5; // Vary speed
-            const life = maxLifeSpark * (0.5 + Math.random() * 0.5);
-            const colorVal = Math.floor(150 + Math.random() * 105); // 150-255
-            const color = `rgb(${colorVal}, ${Math.floor(colorVal * 0.7)}, ${Math.floor(colorVal * 0.2)})`; // Yellow/Orange/Red range
+            const speed = baseSpeed + Math.random() * baseSpeed * 2.0; // More speed variation
+            const life = maxLifeSpark * (0.4 + Math.random() * 0.6);
+            
+            // More varied colors - occasional blue/white hot sparks among the orange/yellow
+            let color;
+            if (Math.random() < 0.15) {  // 15% chance of blue/white hot spark
+                const blueVal = Math.floor(200 + Math.random() * 55);
+                color = `rgb(${Math.floor(blueVal * 0.8)}, ${Math.floor(blueVal * 0.9)}, ${blueVal})`;
+            } else {
+                const redVal = Math.floor(180 + Math.random() * 75); // 180-255
+                color = `rgb(${redVal}, ${Math.floor(redVal * 0.6)}, ${Math.floor(redVal * 0.1)})`; // Yellow/Orange/Red range
+            }
 
             particles.push({
                 x: x, y: y,
                 vx: Math.cos(angle) * speed,
-                vy: -Math.sin(angle) * speed, // Y-down
+                vy: -Math.sin(angle) * speed, 
                 startTime: Date.now(),
                 lifespan: life,
                 maxLifespan: life,
                 color: color,
-                size: 2 + Math.random() * 3,
+                size: 2 + Math.random() * 4, // Slightly larger sparks
                 type: 'spark'
-                // Optional: Add gravity vy += gravity * dt
             });
         }
 
-        // Add smoke puffs
-        for (let i = 0; i < numSmoke; i++) {
-             const angle = Math.random() * Math.PI * 2;
-             const speed = baseSpeed * 0.3 + Math.random() * baseSpeed * 0.5; // Slower smoke
-             const life = maxLifeSmoke * (0.7 + Math.random() * 0.3);
-             const greyVal = Math.floor(80 + Math.random() * 40); // Darker grey range
-             const color = `rgba(${greyVal}, ${greyVal}, ${greyVal}, 0.7)`; // Semi-transparent
+        // Add metal debris chunks
+        for (let i = 0; i < numDebris; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = baseSpeed * 0.7 + Math.random() * baseSpeed;
+            const life = maxLifeDebris * (0.5 + Math.random() * 0.5);
+            const debrisVal = Math.floor(60 + Math.random() * 80); // Metal colors (60-140)
+            let color;
+            
+            // Occasional glowing hot debris
+            if (Math.random() < 0.3) {
+                // Glowing orange/red hot metal
+                color = `rgb(${150 + Math.floor(Math.random() * 105)}, ${50 + Math.floor(Math.random() * 50)}, ${Math.floor(Math.random() * 30)})`;
+            } else {
+                // Regular metal color
+                color = `rgb(${debrisVal}, ${debrisVal}, ${debrisVal})`;
+            }
 
-             particles.push({
-                 x: x, y: y,
-                 vx: Math.cos(angle) * speed,
-                 vy: -Math.sin(angle) * speed, // Y-down
-                 startTime: Date.now(),
-                 lifespan: life,
-                 maxLifespan: life,
-                 color: color,
-                 size: 8 + Math.random() * 8, // Larger smoke
-                 type: 'smoke'
-             });
+            particles.push({
+                x: x, y: y,
+                vx: Math.cos(angle) * speed,
+                vy: -Math.sin(angle) * speed,
+                startTime: Date.now(),
+                lifespan: life,
+                maxLifespan: life,
+                color: color,
+                size: 3 + Math.random() * 5, // Larger debris chunks
+                type: 'debris'
+            });
         }
 
+        // Add smoke puffs with more variety
+        for (let i = 0; i < numSmoke; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = baseSpeed * 0.2 + Math.random() * baseSpeed * 0.4; // Slower smoke
+            const life = maxLifeSmoke * (0.7 + Math.random() * 0.3);
+            
+            // Smoke color variations - dark greys with occasional dark orange/black (fire smoke)
+            let color;
+            if (Math.random() < 0.3) {
+                // Fire smoke - dark with orange tint
+                const smokeVal = Math.floor(40 + Math.random() * 30);
+                color = `rgba(${smokeVal + 20}, ${smokeVal}, ${smokeVal - 10}, 0.75)`;
+            } else {
+                // Regular dark smoke
+                const smokeVal = Math.floor(60 + Math.random() * 50);
+                color = `rgba(${smokeVal}, ${smokeVal}, ${smokeVal}, 0.7)`;
+            }
+
+            particles.push({
+                x: x, y: y,
+                vx: Math.cos(angle) * speed,
+                vy: -Math.sin(angle) * speed - 0.1 - Math.random() * 0.2, // Add slight upward drift
+                startTime: Date.now() + Math.floor(Math.random() * 300), // Staggered start times
+                lifespan: life,
+                maxLifespan: life,
+                color: color,
+                size: 8 + Math.random() * 12, // Larger smoke particles
+                type: 'smoke'
+            });
+        }
+        
+        // Create an effect object to return
         return {
             id: `pExpl-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-            x: x, y: y, // Center (not really needed if particles have coords)
+            x: x, y: y,
             particles: particles,
-            startTime: Date.now(), // Effect start time (for potential grouping)
-            isComplete: false // Flag to mark for removal
+            startTime: Date.now(),
+            isComplete: false
         };
     }
 

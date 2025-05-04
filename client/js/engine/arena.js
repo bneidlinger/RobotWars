@@ -33,6 +33,10 @@ class Arena { // File name remains Arena, class concept is Renderer
         this.gridSize = 50;
         this.gridColor = '#444444';
 
+        // Persistent Scorch Marks
+        this.scorchMarks = []; // Array to track all scorch marks
+        this.loadScorchMarks(); // Load saved scorch marks from localStorage
+
         // Background Texture Loading
         this.backgroundPattern = null;
         this.backgroundImage = new Image();
@@ -79,23 +83,180 @@ class Arena { // File name remains Arena, class concept is Renderer
         }
         targetCtx.restore();
     }
-    /** Redraws the persistent background canvas (texture and grid) */
-    redrawArenaBackground() {
-        console.log("Redrawing arena background canvas (clears scorch marks).");
+    /** 
+     * Redraws the persistent background canvas (texture, grid, and saved scorch marks)
+     * @param {boolean} clearScorchMarks - If true, all scorch marks will be cleared
+     */
+    redrawArenaBackground(clearScorchMarks = false) {
+        console.log("Redrawing arena background canvas" + (clearScorchMarks ? " (clearing all scorch marks)" : ""));
         if (!this.backgroundCtx) return;
+        
+        // Clear canvas and draw base elements
         this.drawBackgroundTexture(this.backgroundCtx);
         this.drawGridLines(this.backgroundCtx);
+        
+        // Clear scorch marks if requested
+        if (clearScorchMarks) {
+            this.scorchMarks = [];
+            this.saveScorchMarks();
+            console.log("All scorch marks have been cleared");
+        } else {
+            // Draw stored scorch marks on top of the background
+            this.drawStoredScorchMarks();
+        }
     }
-    /** Adds a scorch mark to the persistent background canvas */
+    /** 
+     * Load saved scorch marks from localStorage 
+     */
+    loadScorchMarks() {
+        try {
+            const savedScorchMarks = localStorage.getItem('robotWarsScorchMarks');
+            if (savedScorchMarks) {
+                this.scorchMarks = JSON.parse(savedScorchMarks);
+                console.log(`Loaded ${this.scorchMarks.length} scorch marks from storage`);
+            } else {
+                console.log('No saved scorch marks found');
+                this.scorchMarks = [];
+            }
+        } catch (e) {
+            console.error('Error loading scorch marks:', e);
+            this.scorchMarks = [];
+        }
+    }
+    
+    /** 
+     * Save scorch marks to localStorage 
+     */
+    saveScorchMarks() {
+        try {
+            // Limit the number of scorch marks to prevent excessive storage
+            const maxScorchMarks = 50;
+            if (this.scorchMarks.length > maxScorchMarks) {
+                // Remove oldest marks if we exceed the limit
+                this.scorchMarks = this.scorchMarks.slice(-maxScorchMarks);
+            }
+            
+            localStorage.setItem('robotWarsScorchMarks', JSON.stringify(this.scorchMarks));
+        } catch (e) {
+            console.error('Error saving scorch marks:', e);
+        }
+    }
+
+    /** 
+     * Draw all stored scorch marks to the background canvas 
+     */
+    drawStoredScorchMarks() {
+        if (!this.backgroundCtx || !this.scorchMarks.length) return;
+        
+        this.scorchMarks.forEach(mark => {
+            const canvasX = this.translateX(mark.x);
+            const canvasY = this.translateY(mark.y);
+            
+            // Draw the base scorch mark
+            this.backgroundCtx.fillStyle = `rgba(${mark.r}, ${mark.g}, ${mark.b}, ${mark.alpha})`;
+            this.backgroundCtx.beginPath();
+            this.backgroundCtx.arc(canvasX, canvasY, mark.radius, 0, Math.PI * 2);
+            this.backgroundCtx.fill();
+            
+            // Add some texture to the scorch mark
+            if (mark.details) {
+                mark.details.forEach(detail => {
+                    const detailX = canvasX + detail.offsetX;
+                    const detailY = canvasY + detail.offsetY;
+                    
+                    this.backgroundCtx.fillStyle = `rgba(${detail.r}, ${detail.g}, ${detail.b}, ${detail.alpha})`;
+                    this.backgroundCtx.beginPath();
+                    this.backgroundCtx.arc(detailX, detailY, detail.radius, 0, Math.PI * 2);
+                    this.backgroundCtx.fill();
+                });
+            }
+        });
+    }
+    
+    /** 
+     * Adds a randomized scorch mark to the persistent background canvas and saves it
+     */
     addScorchMark(x, y, radius) {
         if (!this.backgroundCtx) return;
+        
         const canvasX = this.translateX(x);
         const canvasY = this.translateY(y);
-        // Use a semi-transparent dark color for the scorch mark
-        this.backgroundCtx.fillStyle = 'rgba(20, 20, 20, 0.65)';
+        
+        // Create a randomized scorch mark
+        const baseRadius = radius * (0.9 + Math.random() * 0.4); // Vary the radius slightly
+        const alpha = 0.5 + Math.random() * 0.3; // Random transparency
+        
+        // Random color variations - mostly black but with occasional dark red or brown tints
+        let r, g, b;
+        if (Math.random() < 0.3) {
+            // Dark red/brown tint for some scorch marks (like heated metal)
+            r = 30 + Math.floor(Math.random() * 20);
+            g = 15 + Math.floor(Math.random() * 10);
+            b = 10 + Math.floor(Math.random() * 5);
+        } else {
+            // Standard dark/black scorch mark
+            const darkVal = 15 + Math.floor(Math.random() * 10);
+            r = darkVal;
+            g = darkVal;
+            b = darkVal;
+        }
+        
+        // Draw the primary scorch mark
+        this.backgroundCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
         this.backgroundCtx.beginPath();
-        this.backgroundCtx.arc(canvasX, canvasY, radius, 0, Math.PI * 2);
+        this.backgroundCtx.arc(canvasX, canvasY, baseRadius, 0, Math.PI * 2);
         this.backgroundCtx.fill();
+        
+        // Create some additional texture details
+        const numDetails = 2 + Math.floor(Math.random() * 4); // 2-5 detail spots
+        const details = [];
+        
+        for (let i = 0; i < numDetails; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * baseRadius * 0.7; // Within 70% of the radius
+            const detailRadius = baseRadius * 0.1 + Math.random() * baseRadius * 0.3; // 10%-40% of main radius
+            
+            // Calculate offset
+            const offsetX = Math.cos(angle) * distance;
+            const offsetY = Math.sin(angle) * distance;
+            
+            // Randomize detail color - darker or lighter than the main mark
+            let detailR, detailG, detailB, detailAlpha;
+            if (Math.random() < 0.7) {
+                // Darker spot
+                detailR = Math.max(0, r - 10 - Math.floor(Math.random() * 10));
+                detailG = Math.max(0, g - 10 - Math.floor(Math.random() * 10));
+                detailB = Math.max(0, b - 5 - Math.floor(Math.random() * 10));
+                detailAlpha = alpha + 0.1;
+            } else {
+                // Lighter spot (ash)
+                detailR = Math.min(60, r + 20 + Math.floor(Math.random() * 20));
+                detailG = Math.min(60, g + 20 + Math.floor(Math.random() * 20));
+                detailB = Math.min(60, b + 20 + Math.floor(Math.random() * 20));
+                detailAlpha = alpha - 0.1;
+            }
+            
+            // Draw the detail
+            this.backgroundCtx.fillStyle = `rgba(${detailR}, ${detailG}, ${detailB}, ${detailAlpha})`;
+            this.backgroundCtx.beginPath();
+            this.backgroundCtx.arc(canvasX + offsetX, canvasY + offsetY, detailRadius, 0, Math.PI * 2);
+            this.backgroundCtx.fill();
+            
+            // Store detail data
+            details.push({
+                offsetX, offsetY, radius: detailRadius,
+                r: detailR, g: detailG, b: detailB, alpha: detailAlpha
+            });
+        }
+        
+        // Store the scorch mark data
+        this.scorchMarks.push({
+            x, y, radius: baseRadius, r, g, b, alpha, details,
+            timestamp: Date.now()
+        });
+        
+        // Save updated scorch marks
+        this.saveScorchMarks();
     }
 
     // === START: Enhanced Robot Drawing System ===
@@ -687,8 +848,8 @@ class Arena { // File name remains Arena, class concept is Renderer
         });
     }
 
-    // --- START: New drawParticleEffects ---
-    /** Draws particle-based explosion effects */
+    // --- START: Enhanced drawParticleEffects ---
+    /** Draws enhanced particle-based explosion effects with improved rendering */
     drawParticleEffects(particleEffects) {
         const ctx = this.ctx;
         if (!ctx || !particleEffects || particleEffects.length === 0) return;
@@ -702,55 +863,149 @@ class Arena { // File name remains Arena, class concept is Renderer
 
                 ctx.save();
 
-                // Apply type-specific fading and size changes
-                if (p.type === 'smoke') {
-                    alpha = lifeRatio * 0.7; // Smoke fades and starts semi-transparent
-                    drawSize = p.size * (1.5 - lifeRatio * 0.5); // Smoke expands slightly as it fades
-                     // Extract base color and apply alpha
-                     try { // Add try-catch for robust color parsing
-                        let baseColor = p.color.substring(0, p.color.lastIndexOf(',')) + ',';
-                        ctx.fillStyle = baseColor + alpha.toFixed(2) + ')';
-                     } catch(e) {
-                         console.warn("Error parsing smoke color, using fallback:", p.color, e);
-                         ctx.fillStyle = `rgba(100, 100, 100, ${alpha.toFixed(2)})`; // Fallback grey
-                     }
-
-                } else if (p.type === 'spark') {
-                    alpha = lifeRatio; // Sparks fade out linearly
-                    drawSize = p.size * lifeRatio; // Sparks shrink
-                    ctx.fillStyle = p.color; // Assume spark color has no alpha initially
-                    ctx.globalAlpha = alpha;
-                } else if (p.type === 'flash') {
-                     alpha = Math.pow(lifeRatio, 0.5); // Flash fades quickly
-                     drawSize = p.size * (1 + (1-lifeRatio)*0.5); // Flash expands
-                     ctx.fillStyle = p.color;
-                     ctx.globalAlpha = alpha;
-                } else { // Default particle behavior
-                    ctx.fillStyle = p.color;
-                    ctx.globalAlpha = lifeRatio;
+                // Apply type-specific rendering styles based on particle type
+                switch (p.type) {
+                    case 'smoke':
+                        // Smoke fades out and expands over time
+                        alpha = lifeRatio * 0.7; // Smoke starts semi-transparent
+                        drawSize = p.size * (1.8 - lifeRatio * 0.8); // Smoke expands more as it fades
+                        
+                        // Extract base color and apply alpha for smoke
+                        try { 
+                            let baseColor = p.color.substring(0, p.color.lastIndexOf(',')) + ',';
+                            ctx.fillStyle = baseColor + alpha.toFixed(2) + ')';
+                        } catch(e) {
+                            ctx.fillStyle = `rgba(100, 100, 100, ${alpha.toFixed(2)})`; // Fallback grey
+                        }
+                        
+                        // Draw smoke as fuzzy circles instead of squares for better appearance
+                        ctx.globalAlpha = alpha * 0.7;
+                        ctx.shadowColor = ctx.fillStyle;
+                        ctx.shadowBlur = 5;
+                        ctx.beginPath();
+                        ctx.arc(this.translateX(p.x), this.translateY(p.y), drawSize/2, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                        
+                    case 'spark':
+                        // Sparks have a tail/motion blur and a fade effect
+                        alpha = lifeRatio * 0.9; // Sparks stay brighter longer
+                        drawSize = p.size * (lifeRatio * 0.8 + 0.2); // Sparks shrink but maintain some size
+                        
+                        // Add a glow effect to sparks
+                        ctx.shadowColor = p.color;
+                        ctx.shadowBlur = 3;
+                        ctx.globalAlpha = alpha;
+                        ctx.fillStyle = p.color;
+                        
+                        // Draw spark with motion trail
+                        const sparkX = this.translateX(p.x);
+                        const sparkY = this.translateY(p.y);
+                        
+                        // Motion trail in direction of movement (subtle)
+                        if (Math.abs(p.vx) > 0.1 || Math.abs(p.vy) > 0.1) {
+                            const trailLength = Math.min(5, Math.sqrt(p.vx*p.vx + p.vy*p.vy) * 0.8);
+                            const dirX = -p.vx / (Math.abs(p.vx) + 0.001); // Normalize with safety
+                            const dirY = -p.vy / (Math.abs(p.vy) + 0.001);
+                            
+                            // Create a gradient for the trail
+                            const trail = ctx.createLinearGradient(
+                                sparkX, sparkY,
+                                sparkX + dirX * trailLength, sparkY + dirY * trailLength
+                            );
+                            trail.addColorStop(0, p.color);
+                            trail.addColorStop(1, 'rgba(0,0,0,0)');
+                            
+                            ctx.strokeStyle = trail;
+                            ctx.lineWidth = drawSize;
+                            ctx.beginPath();
+                            ctx.moveTo(sparkX, sparkY);
+                            ctx.lineTo(sparkX + dirX * trailLength, sparkY + dirY * trailLength);
+                            ctx.stroke();
+                        }
+                        
+                        // Draw the spark head
+                        ctx.beginPath();
+                        ctx.arc(sparkX, sparkY, Math.max(0.5, drawSize/2), 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                        
+                    case 'debris':
+                        // Debris particles with more detailed rendering
+                        alpha = lifeRatio * 0.9;
+                        ctx.globalAlpha = alpha;
+                        ctx.fillStyle = p.color;
+                        ctx.strokeStyle = this._darkenColor(p.color, 0.7);
+                        ctx.lineWidth = 1;
+                        
+                        // Draw debris as small polygons instead of circles for better visual
+                        const debrisX = this.translateX(p.x);
+                        const debrisY = this.translateY(p.y);
+                        const cornerCount = 3 + Math.floor(Math.random() * 3); // 3-5 corners
+                        
+                        ctx.beginPath();
+                        for (let i = 0; i < cornerCount; i++) {
+                            const angle = (i / cornerCount) * Math.PI * 2;
+                            const distVariation = 0.7 + Math.random() * 0.6; // Random distance variation
+                            const cornerX = debrisX + Math.cos(angle) * (drawSize/2) * distVariation;
+                            const cornerY = debrisY + Math.sin(angle) * (drawSize/2) * distVariation;
+                            
+                            if (i === 0) {
+                                ctx.moveTo(cornerX, cornerY);
+                            } else {
+                                ctx.lineTo(cornerX, cornerY);
+                            }
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                        break;
+                        
+                    case 'flash':
+                        // Flash effect with glow
+                        alpha = Math.pow(lifeRatio, 0.5); // Flash fades quickly
+                        drawSize = p.size * (1 + (1-lifeRatio)*0.7); // Flash expands more
+                        
+                        ctx.globalAlpha = alpha;
+                        ctx.fillStyle = p.color;
+                        
+                        // Add a strong glow effect to flashes
+                        ctx.shadowColor = p.color;
+                        ctx.shadowBlur = 15;
+                        
+                        // Draw the flash
+                        ctx.beginPath();
+                        ctx.arc(this.translateX(p.x), this.translateY(p.y), Math.max(0.1, drawSize/2), 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Draw inner brighter core
+                        ctx.globalAlpha = alpha * 1.5; // Brighter center
+                        ctx.beginPath();
+                        ctx.arc(this.translateX(p.x), this.translateY(p.y), Math.max(0.1, drawSize/4), 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                        
+                    default:
+                        // Default particle behavior
+                        ctx.globalAlpha = lifeRatio;
+                        ctx.fillStyle = p.color;
+                        ctx.beginPath();
+                        ctx.arc(this.translateX(p.x), this.translateY(p.y), drawSize/2, 0, Math.PI * 2);
+                        ctx.fill();
                 }
 
-                // Don't draw if invisible or too small
-                if (alpha <= 0 || drawSize <= 0.1) {
-                    ctx.restore();
-                    return;
-                }
-
-                // Draw the particle shape
-                if (p.type === 'spark' || p.type === 'flash') {
-                    // Draw sparks/flashes as circles
-                     ctx.beginPath();
-                     ctx.arc(this.translateX(p.x), this.translateY(p.y), Math.max(0.1, drawSize / 2), 0, Math.PI * 2); // Ensure radius > 0
-                     ctx.fill();
-                } else {
-                    // Draw smoke (or default) as squares
-                     ctx.fillRect(this.translateX(p.x) - drawSize / 2, this.translateY(p.y) - drawSize / 2, Math.max(0.1, drawSize), Math.max(0.1, drawSize)); // Ensure size > 0
-                }
-                ctx.restore(); // Restore alpha changes etc.
+                ctx.restore(); // Restore context state
             });
+            
+            // Add scorch mark when effect starts (once per explosion)
+            if (!effect.scorchAdded && effect.particles.length > 0) {
+                const scorchRadius = 20 + Math.random() * 15; // Varied scorch size
+                this.addScorchMark(effect.x, effect.y, scorchRadius);
+                effect.scorchAdded = true; // Mark as done
+            }
         });
     }
-    // --- END: New drawParticleEffects ---
+    // --- END: Enhanced drawParticleEffects ---
 
 
     // --- START: Removed old drawEffects ---
