@@ -42,7 +42,9 @@ if (scanResult) {
             lineNumbers: true,
             indentUnit: 4,
             autoCloseBrackets: true,
-            matchBrackets: true
+            matchBrackets: true,
+            viewportMargin: Infinity, // Ensures CodeMirror renders all content even when not visible
+            scrollbarStyle: 'native' // Ensures native scrollbars are used
         });
 
         // Set the default code defined above

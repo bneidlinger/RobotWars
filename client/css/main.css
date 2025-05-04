@@ -329,12 +329,11 @@ input#loadout-name-input, input#builder-player-name {
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     display: block;
-    max-width: 100%;
-    aspect-ratio: 1 / 1;
-    flex-grow: 1; /* Allow arena canvas to grow vertically */
-    min-height: 200px;
+    width: 900px;
+    height: 900px;
+    flex-grow: 0; /* Prevent growing */
+    flex-shrink: 0; /* Prevent shrinking */
     align-self: center;
-    width: auto;
 }
 
 /* Row containing the two consoles at the bottom of Arena Column */
@@ -416,21 +415,21 @@ input#loadout-name-input, input#builder-player-name {
 }
 
 .code-editor-wrapper {
-    flex-grow: 1;
-    min-height: 200px;
+    height: 400px; /* Fixed height instead of flex-grow */
     position: relative;
     display: flex;
     border: 1px solid #444;
     border-radius: 4px;
     margin-bottom: 10px;
-    overflow: hidden;
+    overflow: hidden; /* Maintain this to keep contents within the container */
 }
 
 .CodeMirror {
-    flex-grow: 1;
-    height: 100% !important;
+    width: 100%;
+    height: 100% !important; /* Keep height at 100% of wrapper */
     font-family: 'VT323', monospace;
     font-size: 17px; /* Slightly larger editor font */
+    overflow-y: auto !important; /* Ensure vertical scrolling */
 }
 .CodeMirror-readonly .CodeMirror-cursor { display: none !important; }
 .CodeMirror-readonly { background-color: #222 !important; }
@@ -753,11 +752,9 @@ input#loadout-name-input, input#builder-player-name {
         gap: 12px;
     }
     #arena {
-        max-height: 60vh;
-        width: auto;
-        max-width: 90%;
+        width: 700px;
+        height: 700px;
         margin: 0 auto;
-        flex-grow: 0;
     }
     .consoles-row {
         flex-direction: column;
@@ -769,13 +766,15 @@ input#loadout-name-input, input#builder-player-name {
          max-height: 100%;
          flex-grow: 1;
      }
-    .stats-panel, #lobby-area, #game-history-log, .editor-section, .api-help {
+    .stats-panel, #lobby-area, #game-history-log, .api-help {
         max-height: 40vh;
         overflow: hidden;
     }
     .editor-section {
         min-height: 300px;
-        max-height: 50vh;
+    }
+    .code-editor-wrapper {
+        height: 300px; /* Smaller fixed height on medium screens */
     }
     #lobby-area { flex-grow: 0; max-height: 300px; }
     .api-help { max-height: 180px; }
@@ -801,14 +800,17 @@ input#loadout-name-input, input#builder-player-name {
     .main-content-grid { gap: 10px; }
     .devtools-column, .info-lobby-column, .arena-column { gap: 10px; }
 
-    #arena { max-height: 50vh; }
+    #arena { 
+        width: 500px;
+        height: 500px;
+    }
 
     .consoles-row { max-height: 35vh; }
     .consoles-row .console-panel { padding: 6px 8px; }
     .consoles-row .console-panel h3 { font-size: 0.9rem; }
     .consoles-row .console-panel .log-box { font-size: 0.8rem; }
 
-    .stats-panel, #lobby-area, #game-history-log, .editor-section, .api-help {
+    .stats-panel, #lobby-area, #game-history-log, .api-help {
         max-height: 35vh;
         padding: 6px 8px;
     }
@@ -822,7 +824,8 @@ input#loadout-name-input, input#builder-player-name {
     .api-help h4 { font-size: 0.9rem; }
     .api-help li { font-size: 0.8rem; }
     .api-help code { font-size: 0.75rem; }
-    .editor-section { min-height: 250px; max-height: 45vh;}
+    .editor-section { min-height: 250px; }
+    .code-editor-wrapper { height: 250px; }
     .CodeMirror { font-size: 15px; }
     #lobby-area { max-height: 250px; }
 
@@ -851,6 +854,13 @@ input#loadout-name-input, input#builder-player-name {
     nav > button, #btn-toggle-volume { padding: 4px 6px;}
     /* END: Added #btn-toggle-volume */
     #btn-delete-loadout, #builder-delete-loadout { font-size: 0.7em; padding: 1px 3px;}
+    
+    #arena {
+        width: 350px;
+        height: 350px;
+    }
+    
+    .code-editor-wrapper { height: 200px; }
     .CodeMirror { font-size: 14px; }
     .log-box, #game-history-list, #event-log, .robot-stat, .api-help li, .api-help code { font-size: 0.85rem; }
     .api-help h4 { font-size: 0.9rem; }
