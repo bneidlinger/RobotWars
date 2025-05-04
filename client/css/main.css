@@ -415,24 +415,26 @@ input#loadout-name-input, input#builder-player-name {
 }
 
 .code-editor-wrapper {
-    height: 400px; /* Fixed height instead of flex-grow */
+    height: 650px; /* Increased height to use more vertical space */
     position: relative;
     display: flex;
     border: 1px solid #444;
     border-radius: 4px;
     margin-bottom: 10px;
-    overflow: hidden; /* Maintain this to keep contents within the container */
+    overflow: hidden; /* Keep contents within container boundaries */
 }
 
 .CodeMirror {
     width: 100%;
-    height: 100% !important; /* Keep height at 100% of wrapper */
+    height: 100% !important; /* Set height relative to wrapper */
     font-family: 'VT323', monospace;
     font-size: 17px; /* Slightly larger editor font */
-    overflow-y: auto !important; /* Ensure vertical scrolling */
+    /* Remove the extra overflow-y since CodeMirror handles this internally */
 }
 .CodeMirror-readonly .CodeMirror-cursor { display: none !important; }
 .CodeMirror-readonly { background-color: #222 !important; }
+.CodeMirror-scrollbar-filler { display: none !important; } /* Hide scroll corner */
+.CodeMirror-simplescroll-vertical { width: 8px !important; } /* Thinner scrollbar */
 
 .editor-controls {
      display: flex;
@@ -774,7 +776,7 @@ input#loadout-name-input, input#builder-player-name {
         min-height: 300px;
     }
     .code-editor-wrapper {
-        height: 300px; /* Smaller fixed height on medium screens */
+        height: 500px; /* Adjusted height for medium screens */
     }
     #lobby-area { flex-grow: 0; max-height: 300px; }
     .api-help { max-height: 180px; }
@@ -825,7 +827,7 @@ input#loadout-name-input, input#builder-player-name {
     .api-help li { font-size: 0.8rem; }
     .api-help code { font-size: 0.75rem; }
     .editor-section { min-height: 250px; }
-    .code-editor-wrapper { height: 250px; }
+    .code-editor-wrapper { height: 400px; }
     .CodeMirror { font-size: 15px; }
     #lobby-area { max-height: 250px; }
 
@@ -860,7 +862,7 @@ input#loadout-name-input, input#builder-player-name {
         height: 350px;
     }
     
-    .code-editor-wrapper { height: 200px; }
+    .code-editor-wrapper { height: 300px; }
     .CodeMirror { font-size: 14px; }
     .log-box, #game-history-list, #event-log, .robot-stat, .api-help li, .api-help code { font-size: 0.85rem; }
     .api-help h4 { font-size: 0.9rem; }

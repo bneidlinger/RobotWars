@@ -43,8 +43,8 @@ if (scanResult) {
             indentUnit: 4,
             autoCloseBrackets: true,
             matchBrackets: true,
-            viewportMargin: Infinity, // Ensures CodeMirror renders all content even when not visible
-            scrollbarStyle: 'native' // Ensures native scrollbars are used
+            viewportMargin: 20, // Reduced from Infinity to prevent rendering issues
+            scrollbarStyle: 'simple' // Use simple scrollbars to avoid conflicts
         });
 
         // Set the default code defined above
