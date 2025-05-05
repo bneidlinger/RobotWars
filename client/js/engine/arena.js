@@ -294,8 +294,26 @@ class Arena { // File name remains Arena, class concept is Renderer
             const robotDir = robotData.direction || 0; // Robot's body direction
             const radians = robotDir * Math.PI / 180;
 
+            // Initialize damage effects if missing
+            if (!robotData.damageEffects) {
+                robotData.damageEffects = {
+                    smoke: [],
+                    fire: [],
+                    bodyDamage: [],
+                    lastHitTime: 0,
+                    hitPositions: []
+                };
+            }
+
+            // Make sure all damage effect arrays exist
+            if (!robotData.damageEffects.smoke) robotData.damageEffects.smoke = [];
+            if (!robotData.damageEffects.fire) robotData.damageEffects.fire = [];
+            if (!robotData.damageEffects.bodyDamage) robotData.damageEffects.bodyDamage = [];
+            if (!robotData.damageEffects.hitPositions) robotData.damageEffects.hitPositions = [];
+            if (robotData.damageEffects.lastHitTime === undefined) robotData.damageEffects.lastHitTime = 0;
+
             // --- Draw Damage Effects (Behind Robot) - Smoke ---
-            if (robotData.damageEffects && robotData.damageEffects.smoke) {
+            if (robotData.damageEffects.smoke.length > 0) {
                 this._drawSmokeEffects(ctx, robotData, robotX, robotY, radians);
             }
 
@@ -316,7 +334,7 @@ class Arena { // File name remains Arena, class concept is Renderer
             this._drawChassis(ctx, chassisType, chassisColor, baseRadius);
 
             // --- Draw Damage Effects (On Robot) - Body Damage ---
-            if (robotData.damageEffects && robotData.damageEffects.bodyDamage) {
+            if (robotData.damageEffects.bodyDamage.length > 0) {
                 this._drawBodyDamageEffects(ctx, robotData, baseRadius);
             }
 
@@ -326,12 +344,17 @@ class Arena { // File name remains Arena, class concept is Renderer
             ctx.restore(); // Restore rotation/translation
 
             // --- Draw Damage Effects (On Top of Robot) - Fire and Hit Effects ---
-            if (robotData.damageEffects) {
-                if (robotData.damageEffects.fire) {
-                    this._drawFireEffects(ctx, robotData, robotX, robotY, radians);
-                }
-                
-                this._drawHitEffects(ctx, robotData, robotX, robotY);
+            // Fire effects
+            if (robotData.damageEffects.fire.length > 0) {
+                this._drawFireEffects(ctx, robotData, robotX, robotY, radians);
+            }
+            
+            // Hit flash effects - always check for these even if bodyDamage is empty
+            this._drawHitEffects(ctx, robotData, robotX, robotY);
+            
+            // Ensure radius is set for hit effects
+            if (robotData.radius === undefined) {
+                robotData.radius = baseRadius; // Use same base radius for consistency
             }
 
             // --- Draw Name and Health Bar (Common Elements) ---
@@ -663,40 +686,57 @@ class Arena { // File name remains Arena, class concept is Renderer
     _drawSmokeEffects(ctx, robotData, baseX, baseY, robotRadians) {
         ctx.save();
         
-        // Safety check to ensure smoke array exists
-        if (!robotData.damageEffects.smoke) {
-            ctx.restore();
-            return;
+        // We already verified the array exists and has items in drawRobots
+        const smokeCount = robotData.damageEffects.smoke.length;
+        if (smokeCount > 0 && Math.random() < 0.005) { // Reduced frequency of debug logs
+            console.log(`[RENDER DEBUG] Drawing ${smokeCount} smoke particles for robot ${robotData.id || 'unknown'}`);
         }
         
         robotData.damageEffects.smoke.forEach(smoke => {
-            // Calculate position considering robot rotation
-            const rotatedX = smoke.x * Math.cos(robotRadians) - smoke.y * Math.sin(robotRadians);
-            const rotatedY = smoke.x * Math.sin(robotRadians) + smoke.y * Math.cos(robotRadians);
-            
-            // Set color and alpha - pre-calculate the color string only once
-            let smokeColor;
-            const smokeBaseColor = smoke.color || 'rgba(100,100,100,0.5)';
-            if (smokeBaseColor.startsWith('rgba')) {
-                // Extract RGB part of the rgba color
-                const rgbPart = smokeBaseColor.substring(0, smokeBaseColor.lastIndexOf(','));
-                smokeColor = `${rgbPart}, ${smoke.alpha})`;
-            } else {
-                // Use default with specified alpha
-                smokeColor = `rgba(100,100,100,${smoke.alpha})`;
+            try {
+                // Ensure smoke object has required properties
+                if (!smoke || typeof smoke.x !== 'number' || typeof smoke.y !== 'number') return;
+                
+                // Calculate position considering robot rotation
+                const rotatedX = smoke.x * Math.cos(robotRadians) - smoke.y * Math.sin(robotRadians);
+                const rotatedY = smoke.x * Math.sin(robotRadians) + smoke.y * Math.cos(robotRadians);
+                
+                // Set color and alpha - pre-calculate the color string only once
+                let smokeColor;
+                const smokeBaseColor = smoke.color || 'rgba(100,100,100,0.5)';
+                const alpha = smoke.alpha || 0.5; // Default alpha if missing
+                
+                try {
+                    if (smokeBaseColor.startsWith('rgba')) {
+                        // Extract RGB part of the rgba color
+                        const rgbPart = smokeBaseColor.substring(0, smokeBaseColor.lastIndexOf(','));
+                        smokeColor = `${rgbPart}, ${alpha})`;
+                    } else {
+                        // Use default with specified alpha
+                        smokeColor = `rgba(100,100,100,${alpha})`;
+                    }
+                } catch (e) {
+                    // Fallback color if parsing fails
+                    smokeColor = `rgba(100,100,100,${alpha})`;
+                }
+                
+                ctx.fillStyle = smokeColor;
+                
+                // Draw smoke particle as a circle
+                const size = smoke.size || 3; // Default size if missing
+                ctx.beginPath();
+                ctx.arc(
+                    baseX + rotatedX,
+                    baseY + rotatedY,
+                    size,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+            } catch (e) {
+                // Silently skip rendering this particle if it has issues
+                console.warn("[RENDER WARNING] Failed to render smoke particle", e);
             }
-            ctx.fillStyle = smokeColor;
-            
-            // Draw smoke particle as a circle
-            ctx.beginPath();
-            ctx.arc(
-                baseX + rotatedX,
-                baseY + rotatedY,
-                smoke.size,
-                0,
-                Math.PI * 2
-            );
-            ctx.fill();
         });
         
         ctx.restore();
@@ -717,45 +757,56 @@ class Arena { // File name remains Arena, class concept is Renderer
         // Add glow effect for fire
         ctx.globalCompositeOperation = 'lighter';
         
-        // Safety check to ensure fire array exists
-        if (!robotData.damageEffects.fire) {
-            ctx.restore();
-            return;
+        // We already verified the array exists and has items in drawRobots
+        const fireCount = robotData.damageEffects.fire.length;
+        if (fireCount > 0 && Math.random() < 0.005) { // Reduced frequency of debug logs
+            console.log(`[RENDER DEBUG] Drawing ${fireCount} fire particles for robot ${robotData.id || 'unknown'} with damage: ${robotData.damage || 0}`);
         }
         
         robotData.damageEffects.fire.forEach(fire => {
-            // Calculate position considering robot rotation
-            const rotatedX = fire.x * Math.cos(robotRadians) - fire.y * Math.sin(robotRadians);
-            const rotatedY = fire.x * Math.sin(robotRadians) + fire.y * Math.cos(robotRadians);
-            
-            // Set color and alpha
-            ctx.fillStyle = fire.color || '#ff7700';
-            ctx.globalAlpha = fire.alpha;
-            
-            // Apply rotation to fire particles based on robot rotation PLUS flame direction
-            ctx.translate(baseX + rotatedX, baseY + rotatedY);
-            ctx.rotate(robotRadians - Math.PI/2); // Flames should point up relative to robot
-            
-            // Draw fire particle as a triangle-like shape
-            const fireHeight = fire.size * 1.5;
-            const fireWidth = fire.size * 0.8;
-            
-            ctx.beginPath();
-            ctx.moveTo(0, -fireHeight); // Top
-            ctx.lineTo(-fireWidth, fireHeight * 0.3); // Bottom left
-            ctx.lineTo(fireWidth, fireHeight * 0.3); // Bottom right
-            ctx.closePath();
-            ctx.fill();
-            
-            // Add a small glow/inner fire
-            ctx.fillStyle = '#ffffaa';
-            ctx.globalAlpha = fire.alpha * 0.7;
-            ctx.beginPath();
-            ctx.arc(0, -fireHeight * 0.3, fire.size * 0.3, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Reset transformation
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            try {
+                // Ensure fire object has required properties
+                if (!fire || typeof fire.x !== 'number' || typeof fire.y !== 'number') return;
+                
+                // Calculate position considering robot rotation
+                const rotatedX = fire.x * Math.cos(robotRadians) - fire.y * Math.sin(robotRadians);
+                const rotatedY = fire.x * Math.sin(robotRadians) + fire.y * Math.cos(robotRadians);
+                
+                // Set color and alpha with safe defaults
+                ctx.fillStyle = fire.color || '#ff7700';
+                ctx.globalAlpha = fire.alpha || 0.7; // Default alpha if missing
+                
+                // Apply rotation to fire particles based on robot rotation PLUS flame direction
+                ctx.translate(baseX + rotatedX, baseY + rotatedY);
+                ctx.rotate(robotRadians - Math.PI/2); // Flames should point up relative to robot
+                
+                // Draw fire particle as a triangle-like shape
+                const size = fire.size || 3; // Default size if missing
+                const fireHeight = size * 1.5;
+                const fireWidth = size * 0.8;
+                
+                ctx.beginPath();
+                ctx.moveTo(0, -fireHeight); // Top
+                ctx.lineTo(-fireWidth, fireHeight * 0.3); // Bottom left
+                ctx.lineTo(fireWidth, fireHeight * 0.3); // Bottom right
+                ctx.closePath();
+                ctx.fill();
+                
+                // Add a small glow/inner fire
+                ctx.fillStyle = '#ffffaa';
+                ctx.globalAlpha = (fire.alpha || 0.7) * 0.7;
+                ctx.beginPath();
+                ctx.arc(0, -fireHeight * 0.3, size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Reset transformation
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+            } catch (e) {
+                // Silently skip rendering this particle if it has issues
+                console.warn("[RENDER WARNING] Failed to render fire particle", e);
+                // Reset transformation in case of error
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+            }
         });
         
         ctx.restore();
@@ -770,13 +821,20 @@ class Arena { // File name remains Arena, class concept is Renderer
      */
     _drawBodyDamageEffects(ctx, robotData, baseRadius) {
         // We're already in the transformed robot coordinate system
-        // Safety check to ensure bodyDamage array exists
-        if (!robotData.damageEffects.bodyDamage) {
-            return;
+        // We already verified the array exists and has items in drawRobots
+        
+        const damageCount = robotData.damageEffects.bodyDamage.filter(d => d.type === 'dent').length;
+        if (damageCount > 0 && Math.random() < 0.005) { // Reduced frequency of debug logs
+            console.log(`[RENDER DEBUG] Drawing ${damageCount} body damage effects for robot ${robotData.id || 'unknown'} with damage: ${robotData.damage || 0}`);
         }
         
         robotData.damageEffects.bodyDamage.forEach(damage => {
-            if (damage.type === 'dent') {
+            try {
+                if (!damage || damage.type !== 'dent') return;
+                
+                // Ensure damage object has required properties
+                if (typeof damage.x !== 'number' || typeof damage.y !== 'number') return;
+                
                 // Draw dent/scorch mark
                 ctx.fillStyle = damage.color || 'rgba(30,30,30,0.7)';
                 
@@ -785,29 +843,47 @@ class Arena { // File name remains Arena, class concept is Renderer
                 ctx.translate(damage.x, damage.y);
                 ctx.rotate(damage.rotation || 0);
                 
+                // Get damage size with default if missing
+                const size = damage.size || 2;
+                
                 // Draw the damage effect using pre-computed shape type
                 if (damage.shapeType === 'polygon') {
                     // Irregular polygon for a dent
                     ctx.beginPath();
                     
                     // Use pre-computed points if available
-                    if (damage.points && damage.points.length > 0) {
+                    if (damage.points && Array.isArray(damage.points) && damage.points.length > 0) {
+                        let pointsValid = true;
+                        
                         for (let i = 0; i < damage.points.length; i++) {
                             const point = damage.points[i];
+                            if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') {
+                                pointsValid = false;
+                                break;
+                            }
+                            
                             if (i === 0) {
                                 ctx.moveTo(point.x, point.y);
                             } else {
                                 ctx.lineTo(point.x, point.y);
                             }
                         }
+                        
+                        if (!pointsValid) {
+                            // Fallback to circle if points are invalid
+                            ctx.beginPath();
+                            ctx.arc(0, 0, size, 0, Math.PI * 2);
+                        }
                     } else {
                         // Fallback if points weren't pre-computed
                         const points = 5 + Math.floor(Math.random() * 3);
                         const angleStep = (Math.PI * 2) / points;
+                        
+                        ctx.beginPath();
                         for (let i = 0; i < points; i++) {
                             const distort = 0.7 + Math.random() * 0.6;
-                            const px = Math.cos(i * angleStep) * damage.size * distort;
-                            const py = Math.sin(i * angleStep) * damage.size * distort;
+                            const px = Math.cos(i * angleStep) * size * distort;
+                            const py = Math.sin(i * angleStep) * size * distort;
                             
                             if (i === 0) {
                                 ctx.moveTo(px, py);
@@ -821,10 +897,15 @@ class Arena { // File name remains Arena, class concept is Renderer
                 } else {
                     // Simple circle for a burn mark
                     ctx.beginPath();
-                    ctx.arc(0, 0, damage.size, 0, Math.PI * 2);
+                    ctx.arc(0, 0, size, 0, Math.PI * 2);
                     ctx.fill();
                 }
                 
+                ctx.restore();
+            } catch (e) {
+                // Silently skip rendering this damage mark if it has issues
+                console.warn("[RENDER WARNING] Failed to render body damage effect", e);
+                // Ensure context is restored if error occurs
                 ctx.restore();
             }
         });
@@ -846,62 +927,84 @@ class Arena { // File name remains Arena, class concept is Renderer
         // Add glow effect for sparks
         ctx.globalCompositeOperation = 'lighter';
         
-        // Safety check to ensure bodyDamage array exists
-        if (!robotData.damageEffects.bodyDamage) {
-            ctx.restore();
-            return;
-        }
+        // We already initialized the damage effects structure in drawRobots
         
-        robotData.damageEffects.bodyDamage.forEach(damage => {
-            if (damage.type === 'sparkHit') {
-                // Calculate fade based on elapsed time
-                const elapsed = now - damage.startTime;
-                const progress = elapsed / damage.duration;
-                
-                if (progress <= 1) {
-                    const fade = 1 - progress;
+        // 1. Draw spark hit effects
+        if (robotData.damageEffects.bodyDamage && robotData.damageEffects.bodyDamage.length > 0) {
+            robotData.damageEffects.bodyDamage.forEach(damage => {
+                try {
+                    // Skip if not a spark hit or missing required properties
+                    if (!damage || damage.type !== 'sparkHit' || 
+                        typeof damage.x !== 'number' || 
+                        typeof damage.y !== 'number' ||
+                        !damage.startTime ||
+                        !damage.duration) return;
                     
-                    // Draw spark/flash
-                    ctx.fillStyle = damage.color || '#ffcc00';
-                    ctx.globalAlpha = fade;
+                    // Calculate fade based on elapsed time
+                    const elapsed = now - damage.startTime;
+                    const progress = elapsed / damage.duration;
                     
-                    // Draw spark as a small circle with glow
-                    ctx.shadowColor = damage.color || '#ffcc00';
-                    ctx.shadowBlur = damage.size * 2;
-                    
-                    ctx.beginPath();
-                    ctx.arc(
-                        baseX + damage.x,
-                        baseY + damage.y,
-                        damage.size * fade, // Shrinks as it fades
-                        0,
-                        Math.PI * 2
-                    );
-                    ctx.fill();
-                    
-                    // Reset shadow for other draws
-                    ctx.shadowBlur = 0;
+                    if (progress <= 1) {
+                        const fade = 1 - progress;
+                        
+                        // Draw spark/flash
+                        ctx.fillStyle = damage.color || '#ffcc00';
+                        ctx.globalAlpha = fade;
+                        
+                        // Draw spark as a small circle with glow
+                        ctx.shadowColor = damage.color || '#ffcc00';
+                        ctx.shadowBlur = (damage.size || 2) * 2;
+                        
+                        ctx.beginPath();
+                        ctx.arc(
+                            baseX + damage.x,
+                            baseY + damage.y,
+                            (damage.size || 2) * fade, // Shrinks as it fades
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                        
+                        // Reset shadow for other draws
+                        ctx.shadowBlur = 0;
+                    }
+                } catch (e) {
+                    // Silently skip rendering this effect if it has issues
+                    console.warn("[RENDER WARNING] Failed to render spark hit effect", e);
                 }
-            }
-        });
-        
-        // Recent hit flash effect (full-robot glow on hit)
-        // Safety check for lastHitTime
-        if (!robotData.damageEffects.lastHitTime) {
-            robotData.damageEffects.lastHitTime = 0;
+            });
         }
         
-        const timeSinceHit = now - robotData.damageEffects.lastHitTime;
-        if (timeSinceHit < 200) { // Flash effect lasts 200ms
-            const hitFade = 1 - (timeSinceHit / 200);
+        // 2. Draw recent hit flash effect (full-robot glow on hit)
+        try {
+            // Make sure lastHitTime exists
+            const lastHitTime = robotData.damageEffects.lastHitTime || 0;
+            const robotRadius = robotData.radius || 15; // Default to baseRadius if missing
+            const robotDamage = robotData.damage || 0;
             
-            // Draw a glow around the robot
-            ctx.strokeStyle = robotData.damage < 50 ? 'rgba(255,255,255,0.6)' : 'rgba(255,50,0,0.6)';
-            ctx.globalAlpha = hitFade * 0.6;
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(baseX, baseY, robotData.radius + 3, 0, Math.PI * 2);
-            ctx.stroke();
+            const timeSinceHit = now - lastHitTime;
+            if (timeSinceHit < 200) { // Flash effect lasts 200ms
+                const hitFade = 1 - (timeSinceHit / 200);
+                
+                // Determine flash color based on damage level
+                let flashColor;
+                if (robotDamage < 50) {
+                    flashColor = `rgba(255,255,255,${hitFade * 0.6})`;
+                } else {
+                    const greenValue = Math.max(50, Math.min(255, 50 + 150 * (1 - robotDamage/100)));
+                    flashColor = `rgba(255,${greenValue},0,${hitFade * 0.6})`;
+                }
+                
+                // Draw a glow around the robot
+                ctx.strokeStyle = flashColor;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(baseX, baseY, robotRadius + 3, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        } catch (e) {
+            // Silently skip rendering this effect if it has issues
+            console.warn("[RENDER WARNING] Failed to render hit flash effect", e);
         }
         
         ctx.restore();
