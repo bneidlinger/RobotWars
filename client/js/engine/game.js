@@ -153,6 +153,182 @@ class Game {
                     hitPositions: []
                 };
                 
+                // Add constants for visual effect limits
+                robot.MAX_SMOKE_PARTICLES = 25;
+                robot.MAX_FIRE_PARTICLES = 15;
+                robot.MAX_BODY_DAMAGE = 12;
+                
+                // Add _findOldestParticleIndex helper method
+                robot._findOldestParticleIndex = function(particleArray) {
+                    if (particleArray.length === 0) return -1;
+                    
+                    let oldestIdx = 0;
+                    let oldestTime = particleArray[0].createdAt || Date.now();
+                    
+                    for (let i = 1; i < particleArray.length; i++) {
+                        const time = particleArray[i].createdAt || Date.now();
+                        if (time < oldestTime) {
+                            oldestTime = time;
+                            oldestIdx = i;
+                        }
+                    }
+                    
+                    return oldestIdx;
+                };
+                
+                // Add _addVisualDamageEffects method
+                robot._addVisualDamageEffects = function(hitAmount, hitPosition) {
+                    // Quick hit flash or spark effect on any hit
+                    if (hitAmount > 0) {
+                        // Add impact sparks (temporary effect)
+                        const sparkCount = Math.min(5, hitAmount);
+                        for (let i = 0; i < sparkCount; i++) {
+                            // Use hit position with small random offset
+                            const offsetAngle = Math.random() * Math.PI * 2;
+                            const offsetDist = Math.random() * this.radius * 0.4;
+                            
+                            this.damageEffects.bodyDamage.push({
+                                type: 'sparkHit',
+                                x: hitPosition.x + Math.cos(offsetAngle) * offsetDist,
+                                y: hitPosition.y + Math.sin(offsetAngle) * offsetDist,
+                                size: 1 + Math.random() * 2,
+                                duration: 300 + Math.random() * 200,
+                                startTime: Date.now(),
+                                color: '#ffcc00'
+                            });
+                        }
+                    }
+                    
+                    // Add visual damage effects based on damage thresholds
+                    
+                    // Smoke at moderate damage (30%+)
+                    if (this.damage >= 30 && Math.random() < 0.3) {
+                        // Small chance to add smoke at each hit, respecting particle limit
+                        if (this.damageEffects.smoke.length < this.MAX_SMOKE_PARTICLES) {
+                            // Use hit position as the smoke source
+                            this.damageEffects.smoke.push({
+                                x: hitPosition.x,
+                                y: hitPosition.y,
+                                vx: (Math.random() - 0.5) * 0.3,
+                                vy: -0.5 - Math.random() * 0.5, // Upward drift
+                                size: 3 + Math.random() * 4,
+                                alpha: 0.3 + Math.random() * 0.3,
+                                growth: 0.05 + Math.random() * 0.05,
+                                fadeSpeed: 0.005 + Math.random() * 0.01,
+                                color: this.damage > 70 ? 'rgba(30,30,30,0.7)' : 'rgba(150,150,150,0.6)',
+                                createdAt: Date.now() // Track when this particle was created
+                            });
+                        } else {
+                            // Replace oldest smoke particle if at limit
+                            const oldestIdx = this._findOldestParticleIndex(this.damageEffects.smoke);
+                            if (oldestIdx >= 0) {
+                                this.damageEffects.smoke[oldestIdx] = {
+                                    x: hitPosition.x,
+                                    y: hitPosition.y,
+                                    vx: (Math.random() - 0.5) * 0.3,
+                                    vy: -0.5 - Math.random() * 0.5,
+                                    size: 3 + Math.random() * 4,
+                                    alpha: 0.3 + Math.random() * 0.3,
+                                    growth: 0.05 + Math.random() * 0.05,
+                                    fadeSpeed: 0.005 + Math.random() * 0.01,
+                                    color: this.damage > 70 ? 'rgba(30,30,30,0.7)' : 'rgba(150,150,150,0.6)',
+                                    createdAt: Date.now()
+                                };
+                            }
+                        }
+                    }
+                    
+                    // Fire/flame effects at high damage (60%+)
+                    if (this.damage >= 60 && Math.random() < 0.2) {
+                        // Small chance to add fire at each hit when heavily damaged
+                        if (this.damageEffects.fire.length < this.MAX_FIRE_PARTICLES) {
+                            // Use hit position as the fire source with small offset
+                            const offsetAngle = Math.random() * Math.PI * 2;
+                            const offsetDist = Math.random() * this.radius * 0.3;
+                            
+                            this.damageEffects.fire.push({
+                                x: hitPosition.x + Math.cos(offsetAngle) * offsetDist,
+                                y: hitPosition.y + Math.sin(offsetAngle) * offsetDist,
+                                vx: (Math.random() - 0.5) * 0.2,
+                                vy: -0.3 - Math.random() * 0.4, // Upward flame
+                                size: 4 + Math.random() * 3,
+                                alpha: 0.7 + Math.random() * 0.3,
+                                fadeSpeed: 0.01 + Math.random() * 0.01,
+                                shrinkSpeed: 0.02 + Math.random() * 0.02,
+                                color: Math.random() < 0.3 ? '#ff9900' : '#ff5500', // Orange/red flame color
+                                createdAt: Date.now()
+                            });
+                        } else {
+                            // Replace oldest fire particle if at limit
+                            const oldestIdx = this._findOldestParticleIndex(this.damageEffects.fire);
+                            if (oldestIdx >= 0) {
+                                const offsetAngle = Math.random() * Math.PI * 2;
+                                const offsetDist = Math.random() * this.radius * 0.3;
+                                
+                                this.damageEffects.fire[oldestIdx] = {
+                                    x: hitPosition.x + Math.cos(offsetAngle) * offsetDist,
+                                    y: hitPosition.y + Math.sin(offsetAngle) * offsetDist,
+                                    vx: (Math.random() - 0.5) * 0.2,
+                                    vy: -0.3 - Math.random() * 0.4,
+                                    size: 4 + Math.random() * 3,
+                                    alpha: 0.7 + Math.random() * 0.3,
+                                    fadeSpeed: 0.01 + Math.random() * 0.01,
+                                    shrinkSpeed: 0.02 + Math.random() * 0.02,
+                                    color: Math.random() < 0.3 ? '#ff9900' : '#ff5500',
+                                    createdAt: Date.now()
+                                };
+                            }
+                        }
+                    }
+                    
+                    // Permanent body damage effects at various thresholds
+                    // We'll add a new damage mark at 20%, 40%, 60%, and 80% damage
+                    const damageThresholds = [20, 40, 60, 80];
+                    const previousDamage = this.damage - hitAmount;
+                    
+                    // Check if we've crossed any damage thresholds
+                    for (const threshold of damageThresholds) {
+                        if (previousDamage < threshold && this.damage >= threshold) {
+                            // Check body damage limit
+                            if (this.damageEffects.bodyDamage.filter(d => d.type === 'dent').length < this.MAX_BODY_DAMAGE) {
+                                // Use hit position for the damage placement with small randomization
+                                const offsetAngle = Math.random() * Math.PI * 2;
+                                const offsetDist = Math.random() * this.radius * 0.3;
+                                const damageSize = 2 + Math.random() * 3;
+                                
+                                // Pre-determine the shape type to avoid random check during drawing
+                                const shapeType = Math.random() < 0.3 ? 'polygon' : 'circle';
+                                const points = [];
+                                
+                                // Pre-calculate polygon points if needed
+                                if (shapeType === 'polygon') {
+                                    const pointCount = 5 + Math.floor(Math.random() * 3);
+                                    const angleStep = (Math.PI * 2) / pointCount;
+                                    
+                                    for (let i = 0; i < pointCount; i++) {
+                                        const distort = 0.7 + Math.random() * 0.6;
+                                        const px = Math.cos(i * angleStep) * damageSize * distort;
+                                        const py = Math.sin(i * angleStep) * damageSize * distort;
+                                        points.push({ x: px, y: py });
+                                    }
+                                }
+                                
+                                this.damageEffects.bodyDamage.push({
+                                    type: 'dent',
+                                    x: hitPosition.x + Math.cos(offsetAngle) * offsetDist,
+                                    y: hitPosition.y + Math.sin(offsetAngle) * offsetDist,
+                                    size: damageSize,
+                                    shapeType: shapeType,
+                                    points: points, // Only used if shapeType is 'polygon'
+                                    // Higher damage levels cause more severe/darker damage
+                                    color: `rgba(30, 30, 30, ${0.6 + (threshold / 100) * 0.4})`,
+                                    rotation: Math.random() * Math.PI
+                                });
+                            }
+                        }
+                    }
+                };
+                
                 // Add takeDamage method if not present
                 if (!robot.takeDamage) {
                     robot.takeDamage = function(amount, source, hitX, hitY) {
@@ -181,6 +357,11 @@ class Game {
                         this.damageEffects.hitPositions.unshift(hitPosition);
                         if (this.damageEffects.hitPositions.length > 5) {
                             this.damageEffects.hitPositions.pop();
+                        }
+                        
+                        // Call the _addVisualDamageEffects method to create visual effects
+                        if (typeof this._addVisualDamageEffects === 'function') {
+                            this._addVisualDamageEffects(amount, hitPosition);
                         }
                     };
                 }
