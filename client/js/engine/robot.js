@@ -336,6 +336,18 @@ class Robot {
         // Get robot's rotation in radians for applying to effects
         const robotRadians = this.direction * Math.PI / 180;
         
+        // Safety check to ensure damageEffects and smoke array exist
+        if (!this.damageEffects || !this.damageEffects.smoke) {
+            console.warn(`[RENDER ERROR] Missing damageEffects or smoke array for robot`);
+            ctx.restore();
+            return;
+        }
+        
+        const smokeCount = this.damageEffects.smoke.length;
+        if (smokeCount > 0 && Math.random() < 0.01) {
+            console.log(`[RENDER DEBUG] Drawing ${smokeCount} smoke particles for robot`);
+        }
+        
         this.damageEffects.smoke.forEach(smoke => {
             // Calculate position considering robot rotation
             const rotatedX = smoke.x * Math.cos(robotRadians) - smoke.y * Math.sin(robotRadians);
@@ -383,6 +395,18 @@ class Robot {
         
         // Get robot's rotation in radians for applying to effects
         const robotRadians = this.direction * Math.PI / 180;
+        
+        // Safety check to ensure damageEffects and fire array exist
+        if (!this.damageEffects || !this.damageEffects.fire) {
+            console.warn(`[RENDER ERROR] Missing damageEffects or fire array for robot`);
+            ctx.restore();
+            return;
+        }
+        
+        const fireCount = this.damageEffects.fire.length;
+        if (fireCount > 0 && Math.random() < 0.01) {
+            console.log(`[RENDER DEBUG] Drawing ${fireCount} fire particles for robot with damage: ${this.damage}`);
+        }
         
         this.damageEffects.fire.forEach(fire => {
             // Calculate position considering robot rotation
@@ -434,6 +458,18 @@ class Robot {
         
         // Get robot's rotation in radians for applying to effects
         const robotRadians = this.direction * Math.PI / 180;
+        
+        // Safety check to ensure damageEffects and bodyDamage array exist
+        if (!this.damageEffects || !this.damageEffects.bodyDamage) {
+            console.warn(`[RENDER ERROR] Missing damageEffects or bodyDamage array for robot`);
+            ctx.restore();
+            return;
+        }
+        
+        const damageCount = this.damageEffects.bodyDamage.length;
+        if (damageCount > 0 && Math.random() < 0.01) {
+            console.log(`[RENDER DEBUG] Drawing ${damageCount} body damage effects for robot with damage: ${this.damage}`);
+        }
         
         this.damageEffects.bodyDamage.forEach(damage => {
             if (damage.type === 'dent') {
@@ -511,6 +547,13 @@ class Robot {
         // Get robot's rotation in radians for applying to effects
         const robotRadians = this.direction * Math.PI / 180;
         
+        // Safety check to ensure damageEffects and bodyDamage array exist
+        if (!this.damageEffects || !this.damageEffects.bodyDamage) {
+            console.warn(`[RENDER ERROR] Missing damageEffects or bodyDamage array for robot`);
+            ctx.restore();
+            return;
+        }
+        
         // Add glow effect for sparks
         ctx.globalCompositeOperation = 'lighter';
         
@@ -552,6 +595,10 @@ class Robot {
         });
         
         // Recent hit flash effect (full-robot glow on hit)
+        // Safety check for lastHitTime
+        if (!this.damageEffects.lastHitTime) {
+            this.damageEffects.lastHitTime = 0;
+        }
         const timeSinceHit = now - this.damageEffects.lastHitTime;
         if (timeSinceHit < 200) { // Flash effect lasts 200ms
             const hitFade = 1 - (timeSinceHit / 200);
@@ -624,6 +671,10 @@ class Robot {
         });
         
         // Recent hit flash effect (full-robot glow on hit)
+        // Safety check for lastHitTime
+        if (!this.damageEffects.lastHitTime) {
+            this.damageEffects.lastHitTime = 0;
+        }
         const timeSinceHit = now - this.damageEffects.lastHitTime;
         if (timeSinceHit < 200) { // Flash effect lasts 200ms
             const hitFade = 1 - (timeSinceHit / 200);

@@ -98,6 +98,8 @@ class Game {
                 // Only update if robot has damage effects method
                 if (robot._updateDamageEffects) {
                     robot._updateDamageEffects();
+                } else {
+                    console.warn(`[DAMAGE DEBUG] _updateDamageEffects method not found on robot ${robot.id}`);
                 }
             });
         }
@@ -174,6 +176,162 @@ class Game {
                     }
                     
                     return oldestIdx;
+                };
+                
+                // Add the _updateDamageEffects method
+                robot._updateDamageEffects = function() {
+                    const now = Date.now();
+                    
+                    // 1. Update smoke particles
+                    for (let i = this.damageEffects.smoke.length - 1; i >= 0; i--) {
+                        const smoke = this.damageEffects.smoke[i];
+                        
+                        // Move smoke
+                        smoke.x += smoke.vx;
+                        smoke.y += smoke.vy;
+                        
+                        // Grow and fade smoke
+                        smoke.size += smoke.growth;
+                        smoke.alpha -= smoke.fadeSpeed;
+                        
+                        // Remove if fully faded
+                        if (smoke.alpha <= 0) {
+                            this.damageEffects.smoke.splice(i, 1);
+                        }
+                    }
+                    
+                    // 2. Update fire particles
+                    for (let i = this.damageEffects.fire.length - 1; i >= 0; i--) {
+                        const fire = this.damageEffects.fire[i];
+                        
+                        // Move fire
+                        fire.x += fire.vx;
+                        fire.y += fire.vy;
+                        
+                        // Shrink and fade fire
+                        fire.size -= fire.shrinkSpeed;
+                        fire.alpha -= fire.fadeSpeed;
+                        
+                        // Remove if too small or fully faded
+                        if (fire.size <= 0.5 || fire.alpha <= 0) {
+                            this.damageEffects.fire.splice(i, 1);
+                        }
+                    }
+                    
+                    // 3. Update temporary body damage effects (sparks, flash)
+                    for (let i = this.damageEffects.bodyDamage.length - 1; i >= 0; i--) {
+                        const damage = this.damageEffects.bodyDamage[i];
+                        
+                        // If it's a temporary effect with duration
+                        if (damage.type === 'sparkHit' && damage.startTime && damage.duration) {
+                            if (now - damage.startTime > damage.duration) {
+                                this.damageEffects.bodyDamage.splice(i, 1);
+                            }
+                        }
+                    }
+                    
+                    // 4. Generate constant smoke/fire for heavily damaged robots
+                    // Use damage points as emission sources if available
+                    let smokeSource, fireSource;
+                    
+                    // Pick a random damage point as smoke/fire source if available
+                    // Filter to only get permanent damage marks as sources
+                    const damageSources = this.damageEffects.bodyDamage.filter(d => d.type === 'dent');
+                    
+                    if (damageSources.length > 0) {
+                        const randomDamageIndex = Math.floor(Math.random() * damageSources.length);
+                        smokeSource = damageSources[randomDamageIndex];
+                    }
+                    
+                    // If no damage sources, use recent hit positions
+                    if (!smokeSource && this.damageEffects.hitPositions.length > 0) {
+                        const randomHitIndex = Math.floor(Math.random() * this.damageEffects.hitPositions.length);
+                        smokeSource = this.damageEffects.hitPositions[randomHitIndex];
+                    }
+                    
+                    // If still no source, fallback to random position
+                    if (!smokeSource) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const distance = this.radius * 0.7;
+                        smokeSource = {
+                            x: Math.cos(angle) * distance,
+                            y: Math.sin(angle) * distance
+                        };
+                    }
+                    
+                    // Similar source selection for fire
+                    fireSource = smokeSource; // Use same source for simplicity
+                    
+                    // Emit smoke based on damage level and respecting limits
+                    if (this.damage >= 40 && Math.random() < 0.05 + (this.damage / 500)) {
+                        if (this.damageEffects.smoke.length < this.MAX_SMOKE_PARTICLES) {
+                            // Apply small random offset to source position
+                            const offsetAngle = Math.random() * Math.PI * 2;
+                            const offsetDist = Math.random() * this.radius * 0.3;
+                            const sourceX = smokeSource.x + Math.cos(offsetAngle) * offsetDist;
+                            const sourceY = smokeSource.y + Math.sin(offsetAngle) * offsetDist;
+                            
+                            this.damageEffects.smoke.push({
+                                x: sourceX,
+                                y: sourceY,
+                                vx: (Math.random() - 0.5) * 0.2,
+                                vy: -0.3 - Math.random() * 0.3,
+                                size: 2 + Math.random() * 3,
+                                alpha: 0.2 + Math.random() * 0.3,
+                                growth: 0.03 + Math.random() * 0.03,
+                                fadeSpeed: 0.005 + Math.random() * 0.005,
+                                color: this.damage > 70 ? 'rgba(40,40,40,0.6)' : 'rgba(120,120,120,0.5)',
+                                createdAt: now
+                            });
+                        }
+                    }
+                    
+                    // Emit fire for severely damaged robots, respecting limits
+                    if (this.damage >= 75 && Math.random() < 0.03 + ((this.damage - 75) / 200)) {
+                        if (this.damageEffects.fire.length < this.MAX_FIRE_PARTICLES) {
+                            // Apply small random offset to source position
+                            const offsetAngle = Math.random() * Math.PI * 2;
+                            const offsetDist = Math.random() * this.radius * 0.2;
+                            const sourceX = fireSource.x + Math.cos(offsetAngle) * offsetDist;
+                            const sourceY = fireSource.y + Math.sin(offsetAngle) * offsetDist;
+                            
+                            this.damageEffects.fire.push({
+                                x: sourceX,
+                                y: sourceY,
+                                vx: (Math.random() - 0.5) * 0.1,
+                                vy: -0.2 - Math.random() * 0.3,
+                                size: 3 + Math.random() * 2,
+                                alpha: 0.6 + Math.random() * 0.3,
+                                fadeSpeed: 0.01 + Math.random() * 0.01,
+                                shrinkSpeed: 0.02 + Math.random() * 0.03,
+                                color: Math.random() < 0.5 ? '#ff9900' : '#ff5500',
+                                createdAt: now
+                            });
+                        } else if (this.damageEffects.fire.length > 0) {
+                            // Replace oldest fire particle if at limit
+                            const oldestIdx = this._findOldestParticleIndex(this.damageEffects.fire);
+                            if (oldestIdx >= 0) {
+                                // Apply small random offset to source position
+                                const offsetAngle = Math.random() * Math.PI * 2;
+                                const offsetDist = Math.random() * this.radius * 0.2;
+                                const sourceX = fireSource.x + Math.cos(offsetAngle) * offsetDist;
+                                const sourceY = fireSource.y + Math.sin(offsetAngle) * offsetDist;
+                                
+                                this.damageEffects.fire[oldestIdx] = {
+                                    x: sourceX,
+                                    y: sourceY,
+                                    vx: (Math.random() - 0.5) * 0.1,
+                                    vy: -0.2 - Math.random() * 0.3,
+                                    size: 3 + Math.random() * 2,
+                                    alpha: 0.6 + Math.random() * 0.3,
+                                    fadeSpeed: 0.01 + Math.random() * 0.01,
+                                    shrinkSpeed: 0.02 + Math.random() * 0.03,
+                                    color: Math.random() < 0.5 ? '#ff9900' : '#ff5500',
+                                    createdAt: now
+                                };
+                            }
+                        }
+                    }
                 };
                 
                 // Add _addVisualDamageEffects method
@@ -361,7 +519,10 @@ class Game {
                         
                         // Call the _addVisualDamageEffects method to create visual effects
                         if (typeof this._addVisualDamageEffects === 'function') {
+                            console.log(`[DAMAGE DEBUG] Calling _addVisualDamageEffects for robot ${this.id}, damage amount: ${amount}`);
                             this._addVisualDamageEffects(amount, hitPosition);
+                        } else {
+                            console.warn(`[DAMAGE DEBUG] _addVisualDamageEffects method not found on robot ${this.id}`);
                         }
                     };
                 }
@@ -372,7 +533,15 @@ class Game {
             if (previousState && robot.damage > previousState.damage) {
                 // Calculate position where damage was taken (use previous position)
                 const damageAmount = robot.damage - previousState.damage;
+                console.log(`[DAMAGE DEBUG] Robot ${robot.id} damage increased from ${previousState.damage} to ${robot.damage}, creating effects at (${previousState.x}, ${previousState.y})`);
                 robot.takeDamage(damageAmount, 'update', previousState.x, previousState.y);
+            } else if (previousState && robot.damage === 100 && previousState.damage === 100) {
+                // For already destroyed robots, make sure they have visual effects
+                if (robot.damageEffects.smoke.length === 0 && robot.damageEffects.fire.length === 0) {
+                    console.log(`[DAMAGE DEBUG] Robot ${robot.id} is destroyed but has no effects, adding some`);
+                    // Add some effects for destroyed robots
+                    robot.takeDamage(20, 'update', robot.x, robot.y);
+                }
             }
         });
 
