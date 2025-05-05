@@ -60,8 +60,35 @@ class Arena { // File name remains Arena, class concept is Renderer
             }
         };
         
+        // Ambient Lighting Configuration
+        this.ambientConfig = {
+            enabled: true,                // Can be toggled on/off
+            mode: 'day',                  // 'day', 'night', 'dusk'
+            nightIntensity: 0.7,          // Darkness level for night mode (0-1)
+            duskIntensity: 0.4,           // Darkness level for dusk/dawn mode (0-1)
+            colorFilter: {                // Color tint for different lighting conditions
+                day: { r: 255, g: 255, b: 255 },      // Normal daylight (no tint)
+                night: { r: 40, g: 45, b: 80 },       // Blue-ish night tint
+                dusk: { r: 255, g: 180, b: 130 }      // Orange-ish sunset tint
+            },
+            spotlights: {
+                enabled: true,            // Enable spotlight effects at night
+                count: 4,                 // Number of spotlights
+                intensity: 0.4,           // Spotlight intensity
+                radius: 200,              // Spotlight radius
+                movement: {               // Spotlight movement pattern
+                    enabled: true,        // Whether spotlights move
+                    speed: 0.0002,        // Movement speed factor
+                    range: 0.3            // Movement range (fraction of arena size)
+                }
+            }
+        };
+        
         // Active Light Sources Array
         this.activeLightSources = [];
+        
+        // Permanent Light Sources (like arena spotlights)
+        this.permanentLightSources = [];
 
         // Persistent Scorch Marks
         this.scorchMarks = []; // Array to track all scorch marks
@@ -84,6 +111,18 @@ class Arena { // File name remains Arena, class concept is Renderer
         this.backgroundImage.src = 'assets/images/metal_floor.png'; // Path to your texture
 
         this.redrawArenaBackground(); // Initial draw (might be fallback color initially)
+        
+        // Initialize night mode
+        // Default is day mode as defined in ambientConfig
+        // Uncomment the line below to initially set night mode
+        // this.setAmbientMode('night');
+        
+        // Initialize spotlights if currently in night mode
+        if (this.ambientConfig.enabled && 
+            this.ambientConfig.mode !== 'day' && 
+            this.ambientConfig.spotlights.enabled) {
+            this.initSpotlights();
+        }
     }
 
     // --- Coordinate Translation Helpers ---
@@ -1874,15 +1913,30 @@ class Arena { // File name remains Arena, class concept is Renderer
             ? this.lightingConfig.missileLight 
             : this.lightingConfig.explosionLight;
         
+        // Adjust light properties based on ambient lighting
+        let radius = lightConfig.radius;
+        let intensity = lightConfig.intensity;
+        let duration = lightConfig.duration;
+        
+        // Make lights more visible at night
+        if (this.ambientConfig.enabled && this.ambientConfig.mode !== 'day') {
+            // Increase radius, intensity, and duration at night for more dramatic effect
+            const nightBoost = this.ambientConfig.mode === 'night' ? 1.5 : 1.2; // Bigger boost at night than dusk
+            
+            radius *= nightBoost;
+            intensity = Math.min(1.0, intensity * nightBoost); // Cap at 1.0
+            duration *= 1.2; // Make light effects last longer at night
+        }
+        
         // Create light source object
         const light = {
             x: this.translateX(x),
             y: this.translateY(y),
-            radius: lightConfig.radius,
-            intensity: lightConfig.intensity,
+            radius: radius,
+            intensity: intensity,
             color: color,
             startTime: Date.now(),
-            duration: lightConfig.duration,
+            duration: duration,
             falloff: lightConfig.falloff,
             type: type
         };
@@ -2070,6 +2124,285 @@ class Arena { // File name remains Arena, class concept is Renderer
         });
     }
     // --- END: Dynamic Lighting System ---
+    
+    // --- START: Ambient Lighting System ---
+    /**
+     * Initializes arena spotlights for night mode
+     * Called once when the arena is created or when mode changes to night
+     */
+    initSpotlights() {
+        // Clear any existing spotlights
+        this.permanentLightSources = [];
+        
+        if (!this.ambientConfig.enabled || 
+            this.ambientConfig.mode === 'day' || 
+            !this.ambientConfig.spotlights.enabled) {
+            return; // No spotlights needed
+        }
+        
+        // Create arena spotlights
+        const spotCount = this.ambientConfig.spotlights.count;
+        const radius = this.ambientConfig.spotlights.radius;
+        const intensity = this.ambientConfig.spotlights.intensity;
+        
+        // Generate spotlights positioned around the arena
+        for (let i = 0; i < spotCount; i++) {
+            // Spotlights positioned at corners and midpoints of edges for even distribution
+            let x, y;
+            
+            // Calculate base position on arena border
+            const angle = (i / spotCount) * Math.PI * 2;
+            const borderDistance = 0.8; // Distance from center to border (as a fraction of half-width/height)
+            
+            x = this.width/2 + (this.width/2 * borderDistance) * Math.cos(angle);
+            y = this.height/2 + (this.height/2 * borderDistance) * Math.sin(angle);
+            
+            // Randomize color slightly for visual interest
+            // Use either white-ish or slight yellow tint
+            let color;
+            if (Math.random() < 0.7) {
+                // White-ish spotlight
+                color = '#f0f0ff';
+            } else {
+                // Slight yellow tint
+                color = '#ffffcc';
+            }
+            
+            // Create spotlight
+            this.permanentLightSources.push({
+                x,
+                y,
+                baseX: x,     // Store original position for movement calculations
+                baseY: y,
+                radius,
+                intensity,
+                color,
+                falloff: 1.2,
+                movement: {
+                    phase: Math.random() * Math.PI * 2, // Random starting phase
+                    speed: this.ambientConfig.spotlights.movement.speed * (0.7 + Math.random() * 0.6) // Slight randomization in speed
+                }
+            });
+        }
+    }
+    
+    /**
+     * Updates permanent light sources like spotlights, including their movement
+     */
+    updatePermanentLights() {
+        if (!this.ambientConfig.enabled || 
+            this.ambientConfig.mode === 'day' ||
+            !this.ambientConfig.spotlights.enabled ||
+            !this.ambientConfig.spotlights.movement.enabled ||
+            this.permanentLightSources.length === 0) {
+            return; // No movement needed
+        }
+        
+        const now = Date.now();
+        const movementRange = this.ambientConfig.spotlights.movement.range;
+        
+        // Update each spotlight position
+        this.permanentLightSources.forEach(light => {
+            if (!light.movement) return;
+            
+            // Calculate new position using sinusoidal movement
+            const xOffset = Math.sin(now * light.movement.speed + light.movement.phase) * (this.width * movementRange);
+            const yOffset = Math.cos(now * light.movement.speed * 0.7 + light.movement.phase) * (this.height * movementRange);
+            
+            light.x = light.baseX + xOffset;
+            light.y = light.baseY + yOffset;
+        });
+    }
+    
+    /**
+     * Draws the ambient lighting effect (day/night/dusk overlay)
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     */
+    drawAmbientLighting(ctx) {
+        if (!this.ambientConfig.enabled || this.ambientConfig.mode === 'day') {
+            return; // No ambient overlay needed for daylight
+        }
+        
+        // Select intensity based on mode
+        let intensity = this.ambientConfig.mode === 'night' 
+            ? this.ambientConfig.nightIntensity 
+            : this.ambientConfig.duskIntensity;
+        
+        // Select color filter based on mode
+        const colorFilter = this.ambientConfig.colorFilter[this.ambientConfig.mode];
+        
+        // Save context
+        ctx.save();
+        
+        // Create ambient overlay
+        ctx.globalCompositeOperation = 'multiply'; // Multiply blend mode darkens underlying content
+        
+        // Fill screen with ambient color
+        ctx.fillStyle = `rgba(${colorFilter.r}, ${colorFilter.g}, ${colorFilter.b}, ${intensity})`;
+        ctx.fillRect(0, 0, this.width, this.height);
+        
+        // If in night mode with spotlights, draw spotlight clearings
+        if (this.ambientConfig.mode === 'night' && 
+            this.ambientConfig.spotlights.enabled &&
+            this.permanentLightSources.length > 0) {
+            
+            // Switch to destination-out to cut holes in the darkness
+            ctx.globalCompositeOperation = 'destination-out';
+            
+            // Draw each spotlight as a soft clearing in the darkness
+            this.permanentLightSources.forEach(light => {
+                // Create radial gradient for soft-edged light cone
+                const gradient = ctx.createRadialGradient(
+                    light.x, light.y, 0,
+                    light.x, light.y, light.radius
+                );
+                
+                // Center of spotlight is mostly clear
+                gradient.addColorStop(0, `rgba(255, 255, 255, ${light.intensity})`);
+                // Edge fades to transparent
+                gradient.addColorStop(0.7, `rgba(255, 255, 255, ${light.intensity * 0.3})`);
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                
+                // Draw spotlight cone
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(light.x, light.y, light.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        // Restore context
+        ctx.restore();
+    }
+    
+    /**
+     * Draws spotlights as actual light sources (for glow effects)
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     */
+    drawSpotlights(ctx) {
+        if (!this.ambientConfig.enabled || 
+            this.ambientConfig.mode === 'day' ||
+            !this.ambientConfig.spotlights.enabled ||
+            this.permanentLightSources.length === 0) {
+            return; // No spotlights to draw
+        }
+        
+        // Save context
+        ctx.save();
+        
+        // Set blend mode for additive lighting
+        ctx.globalCompositeOperation = 'lighter';
+        
+        // Draw each spotlight glow
+        this.permanentLightSources.forEach(light => {
+            // Extract RGB values from color
+            let r = 255, g = 255, b = 255; // Default white
+            if (light.color.startsWith('#')) {
+                r = parseInt(light.color.substring(1, 3), 16);
+                g = parseInt(light.color.substring(3, 5), 16);
+                b = parseInt(light.color.substring(5, 7), 16);
+            }
+            
+            // Create gradient for light glow
+            const gradient = ctx.createRadialGradient(
+                light.x, light.y, 0,
+                light.x, light.y, light.radius * 0.5 // Spotlight glow is smaller than its area of effect
+            );
+            
+            // Create gradient stops for realistic light falloff
+            const adjustedIntensity = light.intensity * 0.5; // Reduce intensity for glow effect
+            gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${adjustedIntensity})`);
+            gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${adjustedIntensity * 0.3})`);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            // Draw spotlight glow
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(light.x, light.y, light.radius * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Restore context
+        ctx.restore();
+    }
+    
+    /**
+     * Sets the ambient lighting mode
+     * @param {string} mode - 'day', 'night', or 'dusk'
+     */
+    setAmbientMode(mode) {
+        if (!['day', 'night', 'dusk'].includes(mode)) {
+            console.error(`Invalid ambient lighting mode: ${mode}. Valid modes are 'day', 'night', or 'dusk'.`);
+            return;
+        }
+        
+        // Set new mode
+        this.ambientConfig.mode = mode;
+        
+        // Initialize spotlights if needed
+        if (mode === 'night' && this.ambientConfig.spotlights.enabled) {
+            this.initSpotlights();
+        }
+        
+        console.log(`Ambient lighting mode set to: ${mode}`);
+    }
+    
+    /**
+     * Toggles through ambient lighting modes in the sequence: day -> dusk -> night -> day
+     * Can be called from the UI to allow users to toggle lighting
+     * @returns {string} The new lighting mode
+     */
+    toggleLightingMode() {
+        // Get current mode
+        const currentMode = this.ambientConfig.mode;
+        
+        // Determine next mode in sequence
+        let nextMode;
+        switch(currentMode) {
+            case 'day': 
+                nextMode = 'dusk';
+                break;
+            case 'dusk': 
+                nextMode = 'night';
+                break;
+            case 'night':
+            default:
+                nextMode = 'day'; 
+                break;
+        }
+        
+        // Set new mode
+        this.setAmbientMode(nextMode);
+        
+        return nextMode;
+    }
+    
+    /**
+     * Public method to get the current lighting mode
+     * @returns {string} Current lighting mode ('day', 'night', or 'dusk')
+     */
+    getLightingMode() {
+        return this.ambientConfig.mode;
+    }
+    
+    /**
+     * Enables or disables spotlights in night mode
+     * @param {boolean} enabled - Whether spotlights should be enabled
+     */
+    setSpotlightsEnabled(enabled) {
+        this.ambientConfig.spotlights.enabled = !!enabled;
+        
+        // If enabling spotlights in night mode, initialize them
+        if (enabled && this.ambientConfig.mode === 'night') {
+            this.initSpotlights();
+        } else if (!enabled) {
+            // Clear spotlights if disabling
+            this.permanentLightSources = [];
+        }
+        
+        return this.ambientConfig.spotlights.enabled;
+    }
+    // --- END: Ambient Lighting System ---
 
     // --- START: Removed old drawEffects ---
     /*
@@ -2091,7 +2424,7 @@ class Arena { // File name remains Arena, class concept is Renderer
 
     /**
      * Main drawing loop method - called by Game.js.
-     * Includes optional screen shake and dynamic lighting.
+     * Includes optional screen shake, dynamic lighting, and ambient lighting effects.
      * @param {Array} missiles - Array of missile data from game state.
      * @param {Array} activeExplosions - Array of simple explosion objects (e.g., for missile impacts).
      * @param {Array} activeFlashes - Array of active muzzle flash objects.
@@ -2104,8 +2437,9 @@ class Arena { // File name remains Arena, class concept is Renderer
             return;
         }
         
-        // Update dynamic lighting system
+        // Update dynamic lighting systems
         this.updateLightSources();
+        this.updatePermanentLights(); // Update spotlight positions
         
         // Check for new explosion events and create light sources
         if (particleEffects && particleEffects.length > 0) {
@@ -2153,23 +2487,31 @@ class Arena { // File name remains Arena, class concept is Renderer
         this.ctx.translate(shakeX, shakeY);
         // --- Screen Shake End ---
         
-        // 2. Draw Dynamic Shadows from Light Sources
-        // (These are drawn before robots so they appear behind them)
+        // 2. Draw shadows for permanent light sources like spotlights
+        if (this.ambientConfig.enabled && 
+            this.ambientConfig.mode !== 'day' &&
+            this.ambientConfig.spotlights.enabled) {
+            this.permanentLightSources.forEach(light => {
+                this._drawDynamicShadows(this.ctx, light);
+            });
+        }
+        
+        // 3. Draw shadows for dynamic light sources (explosions/missiles)
         this.drawLightSources(this.ctx);
 
-        // 3. Draw Robots (including their permanent shadows)
+        // 4. Draw Robots (including their permanent shadows)
         this.drawRobots();
 
-        // 4. Draw Missiles (now with unique visuals/trails)
+        // 5. Draw Missiles (now with unique visuals/trails)
         this.drawMissiles(missiles);
 
-        // 5. Draw NEW Particle Effects (for robot destruction)
+        // 6. Draw NEW Particle Effects (for robot destruction)
         this.drawParticleEffects(particleEffects);
 
-        // 6. Draw Muzzle Flashes
+        // 7. Draw Muzzle Flashes
         this.drawMuzzleFlashes(activeFlashes);
         
-        // 7. Draw Dynamic Lighting (glow effect on top of everything)
+        // 8. Draw Dynamic Lighting (glow effect on top of everything)
         // The shadows are drawn earlier, but the actual light glow should be on top
         // Light sources were already computed earlier, just drawing the glow here
         if (this.lightingConfig.enabled && this.activeLightSources.length > 0) {
@@ -2219,6 +2561,13 @@ class Arena { // File name remains Arena, class concept is Renderer
             // Restore context
             this.ctx.restore();
         }
+        
+        // 9. Draw spotlight glows (if in night mode)
+        this.drawSpotlights(this.ctx);
+        
+        // 10. Apply ambient lighting overlay (night/dusk effect) 
+        // This needs to be drawn after all regular content
+        this.drawAmbientLighting(this.ctx);
 
         // --- Screen Shake Restore ---
         this.ctx.restore(); // Restore context after drawing everything (removes shake translation)
