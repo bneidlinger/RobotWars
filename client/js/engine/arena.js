@@ -288,13 +288,18 @@ class Arena { // File name remains Arena, class concept is Renderer
             const chassisType = visuals.chassis?.type || 'medium';
             const turretType = visuals.turret?.type || 'standard';
 
-            ctx.save(); // Save context state before drawing this robot
-
             // Get robot position and direction
             const robotX = this.translateX(robotData.x || 0);
             const robotY = this.translateY(robotData.y || 0);
             const robotDir = robotData.direction || 0; // Robot's body direction
             const radians = robotDir * Math.PI / 180;
+
+            // --- Draw Damage Effects (Behind Robot) - Smoke ---
+            if (robotData.damageEffects && robotData.damageEffects.smoke) {
+                this._drawSmokeEffects(ctx, robotData, robotX, robotY, radians);
+            }
+
+            ctx.save(); // Save context state before drawing this robot
 
             // Translate and rotate context to robot's position and orientation
             ctx.translate(robotX, robotY);
@@ -310,10 +315,24 @@ class Arena { // File name remains Arena, class concept is Renderer
             // 2. Draw Chassis (Middle Layer)
             this._drawChassis(ctx, chassisType, chassisColor, baseRadius);
 
+            // --- Draw Damage Effects (On Robot) - Body Damage ---
+            if (robotData.damageEffects && robotData.damageEffects.bodyDamage) {
+                this._drawBodyDamageEffects(ctx, robotData, baseRadius);
+            }
+
             // 3. Draw Turret (Top Layer) - Turret might face a different direction (TODO: add turret direction if needed)
             this._drawTurret(ctx, turretType, turretColor, baseRadius);
 
             ctx.restore(); // Restore rotation/translation
+
+            // --- Draw Damage Effects (On Top of Robot) - Fire and Hit Effects ---
+            if (robotData.damageEffects) {
+                if (robotData.damageEffects.fire) {
+                    this._drawFireEffects(ctx, robotData, robotX, robotY, radians);
+                }
+                
+                this._drawHitEffects(ctx, robotData, robotX, robotY);
+            }
 
             // --- Draw Name and Health Bar (Common Elements) ---
             // Position relative to the un-rotated canvas
@@ -630,6 +649,262 @@ class Arena { // File name remains Arena, class concept is Renderer
         let r = parseInt(color.substring(1, 3), 16); let g = parseInt(color.substring(3, 5), 16); let b = parseInt(color.substring(5, 7), 16);
         r = Math.min(255, Math.floor(r * factor)); g = Math.min(255, Math.floor(g * factor)); b = Math.min(255, Math.floor(b * factor));
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+    
+    /**
+     * Draw smoke particles for a robot
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} robotData - Robot data from server
+     * @param {number} baseX - Robot's x position on canvas
+     * @param {number} baseY - Robot's y position on canvas
+     * @param {number} robotRadians - Robot's rotation in radians
+     * @private
+     */
+    _drawSmokeEffects(ctx, robotData, baseX, baseY, robotRadians) {
+        ctx.save();
+        
+        // Safety check to ensure smoke array exists
+        if (!robotData.damageEffects.smoke) {
+            ctx.restore();
+            return;
+        }
+        
+        robotData.damageEffects.smoke.forEach(smoke => {
+            // Calculate position considering robot rotation
+            const rotatedX = smoke.x * Math.cos(robotRadians) - smoke.y * Math.sin(robotRadians);
+            const rotatedY = smoke.x * Math.sin(robotRadians) + smoke.y * Math.cos(robotRadians);
+            
+            // Set color and alpha - pre-calculate the color string only once
+            let smokeColor;
+            const smokeBaseColor = smoke.color || 'rgba(100,100,100,0.5)';
+            if (smokeBaseColor.startsWith('rgba')) {
+                // Extract RGB part of the rgba color
+                const rgbPart = smokeBaseColor.substring(0, smokeBaseColor.lastIndexOf(','));
+                smokeColor = `${rgbPart}, ${smoke.alpha})`;
+            } else {
+                // Use default with specified alpha
+                smokeColor = `rgba(100,100,100,${smoke.alpha})`;
+            }
+            ctx.fillStyle = smokeColor;
+            
+            // Draw smoke particle as a circle
+            ctx.beginPath();
+            ctx.arc(
+                baseX + rotatedX,
+                baseY + rotatedY,
+                smoke.size,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        });
+        
+        ctx.restore();
+    }
+    
+    /**
+     * Draw fire particles for a robot
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} robotData - Robot data from server
+     * @param {number} baseX - Robot's x position on canvas
+     * @param {number} baseY - Robot's y position on canvas
+     * @param {number} robotRadians - Robot's rotation in radians
+     * @private
+     */
+    _drawFireEffects(ctx, robotData, baseX, baseY, robotRadians) {
+        ctx.save();
+        
+        // Add glow effect for fire
+        ctx.globalCompositeOperation = 'lighter';
+        
+        // Safety check to ensure fire array exists
+        if (!robotData.damageEffects.fire) {
+            ctx.restore();
+            return;
+        }
+        
+        robotData.damageEffects.fire.forEach(fire => {
+            // Calculate position considering robot rotation
+            const rotatedX = fire.x * Math.cos(robotRadians) - fire.y * Math.sin(robotRadians);
+            const rotatedY = fire.x * Math.sin(robotRadians) + fire.y * Math.cos(robotRadians);
+            
+            // Set color and alpha
+            ctx.fillStyle = fire.color || '#ff7700';
+            ctx.globalAlpha = fire.alpha;
+            
+            // Apply rotation to fire particles based on robot rotation PLUS flame direction
+            ctx.translate(baseX + rotatedX, baseY + rotatedY);
+            ctx.rotate(robotRadians - Math.PI/2); // Flames should point up relative to robot
+            
+            // Draw fire particle as a triangle-like shape
+            const fireHeight = fire.size * 1.5;
+            const fireWidth = fire.size * 0.8;
+            
+            ctx.beginPath();
+            ctx.moveTo(0, -fireHeight); // Top
+            ctx.lineTo(-fireWidth, fireHeight * 0.3); // Bottom left
+            ctx.lineTo(fireWidth, fireHeight * 0.3); // Bottom right
+            ctx.closePath();
+            ctx.fill();
+            
+            // Add a small glow/inner fire
+            ctx.fillStyle = '#ffffaa';
+            ctx.globalAlpha = fire.alpha * 0.7;
+            ctx.beginPath();
+            ctx.arc(0, -fireHeight * 0.3, fire.size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Reset transformation
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+        });
+        
+        ctx.restore();
+    }
+    
+    /**
+     * Draw body damage effects (dents, scorch marks) for a robot
+     * @param {CanvasRenderingContext2D} ctx - Canvas context already transformed to robot's coordinates
+     * @param {Object} robotData - Robot data from server
+     * @param {number} baseRadius - Robot's base radius for sizing
+     * @private
+     */
+    _drawBodyDamageEffects(ctx, robotData, baseRadius) {
+        // We're already in the transformed robot coordinate system
+        // Safety check to ensure bodyDamage array exists
+        if (!robotData.damageEffects.bodyDamage) {
+            return;
+        }
+        
+        robotData.damageEffects.bodyDamage.forEach(damage => {
+            if (damage.type === 'dent') {
+                // Draw dent/scorch mark
+                ctx.fillStyle = damage.color || 'rgba(30,30,30,0.7)';
+                
+                // Apply rotation to effect (damage rotation)
+                ctx.save();
+                ctx.translate(damage.x, damage.y);
+                ctx.rotate(damage.rotation || 0);
+                
+                // Draw the damage effect using pre-computed shape type
+                if (damage.shapeType === 'polygon') {
+                    // Irregular polygon for a dent
+                    ctx.beginPath();
+                    
+                    // Use pre-computed points if available
+                    if (damage.points && damage.points.length > 0) {
+                        for (let i = 0; i < damage.points.length; i++) {
+                            const point = damage.points[i];
+                            if (i === 0) {
+                                ctx.moveTo(point.x, point.y);
+                            } else {
+                                ctx.lineTo(point.x, point.y);
+                            }
+                        }
+                    } else {
+                        // Fallback if points weren't pre-computed
+                        const points = 5 + Math.floor(Math.random() * 3);
+                        const angleStep = (Math.PI * 2) / points;
+                        for (let i = 0; i < points; i++) {
+                            const distort = 0.7 + Math.random() * 0.6;
+                            const px = Math.cos(i * angleStep) * damage.size * distort;
+                            const py = Math.sin(i * angleStep) * damage.size * distort;
+                            
+                            if (i === 0) {
+                                ctx.moveTo(px, py);
+                            } else {
+                                ctx.lineTo(px, py);
+                            }
+                        }
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // Simple circle for a burn mark
+                    ctx.beginPath();
+                    ctx.arc(0, 0, damage.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+        });
+    }
+    
+    /**
+     * Draw hit flash/spark effects for a robot
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} robotData - Robot data from server
+     * @param {number} baseX - Robot's x position on canvas
+     * @param {number} baseY - Robot's y position on canvas
+     * @private
+     */
+    _drawHitEffects(ctx, robotData, baseX, baseY) {
+        ctx.save();
+        
+        const now = Date.now();
+        
+        // Add glow effect for sparks
+        ctx.globalCompositeOperation = 'lighter';
+        
+        // Safety check to ensure bodyDamage array exists
+        if (!robotData.damageEffects.bodyDamage) {
+            ctx.restore();
+            return;
+        }
+        
+        robotData.damageEffects.bodyDamage.forEach(damage => {
+            if (damage.type === 'sparkHit') {
+                // Calculate fade based on elapsed time
+                const elapsed = now - damage.startTime;
+                const progress = elapsed / damage.duration;
+                
+                if (progress <= 1) {
+                    const fade = 1 - progress;
+                    
+                    // Draw spark/flash
+                    ctx.fillStyle = damage.color || '#ffcc00';
+                    ctx.globalAlpha = fade;
+                    
+                    // Draw spark as a small circle with glow
+                    ctx.shadowColor = damage.color || '#ffcc00';
+                    ctx.shadowBlur = damage.size * 2;
+                    
+                    ctx.beginPath();
+                    ctx.arc(
+                        baseX + damage.x,
+                        baseY + damage.y,
+                        damage.size * fade, // Shrinks as it fades
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fill();
+                    
+                    // Reset shadow for other draws
+                    ctx.shadowBlur = 0;
+                }
+            }
+        });
+        
+        // Recent hit flash effect (full-robot glow on hit)
+        // Safety check for lastHitTime
+        if (!robotData.damageEffects.lastHitTime) {
+            robotData.damageEffects.lastHitTime = 0;
+        }
+        
+        const timeSinceHit = now - robotData.damageEffects.lastHitTime;
+        if (timeSinceHit < 200) { // Flash effect lasts 200ms
+            const hitFade = 1 - (timeSinceHit / 200);
+            
+            // Draw a glow around the robot
+            ctx.strokeStyle = robotData.damage < 50 ? 'rgba(255,255,255,0.6)' : 'rgba(255,50,0,0.6)';
+            ctx.globalAlpha = hitFade * 0.6;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(baseX, baseY, robotData.radius + 3, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        ctx.restore();
     }
     // === END: Enhanced Robot Drawing System ===
 
