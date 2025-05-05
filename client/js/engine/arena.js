@@ -33,6 +33,36 @@ class Arena { // File name remains Arena, class concept is Renderer
         this.gridSize = 50;
         this.gridColor = '#444444';
 
+        // Shadow Configuration
+        this.shadowConfig = {
+            enabled: true,            // Can be toggled off for performance
+            offsetX: 5,               // X offset for shadow from robot position
+            offsetY: 5,               // Y offset for shadow from robot position
+            blur: 5,                  // Blur amount for the shadow
+            color: 'rgba(0,0,0,0.4)', // Shadow color and opacity
+            scale: 0.85               // Size of shadow relative to robot (0.5-1.0)
+        };
+        
+        // Dynamic Lighting Configuration
+        this.lightingConfig = {
+            enabled: true,            // Can be toggled off for performance
+            explosionLight: {
+                radius: 150,          // Light radius for explosions
+                intensity: 0.7,       // Light intensity (0-1)
+                duration: 800,        // Duration in ms
+                falloff: 2            // Light falloff (1-3, higher = sharper falloff)
+            },
+            missileLight: {
+                radius: 50,           // Light radius for missile firing
+                intensity: 0.4,       // Light intensity (0-1)
+                duration: 300,        // Duration in ms
+                falloff: 1.5          // Light falloff
+            }
+        };
+        
+        // Active Light Sources Array
+        this.activeLightSources = [];
+
         // Persistent Scorch Marks
         this.scorchMarks = []; // Array to track all scorch marks
         this.loadScorchMarks(); // Load saved scorch marks from localStorage
@@ -264,6 +294,7 @@ class Arena { // File name remains Arena, class concept is Renderer
      * Main function to draw all robots based on data from Game class,
      * using the 'visuals' property for component types and colors.
      * Includes name and health bar. Checks visibility flag.
+     * Now includes shadows beneath robots.
      */
     drawRobots() {
         const ctx = this.ctx;
@@ -271,6 +302,29 @@ class Arena { // File name remains Arena, class concept is Renderer
 
         const baseRadius = 15; // Use a consistent base size reference
 
+        // First pass - Draw all robot shadows
+        // Drawing shadows first ensures they appear beneath all robots
+        if (this.shadowConfig.enabled) {
+            this.robots.forEach(robotData => {
+                // Skip if data is missing or robot is not visible/alive
+                if (!robotData || !robotData.isAlive) return;
+                
+                // Ensure visuals data exists, provide defaults if missing
+                const visuals = robotData.visuals || {
+                    chassis: { type: 'medium', color: '#aaaaaa' }
+                };
+                const chassisType = visuals.chassis?.type || 'medium';
+                
+                // Get robot position 
+                const robotX = this.translateX(robotData.x || 0);
+                const robotY = this.translateY(robotData.y || 0);
+                
+                // Draw the shadow (passing robot data, position, base size, and chassis type)
+                this._drawShadow(ctx, robotData, robotX, robotY, baseRadius, chassisType);
+            });
+        }
+
+        // Second pass - Draw all robots (main rendering)
         this.robots.forEach(robotData => {
             // Skip if data is missing or robot is not visible/alive
             // Use robotData.isAlive which comes from the server state
@@ -672,6 +726,188 @@ class Arena { // File name remains Arena, class concept is Renderer
         let r = parseInt(color.substring(1, 3), 16); let g = parseInt(color.substring(3, 5), 16); let b = parseInt(color.substring(5, 7), 16);
         r = Math.min(255, Math.floor(r * factor)); g = Math.min(255, Math.floor(g * factor)); b = Math.min(255, Math.floor(b * factor));
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+    
+    /**
+     * Draws a shadow beneath a robot, with dynamic properties based on robot movement
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} robotData - Robot data from server
+     * @param {number} robotX - Robot's x position on canvas
+     * @param {number} robotY - Robot's y position on canvas
+     * @param {number} baseRadius - Base radius of the robot
+     * @param {string} chassisType - Type of chassis (affects shadow shape)
+     * @private
+     */
+    _drawShadow(ctx, robotData, robotX, robotY, baseRadius, chassisType) {
+        // Skip shadow rendering if disabled
+        if (!this.shadowConfig.enabled) return;
+        
+        // Get robot direction for shadow orientation
+        const robotDir = robotData.direction || 0;
+        const directionRad = robotDir * Math.PI / 180;
+        
+        // Calculate movement speed if velocity data is available
+        let speed = 0;
+        if (robotData.vx !== undefined && robotData.vy !== undefined) {
+            speed = Math.sqrt(robotData.vx * robotData.vx + robotData.vy * robotData.vy);
+        }
+        
+        // Dynamic shadow position based on light source and movement
+        // When moving fast, shadow extends further in direction of movement
+        const dynamicOffsetX = this.shadowConfig.offsetX + Math.cos(directionRad) * speed * 0.2;
+        const dynamicOffsetY = this.shadowConfig.offsetY + Math.sin(directionRad) * speed * 0.2;
+        
+        const shadowX = robotX + dynamicOffsetX;
+        const shadowY = robotY + dynamicOffsetY;
+        
+        // Save context state
+        ctx.save();
+        
+        // Set shadow properties
+        ctx.fillStyle = this.shadowConfig.color;
+        
+        // Calculate shadow size based on robot dimensions and configured scale
+        // Shadow stretches slightly in direction of movement when moving
+        const shadowScale = this.shadowConfig.scale;
+        const stretchFactor = 1 + Math.min(0.3, speed * 0.01); // Limit stretch to 30%
+        
+        // Apply rotation to context for directional shadows
+        ctx.translate(shadowX, shadowY);
+        if (speed > 0.5) { // Only rotate shadow if moving significantly
+            ctx.rotate(directionRad);
+        }
+        
+        // Choose shadow shape based on robot chassis type and apply directional effects
+        // Note: We're using simpler shapes for shadows than the actual robots
+        switch(chassisType) {
+            case 'heavy':
+                // Rectangular shadow with rounded corners for heavy chassis
+                const heavyWidth = baseRadius * 2.4 * shadowScale;
+                const heavyHeight = baseRadius * 1.6 * shadowScale;
+                const heavyBorderRadius = 4 * shadowScale;
+                
+                // Stretch in direction of movement
+                const stretchedWidth = speed > 0.5 ? heavyWidth * stretchFactor : heavyWidth;
+                
+                // Apply blur if enabled
+                if (this.shadowConfig.blur > 0) {
+                    ctx.shadowColor = this.shadowConfig.color;
+                    ctx.shadowBlur = this.shadowConfig.blur;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
+                }
+                
+                // Draw the heavy chassis shadow
+                this._drawRoundedRect(
+                    ctx, 
+                    -stretchedWidth/2, 
+                    -heavyHeight/2, 
+                    stretchedWidth, 
+                    heavyHeight, 
+                    heavyBorderRadius
+                );
+                break;
+                
+            case 'triangular':
+                // Triangular shadow
+                const triWidth = baseRadius * 2.2 * shadowScale;
+                const triHeight = baseRadius * 1.8 * shadowScale;
+                const stretchedTriWidth = speed > 0.5 ? triWidth * stretchFactor : triWidth;
+                
+                // Apply blur if enabled
+                if (this.shadowConfig.blur > 0) {
+                    ctx.shadowColor = this.shadowConfig.color;
+                    ctx.shadowBlur = this.shadowConfig.blur;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
+                }
+                
+                // Draw triangular shadow
+                ctx.beginPath();
+                ctx.moveTo(stretchedTriWidth/2, 0);
+                ctx.lineTo(-stretchedTriWidth/2, -triHeight/2);
+                ctx.lineTo(-stretchedTriWidth/2, triHeight/2);
+                ctx.closePath();
+                ctx.fill();
+                break;
+                
+            case 'hexagonal':
+                // Hexagonal shadow
+                const hexWidth = baseRadius * 2.2 * shadowScale;
+                const hexHeight = baseRadius * 1.5 * shadowScale;
+                const hexSide = hexHeight / 2;
+                const stretchedHexWidth = speed > 0.5 ? hexWidth * stretchFactor : hexWidth;
+                
+                // Apply blur if enabled
+                if (this.shadowConfig.blur > 0) {
+                    ctx.shadowColor = this.shadowConfig.color;
+                    ctx.shadowBlur = this.shadowConfig.blur;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
+                }
+                
+                // Draw hexagonal shadow
+                ctx.beginPath();
+                ctx.moveTo(stretchedHexWidth/2, 0);
+                ctx.lineTo(stretchedHexWidth/4, -hexSide);
+                ctx.lineTo(-stretchedHexWidth/4, -hexSide);
+                ctx.lineTo(-stretchedHexWidth/2, 0);
+                ctx.lineTo(-stretchedHexWidth/4, hexSide);
+                ctx.lineTo(stretchedHexWidth/4, hexSide);
+                ctx.closePath();
+                ctx.fill();
+                break;
+                
+            case 'light':
+                // Light chassis unique shadow shape
+                const lightWidth = baseRadius * 1.7 * shadowScale;
+                const lightHeight = baseRadius * 1.2 * shadowScale;
+                const stretchedLightWidth = speed > 0.5 ? lightWidth * stretchFactor : lightWidth;
+                
+                // Apply blur if enabled
+                if (this.shadowConfig.blur > 0) {
+                    ctx.shadowColor = this.shadowConfig.color;
+                    ctx.shadowBlur = this.shadowConfig.blur;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
+                }
+                
+                // Draw pointy-fronted shadow for light chassis
+                ctx.beginPath();
+                ctx.moveTo(stretchedLightWidth/2, 0);
+                ctx.lineTo(stretchedLightWidth/4, -lightHeight/2);
+                ctx.lineTo(-stretchedLightWidth/2, -lightHeight/2);
+                ctx.lineTo(-stretchedLightWidth/2, lightHeight/2);
+                ctx.lineTo(stretchedLightWidth/4, lightHeight/2);
+                ctx.closePath();
+                ctx.fill();
+                break;
+                
+            case 'medium':
+            default:
+                // Elliptical shadow for most robots
+                // Apply blur if enabled
+                if (this.shadowConfig.blur > 0) {
+                    ctx.shadowColor = this.shadowConfig.color;
+                    ctx.shadowBlur = this.shadowConfig.blur;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
+                }
+                
+                // Calculate shadow size - stretches in direction of movement
+                const shadowRadius = baseRadius * (1.9 * shadowScale);
+                const shadowRadiusX = speed > 0.5 ? shadowRadius * stretchFactor : shadowRadius;
+                const shadowRadiusY = shadowRadius * 0.6;
+                
+                // Draw elliptical shadow
+                ctx.beginPath();
+                ctx.ellipse(0, 0, shadowRadiusX, shadowRadiusY, 0, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+        }
+        
+        // Restore context
+        ctx.restore();
     }
     
     /**
@@ -1622,6 +1858,218 @@ class Arena { // File name remains Arena, class concept is Renderer
     }
     // --- END: Enhanced drawParticleEffects ---
 
+    // --- START: Dynamic Lighting System ---
+    /**
+     * Adds a temporary light source at the specified position
+     * @param {number} x - X position of the light source
+     * @param {number} y - Y position of the light source
+     * @param {string} type - Type of light ('explosion' or 'missile')
+     * @param {string} color - Color of the light (e.g., '#ff9900' for fire)
+     */
+    addLightSource(x, y, type = 'explosion', color = '#ff9900') {
+        if (!this.lightingConfig.enabled) return;
+        
+        // Select light configuration based on type
+        const lightConfig = type === 'missile' 
+            ? this.lightingConfig.missileLight 
+            : this.lightingConfig.explosionLight;
+        
+        // Create light source object
+        const light = {
+            x: this.translateX(x),
+            y: this.translateY(y),
+            radius: lightConfig.radius,
+            intensity: lightConfig.intensity,
+            color: color,
+            startTime: Date.now(),
+            duration: lightConfig.duration,
+            falloff: lightConfig.falloff,
+            type: type
+        };
+        
+        // Add to active light sources
+        this.activeLightSources.push(light);
+        
+        // For debugging
+        //console.log(`Added ${type} light at (${x}, ${y})`);
+    }
+    
+    /**
+     * Updates light sources, removing expired ones
+     */
+    updateLightSources() {
+        if (!this.lightingConfig.enabled || this.activeLightSources.length === 0) return;
+        
+        const now = Date.now();
+        
+        // Remove expired light sources
+        this.activeLightSources = this.activeLightSources.filter(light => {
+            return now - light.startTime < light.duration;
+        });
+    }
+    
+    /**
+     * Draws all active light sources and their shadows
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     */
+    drawLightSources(ctx) {
+        if (!this.lightingConfig.enabled || this.activeLightSources.length === 0) return;
+        
+        const now = Date.now();
+        
+        // Process each light source
+        this.activeLightSources.forEach(light => {
+            // Calculate light fade based on elapsed time
+            const elapsed = now - light.startTime;
+            const progress = Math.min(1, elapsed / light.duration);
+            const fade = 1 - progress;
+            
+            // Skip if completely faded
+            if (fade <= 0) return;
+            
+            // Draw light glow
+            const adjustedIntensity = light.intensity * fade;
+            
+            // Set up gradient for light falloff
+            const gradient = ctx.createRadialGradient(
+                light.x, light.y, 0,
+                light.x, light.y, light.radius * (1 + progress * 0.2) // Light expands slightly as it fades
+            );
+            
+            // Parse color to create transparent version
+            let r, g, b;
+            try {
+                if (light.color.startsWith('#')) {
+                    // Hex color
+                    r = parseInt(light.color.substring(1, 3), 16);
+                    g = parseInt(light.color.substring(3, 5), 16);
+                    b = parseInt(light.color.substring(5, 7), 16);
+                } else if (light.color.startsWith('rgb')) {
+                    // RGB color 
+                    const matches = light.color.match(/\d+/g);
+                    if (matches && matches.length >= 3) {
+                        r = parseInt(matches[0]);
+                        g = parseInt(matches[1]);
+                        b = parseInt(matches[2]);
+                    } else {
+                        r = 255; g = 153; b = 0; // Default orange for fallback
+                    }
+                } else {
+                    r = 255; g = 153; b = 0; // Default orange for fallback
+                }
+            } catch (e) {
+                r = 255; g = 153; b = 0; // Default orange for fallback
+            }
+            
+            // Create gradient stops
+            gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${adjustedIntensity})`);
+            gradient.addColorStop(Math.pow(0.5, light.falloff), `rgba(${r}, ${g}, ${b}, ${adjustedIntensity * 0.5})`);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            // Save context state
+            ctx.save();
+            
+            // Set blend mode for additive lighting
+            ctx.globalCompositeOperation = 'lighter';
+            
+            // Draw light radial gradient
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(light.x, light.y, light.radius * (1 + progress * 0.2), 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Restore context
+            ctx.restore();
+            
+            // Draw dynamic shadows from this light source if enabled
+            if (this.shadowConfig.enabled) {
+                this._drawDynamicShadows(ctx, light);
+            }
+        });
+    }
+    
+    /**
+     * Draws dynamic shadows cast by objects from a light source
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} light - Light source data
+     * @private
+     */
+    _drawDynamicShadows(ctx, light) {
+        // Skip if no robots to cast shadows
+        if (!this.robots || this.robots.length === 0) return;
+        
+        // Calculate light fade based on elapsed time
+        const elapsed = Date.now() - light.startTime;
+        const progress = Math.min(1, elapsed / light.duration);
+        const fade = 1 - progress;
+        
+        // Skip if completely faded
+        if (fade <= 0) return;
+        
+        // For each robot, calculate and draw shadow projected away from light
+        this.robots.forEach(robotData => {
+            // Skip if robot is not visible or alive
+            if (!robotData || !robotData.isAlive) return;
+            
+            // Get robot position
+            const robotX = this.translateX(robotData.x || 0);
+            const robotY = this.translateY(robotData.y || 0);
+            
+            // Calculate vector from light to robot (shadow direction)
+            const dx = robotX - light.x;
+            const dy = robotY - light.y;
+            
+            // Calculate distance from light to robot
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Skip if robot is outside light radius (plus some margin)
+            if (distance > light.radius * 1.5) return;
+            
+            // Calculate shadow length based on distance from light
+            // Closer to light = longer shadow
+            const shadowLength = Math.max(20, 50 * (1 - distance / light.radius));
+            
+            // Normalize direction vector
+            const dirX = dx / distance;
+            const dirY = dy / distance;
+            
+            // Calculate shadow end point
+            const shadowEndX = robotX + dirX * shadowLength;
+            const shadowEndY = robotY + dirY * shadowLength;
+            
+            // Calculate shadow opacity based on light intensity and distance
+            const shadowOpacity = 0.4 * fade * (1 - distance / light.radius);
+            
+            // Save context
+            ctx.save();
+            
+            // Set shadow properties
+            ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
+            
+            // Determine robot size (approximate from baseRadius)
+            const baseRadius = robotData.radius || 15;
+            const robotWidth = baseRadius * 2;
+            
+            // Calculate shadow width at robot position (perpendicular to shadow direction)
+            const perpX = -dirY; // Perpendicular vector
+            const perpY = dirX;  // Perpendicular vector
+            
+            // Draw shadow as a trapezoid shape
+            ctx.beginPath();
+            // Start with points at robot position
+            ctx.moveTo(robotX + perpX * robotWidth/2, robotY + perpY * robotWidth/2);
+            ctx.lineTo(robotX - perpX * robotWidth/2, robotY - perpY * robotWidth/2);
+            // End with points at shadow end (narrower for perspective effect)
+            ctx.lineTo(shadowEndX - perpX * robotWidth/4, shadowEndY - perpY * robotWidth/4);
+            ctx.lineTo(shadowEndX + perpX * robotWidth/4, shadowEndY + perpY * robotWidth/4);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Restore context
+            ctx.restore();
+        });
+    }
+    // --- END: Dynamic Lighting System ---
 
     // --- START: Removed old drawEffects ---
     /*
@@ -1643,7 +2091,7 @@ class Arena { // File name remains Arena, class concept is Renderer
 
     /**
      * Main drawing loop method - called by Game.js.
-     * Includes optional screen shake.
+     * Includes optional screen shake and dynamic lighting.
      * @param {Array} missiles - Array of missile data from game state.
      * @param {Array} activeExplosions - Array of simple explosion objects (e.g., for missile impacts).
      * @param {Array} activeFlashes - Array of active muzzle flash objects.
@@ -1655,6 +2103,43 @@ class Arena { // File name remains Arena, class concept is Renderer
             console.error("Cannot draw, context/background missing!");
             return;
         }
+        
+        // Update dynamic lighting system
+        this.updateLightSources();
+        
+        // Check for new explosion events and create light sources
+        if (particleEffects && particleEffects.length > 0) {
+            particleEffects.forEach(effect => {
+                // Add light for fresh explosions (use a flag to avoid adding multiple lights)
+                if (!effect.lightAdded && effect.particles && effect.particles.length > 0) {
+                    // For robot deaths/explosions
+                    this.addLightSource(effect.x, effect.y, 'explosion', '#ff6600');
+                    effect.lightAdded = true;
+                }
+            });
+        }
+        
+        // Create light sources for muzzle flashes
+        if (activeFlashes && activeFlashes.length > 0) {
+            activeFlashes.forEach(flash => {
+                // Add light for fresh muzzle flashes (use timestamp to avoid duplicates)
+                const now = Date.now();
+                if (!flash.lightAdded && now - flash.startTime < 50) { // Only add light if flash is new
+                    // Different light colors based on weapon type
+                    let flashColor;
+                    switch (flash.type) {
+                        case 'laser': flashColor = '#88ccff'; break;  // Blue for lasers
+                        case 'missile': flashColor = '#ffcc44'; break; // Yellow for missiles 
+                        case 'cannon': flashColor = '#ff9933'; break;  // Orange for cannons
+                        default: flashColor = '#ffaa00'; break;        // Default orange-yellow
+                    }
+                    
+                    this.addLightSource(flash.x, flash.y, 'missile', flashColor);
+                    flash.lightAdded = true;
+                }
+            });
+        }
+        
         // 1. Clear the dynamic canvas and draw the static background
         this.clear();
 
@@ -1667,23 +2152,73 @@ class Arena { // File name remains Arena, class concept is Renderer
         this.ctx.save(); // Save context before shake translation
         this.ctx.translate(shakeX, shakeY);
         // --- Screen Shake End ---
+        
+        // 2. Draw Dynamic Shadows from Light Sources
+        // (These are drawn before robots so they appear behind them)
+        this.drawLightSources(this.ctx);
 
-        // 2. Draw Robots
+        // 3. Draw Robots (including their permanent shadows)
         this.drawRobots();
 
-        // 3. Draw Missiles (now with unique visuals/trails)
+        // 4. Draw Missiles (now with unique visuals/trails)
         this.drawMissiles(missiles);
 
-        // 4. Draw OLD Explosions (e.g., for simple missile impacts if needed)
-        // If particle explosions completely replace these, you can remove this call.
-        // For now, assume they might coexist for different event types.
-        // this.drawEffects(activeExplosions); // <<< Kept commented out, assuming replacement
-
         // 5. Draw NEW Particle Effects (for robot destruction)
-        this.drawParticleEffects(particleEffects); // <<< ADDED CALL
+        this.drawParticleEffects(particleEffects);
 
         // 6. Draw Muzzle Flashes
         this.drawMuzzleFlashes(activeFlashes);
+        
+        // 7. Draw Dynamic Lighting (glow effect on top of everything)
+        // The shadows are drawn earlier, but the actual light glow should be on top
+        // Light sources were already computed earlier, just drawing the glow here
+        if (this.lightingConfig.enabled && this.activeLightSources.length > 0) {
+            // Save context state
+            this.ctx.save();
+            
+            // Set blend mode for additive lighting
+            this.ctx.globalCompositeOperation = 'lighter';
+            
+            // Draw each light glow
+            this.activeLightSources.forEach(light => {
+                // Skip if the light has faded completely
+                const elapsed = Date.now() - light.startTime;
+                const progress = Math.min(1, elapsed / light.duration);
+                const fade = 1 - progress;
+                if (fade <= 0) return;
+                
+                // Draw light glow
+                const adjustedIntensity = light.intensity * fade;
+                
+                // Set up gradient for light falloff
+                const gradient = this.ctx.createRadialGradient(
+                    light.x, light.y, 0,
+                    light.x, light.y, light.radius * (1 + progress * 0.2)
+                );
+                
+                // Parse light color
+                let r = 255, g = 153, b = 0; // Default
+                if (light.color.startsWith('#')) {
+                    r = parseInt(light.color.substring(1, 3), 16);
+                    g = parseInt(light.color.substring(3, 5), 16);
+                    b = parseInt(light.color.substring(5, 7), 16);
+                }
+                
+                // Create gradient stops
+                gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${adjustedIntensity})`);
+                gradient.addColorStop(Math.pow(0.3, light.falloff), `rgba(${r}, ${g}, ${b}, ${adjustedIntensity * 0.5})`);
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                
+                // Draw light
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(light.x, light.y, light.radius, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
+            
+            // Restore context
+            this.ctx.restore();
+        }
 
         // --- Screen Shake Restore ---
         this.ctx.restore(); // Restore context after drawing everything (removes shake translation)
