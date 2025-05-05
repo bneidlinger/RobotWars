@@ -35,6 +35,7 @@ class Controls {
         this.resetButton = document.getElementById('btn-reset');
         this.selfDestructButton = document.getElementById('btn-self-destruct');
         this.testButton = document.getElementById('btn-test-code');
+        this.lightingToggleButton = document.getElementById('btn-toggle-lighting');
         this.loadoutStatus = document.getElementById('loadout-status');
         // --- End Element References ---
 
@@ -42,6 +43,9 @@ class Controls {
 
         // Populate the CODE SNIPPET dropdown via API on load (will skip if not logged in)
         this.populateCodeSnippetSelect();
+        
+        // Initialize lighting button state
+        this.initLightingButton();
 
         console.log('Controls initialized (API Mode).');
     }
@@ -315,6 +319,34 @@ class Controls {
                 }
             });
         } else { console.warn("Self Destruct Button not found for listener."); }
+        
+        // Lighting toggle button
+        if (this.lightingToggleButton) {
+            this.lightingToggleButton.addEventListener('click', () => {
+                if (!this.game || !this.game.renderer) return;
+                
+                // Toggle lighting mode
+                const newMode = this.game.toggleLightingMode();
+                
+                // Update button icon based on mode
+                switch(newMode) {
+                    case 'day':
+                        this.lightingToggleButton.textContent = '☀️'; // Sun
+                        this.lightingToggleButton.title = 'Toggle Lighting Mode (Currently: Day)';
+                        break;
+                    case 'dusk':
+                        this.lightingToggleButton.textContent = '🌆'; // Sunset
+                        this.lightingToggleButton.title = 'Toggle Lighting Mode (Currently: Dusk)';
+                        break;
+                    case 'night':
+                        this.lightingToggleButton.textContent = '🌙'; // Moon
+                        this.lightingToggleButton.title = 'Toggle Lighting Mode (Currently: Night)';
+                        break;
+                }
+                
+                console.log(`Lighting mode toggled to: ${newMode}`);
+            });
+        } else { console.warn("Lighting Toggle Button not found for listener."); }
 
     } // End setupEventListeners
 
@@ -642,6 +674,35 @@ class Controls {
                   }
                   this.statusTimeoutId = null;
              }, 4000);
+        }
+    }
+
+    /**
+     * Initializes the lighting toggle button state based on the current lighting mode
+     */
+    initLightingButton() {
+        if (!this.lightingToggleButton || !this.game) return;
+        
+        // Get current lighting mode
+        const currentMode = this.game.getLightingMode();
+        
+        // Set button icon and title based on current mode
+        switch(currentMode) {
+            case 'day':
+                this.lightingToggleButton.textContent = '☀️'; // Sun
+                this.lightingToggleButton.title = 'Toggle Lighting Mode (Currently: Day)';
+                break;
+            case 'dusk':
+                this.lightingToggleButton.textContent = '🌆'; // Sunset
+                this.lightingToggleButton.title = 'Toggle Lighting Mode (Currently: Dusk)';
+                break;
+            case 'night':
+                this.lightingToggleButton.textContent = '🌙'; // Moon
+                this.lightingToggleButton.title = 'Toggle Lighting Mode (Currently: Night)';
+                break;
+            default:
+                this.lightingToggleButton.textContent = '☀️'; // Default to day
+                this.lightingToggleButton.title = 'Toggle Lighting Mode (Day/Dusk/Night)';
         }
     }
 

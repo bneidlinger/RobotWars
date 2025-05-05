@@ -35,6 +35,9 @@ class Game {
         try {
             this.renderer = new Arena(this.canvasId);
             console.log("Game: Arena renderer initialized successfully.");
+            
+            // Store current lighting mode
+            this.currentLightingMode = this.renderer.getLightingMode();
         } catch (error) {
             console.error("Game: Failed to initialize Arena renderer:", error);
             // Handle initialization failure (e.g., show error message)
@@ -912,6 +915,29 @@ class Game {
         // --- END: Play specific robot death sound ---
 
         // NOTE: We are no longer playing 'explode' sound here or adding to activeExplosions for robot death.
+    }
+    
+    /**
+     * Toggles the arena lighting mode between day, dusk, and night
+     * @returns {string} The new lighting mode
+     */
+    toggleLightingMode() {
+        if (!this.renderer) return 'day';
+        
+        // Use the Arena's built-in toggle method
+        const newMode = this.renderer.toggleLightingMode();
+        this.currentLightingMode = newMode;
+        
+        // Return the new mode for UI updates
+        return newMode;
+    }
+    
+    /**
+     * Gets the current lighting mode
+     * @returns {string} Current lighting mode ('day', 'dusk', or 'night')
+     */
+    getLightingMode() {
+        return this.currentLightingMode || 'day';
     }
 
 } // End Game Class
