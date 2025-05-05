@@ -207,8 +207,15 @@ class GameInstance {
     }
 
     /** Stores a hit event to be broadcast in the next game state update. */
-    addHitEvent(x, y, targetId) {
-        this.hitEventsToBroadcast.push({ type: 'hit', x, y, targetId });
+    addHitEvent(x, y, targetId, cause = 'unknown', damage = 0) {
+        this.hitEventsToBroadcast.push({ 
+            type: 'hit', 
+            x, 
+            y, 
+            targetId,
+            cause,
+            damage
+        });
     }
 
     // --- checkGameOver ---

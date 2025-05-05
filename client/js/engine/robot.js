@@ -304,6 +304,21 @@ class Robot {
         ctx.fillStyle = this.damage < 50 ? '#4CAF50' : this.damage < 75 ? '#FFC107' : '#F44336';
         ctx.fillRect(damageX, damageY, healthWidth, damageHeight);
         
+        // Debug visual indicator for damage effects
+        // Show number of damage effects present
+        if (this.damage > 0) {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            const smokeCount = this.damageEffects.smoke.length;
+            const fireCount = this.damageEffects.fire.length;
+            const dmgCount = this.damageEffects.bodyDamage.filter(d => d.type === 'dent').length;
+            
+            if (smokeCount > 0 || fireCount > 0 || dmgCount > 0) {
+                ctx.fillText(`S:${smokeCount} F:${fireCount} D:${dmgCount}`, this.x, this.y + this.radius + 15);
+            }
+        }
+        
         // Restore context
         ctx.restore();
     }
@@ -915,6 +930,7 @@ class Missile {
         this.x += Math.cos(radians) * this.speed;
         this.y -= Math.sin(radians) * this.speed; // Canvas y-axis is inverted
     }
+}
 
     draw(ctx) {
         ctx.beginPath();

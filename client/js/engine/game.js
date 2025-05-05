@@ -91,6 +91,16 @@ class Game {
         // Update effects before drawing
         this.updateEffects(deltaTime);
         this.updateParticleEffects(deltaTime); // Update particle effects
+        
+        // Update robot damage effects for all active robots
+        if (this.robots && this.robots.length > 0) {
+            this.robots.forEach(robot => {
+                // Only update if robot has damage effects method
+                if (robot._updateDamageEffects) {
+                    robot._updateDamageEffects();
+                }
+            });
+        }
 
         // Update screen shake state
         this.updateScreenShake(); // Update shake effect
@@ -115,11 +125,75 @@ class Game {
     updateFromServer(gameState) {
         if (!gameState) return;
 
+        // Store previous robot damage values for detecting changes
+        const previousRobots = new Map();
+        this.robots.forEach(robot => {
+            previousRobots.set(robot.id, { 
+                damage: robot.damage,
+                x: robot.x,
+                y: robot.y
+            });
+        });
+        
         // Update core game entities
         this.robots = gameState.robots || [];
         this.missiles = gameState.missiles || [];
         this.gameId = gameState.gameId || this.gameId; // Keep existing if not provided
         this.gameName = gameState.gameName || this.gameName;
+        
+        // Initialize damage effect properties for new robots
+        this.robots.forEach(robot => {
+            // If robot didn't have damage effects, initialize them
+            if (!robot.damageEffects) {
+                robot.damageEffects = {
+                    smoke: [],
+                    fire: [],
+                    bodyDamage: [],
+                    lastHitTime: 0,
+                    hitPositions: []
+                };
+                
+                // Add takeDamage method if not present
+                if (!robot.takeDamage) {
+                    robot.takeDamage = function(amount, source, hitX, hitY) {
+                        // Record the hit time for visual effects
+                        this.damageEffects.lastHitTime = Date.now();
+                        
+                        // Calculate hit position if not provided (relative to robot center)
+                        let hitPosition;
+                        if (hitX !== undefined && hitY !== undefined) {
+                            // Convert absolute hit coordinates to relative
+                            hitPosition = {
+                                x: hitX - this.x,
+                                y: hitY - this.y
+                            };
+                        } else {
+                            // Generate a random position based on robot's radius
+                            const hitAngle = Math.random() * Math.PI * 2;
+                            const hitDistance = Math.random() * this.radius * 0.8;
+                            hitPosition = {
+                                x: Math.cos(hitAngle) * hitDistance,
+                                y: Math.sin(hitAngle) * hitDistance
+                            };
+                        }
+                        
+                        // Store hit position for effect placement (keep last 5 hits)
+                        this.damageEffects.hitPositions.unshift(hitPosition);
+                        if (this.damageEffects.hitPositions.length > 5) {
+                            this.damageEffects.hitPositions.pop();
+                        }
+                    };
+                }
+            }
+            
+            // Detect damage increases from server update and create appropriate visual effects
+            const previousState = previousRobots.get(robot.id);
+            if (previousState && robot.damage > previousState.damage) {
+                // Calculate position where damage was taken (use previous position)
+                const damageAmount = robot.damage - previousState.damage;
+                robot.takeDamage(damageAmount, 'update', previousState.x, previousState.y);
+            }
+        });
 
         // Update renderer's robot data copy
         if (this.renderer) {
@@ -153,15 +227,27 @@ class Game {
             });
         }
 
-        // Handle Hit Events (Sound Only Currently)
+        // Handle Hit Events with visual damage effects
         if (Array.isArray(gameState.hitEvents)) {
             gameState.hitEvents.forEach(hitEvent => {
                 // Play hit sound
                 if (window.audioManager?.playSound) {
                     window.audioManager.playSound('hit');
                 }
-                 // TODO: Add visual impact spark effect here?
-                 // e.g., this.createImpactSpark(hitEvent.x, hitEvent.y);
+                
+                // Find the robot that was hit and apply visual damage effects
+                if (hitEvent.robotId && hitEvent.x !== undefined && hitEvent.y !== undefined) {
+                    const hitRobot = this.robots.find(robot => robot.id === hitEvent.robotId);
+                    if (hitRobot) {
+                        // Estimate damage amount based on hit type or use a default
+                        const damageAmount = hitEvent.damage || 
+                                            (hitEvent.cause === 'missile' ? 10 : 
+                                             hitEvent.cause === 'collision' ? 2 : 5);
+                        
+                        // Apply visual damage to the robot
+                        hitRobot.takeDamage(damageAmount, hitEvent.cause, hitEvent.x, hitEvent.y);
+                    }
+                }
             });
         }
 

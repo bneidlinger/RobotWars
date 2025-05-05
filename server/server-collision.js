@@ -54,12 +54,11 @@ class ServerCollisionSystem {
 
                         console.log(`[Collision] Missile from ${firingRobot.id} hit ${targetRobot.id}. Damage: ${damageAmount}. Destroyed: ${result.destroyed}. Hit: ${result.hit}`);
 
-                        // START CHANGE: Generate hit event if damage was applied
+                        // Generate hit event if damage was applied
                         if (result.hit && typeof this.game.addHitEvent === 'function') {
                             // Use the location from the result object (where the robot was when hit)
-                            this.game.addHitEvent(result.x, result.y, targetRobot.id);
+                            this.game.addHitEvent(result.x, result.y, targetRobot.id, 'missile', damageAmount);
                         }
-                        // END CHANGE
 
                         // Trigger visual explosion effect via GameInstance
                         if (typeof this.game.createExplosion === 'function') {
@@ -121,10 +120,10 @@ class ServerCollisionSystem {
                     const resultB = robotB.takeDamage(collisionDamage, 'collision');
 
                     if (resultA.hit && typeof this.game.addHitEvent === 'function') {
-                         this.game.addHitEvent(resultA.x, resultA.y, robotA.id);
+                         this.game.addHitEvent(resultA.x, resultA.y, robotA.id, 'collision', collisionDamage);
                     }
                     if (resultB.hit && typeof this.game.addHitEvent === 'function') {
-                         this.game.addHitEvent(resultB.x, resultB.y, robotB.id);
+                         this.game.addHitEvent(resultB.x, resultB.y, robotB.id, 'collision', collisionDamage);
                     }
                     // END CHANGE
 

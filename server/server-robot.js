@@ -253,7 +253,7 @@ class ServerRobot {
         } else {
             // Damage taken, but not destroyed
             // console.log(`[${this.id}] Took ${damageAmount.toFixed(1)} damage via ${cause}. Current health: ${(100 - this._damage).toFixed(1)}%`); // DEBUG: Optional verbose logging
-            return { destroyed: false, hit: true, x: hitX, y: hitY }; // Return hit details
+            return { destroyed: false, hit: true, x: hitX, y: hitY, cause: cause }; // Return hit details with cause
         }
     }
 }
