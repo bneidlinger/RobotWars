@@ -49,12 +49,11 @@ header img.header-logo {
 header h1 {
     font-family: 'Press Start 2P', cursive;
     font-size: 1.6rem;
-    color: #4CAF50;
     margin: 0 10px 0 0;
     display: inline-block;
     vertical-align: middle;
     flex-shrink: 0;
-    position: relative; /* Add relative positioning for the birthday message */
+    position: relative;
 }
 
 /* --- Header Player Info Area Styles --- */
@@ -1370,33 +1369,32 @@ input#loadout-name-input, input#builder-player-name {
 
 /* === END: Test Bot Selection Modal Styles === */
 
-/* === Happy Birthday JN Styles === */
-.bday-message {
-    position: absolute;
+/* === Neon Robot Wars Title === */
+.neon-title {
     font-family: 'Press Start 2P', cursive;
-    font-size: 0.5rem;
-    top: -5px;
-    right: -125px;
-    white-space: nowrap;
-    text-transform: uppercase;
-    color: transparent;
-    text-shadow: 0 0 5px #ff00de, 0 0 10px #ff00de;
-    animation: neon-flicker 2s infinite alternate;
-    transform: rotate(-2deg);
+    color: #00ff00;
+    text-shadow: 0 0 5px #00ff00, 
+                 0 0 10px #00ff00, 
+                 0 0 15px #00ff00,
+                 0 0 20px #00ff00, 
+                 0 0 30px #00ff00;
+    animation: neon-green-flicker 10s linear infinite;
 }
 
-@keyframes neon-flicker {
-    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
-        color: #ff00de;
-        text-shadow: 0 0 5px #ff00de, 
-                     0 0 10px #ff00de, 
-                     0 0 15px #ff00de,
-                     0 0 20px #ff00de, 
-                     0 0 30px #ff00de;
+@keyframes neon-green-flicker {
+    0%, 92%, 94%, 96%, 98%, 100% {
+        color: #00ff00;
+        text-shadow: 0 0 5px #00ff00, 
+                     0 0 10px #00ff00, 
+                     0 0 15px #00ff00,
+                     0 0 20px #00ff00, 
+                     0 0 30px #00ff00;
     }
-    20%, 24%, 55% {
-        color: #222;
-        text-shadow: none;
+    93%, 95%, 97%, 99% {
+        color: #008800;
+        text-shadow: 0 0 2px #008800, 
+                     0 0 5px #008800, 
+                     0 0 7px #008800;
     }
 }
 
