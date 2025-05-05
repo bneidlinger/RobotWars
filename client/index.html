@@ -167,6 +167,20 @@
                                 <option value="legs">Spider Legs</option>
                             </select>
                             <span><!-- Placeholder for color if needed --></span>
+
+                            <label for="beacon-type-select">Beacon:</label>
+                            <select id="beacon-type-select">
+                                <option value="none">None</option>
+                                <option value="led">LED Light</option>
+                                <option value="robot">Robot Light</option>
+                                <option value="antenna">Antenna Light</option>
+                            </select>
+                            <input type="color" id="beacon-color-input" value="#ff0000">
+                            
+                            <label for="beacon-strobe-checkbox" class="checkbox-label">
+                                <input type="checkbox" id="beacon-strobe-checkbox">
+                                Strobing Light
+                            </label>
                         </div>
                     </div>
 

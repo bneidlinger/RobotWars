@@ -373,13 +373,17 @@ class Arena { // File name remains Arena, class concept is Renderer
             const visuals = robotData.visuals || {
                 turret: { type: 'standard', color: '#ffffff' },
                 chassis: { type: 'medium', color: '#aaaaaa' },
-                mobility: { type: 'wheels' }
+                mobility: { type: 'wheels' },
+                beacon: { type: 'none', color: '#ffffff', strobe: false }
             };
             const chassisColor = visuals.chassis?.color || '#aaaaaa';
             const turretColor = visuals.turret?.color || '#ffffff';
             const mobilityType = visuals.mobility?.type || 'wheels';
             const chassisType = visuals.chassis?.type || 'medium';
             const turretType = visuals.turret?.type || 'standard';
+            const beaconType = visuals.beacon?.type || 'none';
+            const beaconColor = visuals.beacon?.color || '#ffffff';
+            const beaconStrobe = visuals.beacon?.strobe || false;
 
             // Get robot position and direction
             const robotX = this.translateX(robotData.x || 0);
@@ -433,6 +437,11 @@ class Arena { // File name remains Arena, class concept is Renderer
 
             // 3. Draw Turret (Top Layer) - Turret might face a different direction (TODO: add turret direction if needed)
             this._drawTurret(ctx, turretType, turretColor, baseRadius);
+            
+            // 4. Draw Beacon (if enabled) - Top of turret
+            if (beaconType !== 'none') {
+                this._drawBeacon(ctx, beaconType, beaconColor, beaconStrobe, baseRadius);
+            }
 
             ctx.restore(); // Restore rotation/translation
 
@@ -765,6 +774,190 @@ class Arena { // File name remains Arena, class concept is Renderer
         let r = parseInt(color.substring(1, 3), 16); let g = parseInt(color.substring(3, 5), 16); let b = parseInt(color.substring(5, 7), 16);
         r = Math.min(255, Math.floor(r * factor)); g = Math.min(255, Math.floor(g * factor)); b = Math.min(255, Math.floor(b * factor));
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+    
+    /**
+     * Draws a beacon/light on top of a robot
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {string} beaconType - Type of beacon (led, robot, antenna)
+     * @param {string} beaconColor - Color of the beacon light
+     * @param {boolean} strobe - Whether the beacon should strobe/flash
+     * @param {number} baseRadius - Base radius for scaling
+     */
+    _drawBeacon(ctx, beaconType, beaconColor, strobe, baseRadius) {
+        // Skip if type is none or not specified
+        if (!beaconType || beaconType === 'none') return;
+        
+        // Determine if this frame should show the light (for strobing effect)
+        const shouldFlash = strobe ? (Date.now() % 1000 < 500) : true;
+        
+        // Base beacon properties
+        const beaconSize = baseRadius * 0.3;
+        const beaconHeight = baseRadius * 0.6;
+        const yOffset = -baseRadius * 0.5; // Raise above the turret
+        
+        // Save context for glow effects
+        ctx.save();
+        
+        // Draw different beacon types
+        switch (beaconType) {
+            case 'led':
+                // Simple LED bulb with glow
+                // Base
+                ctx.fillStyle = '#333333';
+                ctx.beginPath();
+                ctx.arc(0, yOffset - beaconSize * 0.5, beaconSize * 1.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#222222';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // Light dome
+                if (shouldFlash) {
+                    // Light is on
+                    // Add glow effect
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.shadowColor = beaconColor;
+                    ctx.shadowBlur = beaconSize * 4;
+                    
+                    // Outer glow
+                    ctx.fillStyle = this._lightenColor(beaconColor, 0.7);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconSize, beaconSize * 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Bright center
+                    ctx.fillStyle = this._lightenColor(beaconColor, 1.2);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconSize, beaconSize, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Light is off (just draw the dome)
+                    ctx.fillStyle = this._darkenColor(beaconColor, 0.5);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconSize, beaconSize, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#222222';
+                    ctx.stroke();
+                }
+                break;
+                
+            case 'robot':
+                // Robot-style light with tech details
+                // Base mounting plate
+                ctx.fillStyle = '#333333';
+                this._drawRoundedRect(ctx, -beaconSize * 1.5, yOffset - beaconSize * 0.5, beaconSize * 3, beaconSize, beaconSize * 0.3);
+                
+                // Tech details on base
+                ctx.fillStyle = '#222222';
+                this._drawRoundedRect(ctx, -beaconSize * 1.2, yOffset - beaconSize * 0.3, beaconSize * 0.7, beaconSize * 0.6, beaconSize * 0.2);
+                this._drawRoundedRect(ctx, beaconSize * 0.5, yOffset - beaconSize * 0.3, beaconSize * 0.7, beaconSize * 0.6, beaconSize * 0.2);
+                
+                // Light housing
+                ctx.fillStyle = '#444444';
+                ctx.beginPath();
+                ctx.arc(0, yOffset - beaconSize * 0.7, beaconSize * 0.8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#222222';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                if (shouldFlash) {
+                    // Light is on
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.shadowColor = beaconColor;
+                    ctx.shadowBlur = beaconSize * 4;
+                    
+                    // Outer glow
+                    ctx.fillStyle = this._lightenColor(beaconColor, 0.8);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconSize * 0.7, beaconSize, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Bright center
+                    ctx.fillStyle = this._lightenColor(beaconColor, 1.3);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconSize * 0.7, beaconSize * 0.6, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Light is off
+                    ctx.fillStyle = this._darkenColor(beaconColor, 0.4);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconSize * 0.7, beaconSize * 0.6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#222222';
+                    ctx.stroke();
+                }
+                break;
+                
+            case 'antenna':
+                // Antenna with light on top
+                // Antenna base
+                ctx.fillStyle = '#333333';
+                ctx.beginPath();
+                ctx.arc(0, yOffset, beaconSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#222222';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // Antenna pole
+                ctx.fillStyle = '#666666';
+                ctx.fillRect(-beaconSize * 0.2, yOffset - beaconHeight, beaconSize * 0.4, beaconHeight);
+                ctx.strokeStyle = '#444444';
+                ctx.strokeRect(-beaconSize * 0.2, yOffset - beaconHeight, beaconSize * 0.4, beaconHeight);
+                
+                // Optional antenna details
+                ctx.fillStyle = '#888888';
+                ctx.fillRect(-beaconSize * 0.3, yOffset - beaconHeight * 0.7, beaconSize * 0.6, beaconSize * 0.3);
+                ctx.strokeStyle = '#444444';
+                ctx.strokeRect(-beaconSize * 0.3, yOffset - beaconHeight * 0.7, beaconSize * 0.6, beaconSize * 0.3);
+                
+                if (shouldFlash) {
+                    // Light is on
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.shadowColor = beaconColor;
+                    ctx.shadowBlur = beaconSize * 4;
+                    
+                    // Outer glow
+                    ctx.fillStyle = this._lightenColor(beaconColor, 0.8);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconHeight - beaconSize * 0.5, beaconSize * 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Bright center
+                    ctx.fillStyle = this._lightenColor(beaconColor, 1.3);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconHeight - beaconSize * 0.5, beaconSize * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Light is off
+                    ctx.fillStyle = this._darkenColor(beaconColor, 0.4);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconHeight - beaconSize * 0.5, beaconSize * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#222222';
+                    ctx.stroke();
+                }
+                break;
+                
+            default:
+                // Simple beacon as fallback
+                if (shouldFlash) {
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.shadowColor = beaconColor;
+                    ctx.shadowBlur = beaconSize * 3;
+                    
+                    ctx.fillStyle = beaconColor;
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset, beaconSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                break;
+        }
+        
+        // Restore context
+        ctx.restore();
     }
     
     /**

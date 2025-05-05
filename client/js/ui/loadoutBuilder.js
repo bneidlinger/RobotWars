@@ -23,6 +23,9 @@ class LoadoutBuilder {
         this.chassisTypeSelect = document.getElementById('chassis-type-select');
         this.chassisColorInput = document.getElementById('chassis-color-input');
         this.mobilityTypeSelect = document.getElementById('mobility-type-select');
+        this.beaconTypeSelect = document.getElementById('beacon-type-select');
+        this.beaconColorInput = document.getElementById('beacon-color-input');
+        this.beaconStrobeCheckbox = document.getElementById('beacon-strobe-checkbox');
         this.builderCodeSelect = document.getElementById('builder-code-select'); // Selects Code Snippet Name
         this.previewCanvas = document.getElementById('loadout-preview');
         this.enterLobbyButton = document.getElementById('btn-enter-lobby');
@@ -65,7 +68,8 @@ class LoadoutBuilder {
              visuals: {
                  turret: { type: 'standard', color: '#D3D3D3' },
                  chassis: { type: 'medium', color: '#808080' },
-                 mobility: { type: 'wheels' }
+                 mobility: { type: 'wheels' },
+                 beacon: { type: 'none', color: '#FF0000', strobe: false }
              },
              codeLoadoutName: '' // Name of the code snippet
          };
@@ -208,11 +212,15 @@ class LoadoutBuilder {
         if (!this.currentLoadout.visuals.turret) this.currentLoadout.visuals.turret = {};
         if (!this.currentLoadout.visuals.chassis) this.currentLoadout.visuals.chassis = {};
         if (!this.currentLoadout.visuals.mobility) this.currentLoadout.visuals.mobility = {};
+        if (!this.currentLoadout.visuals.beacon) this.currentLoadout.visuals.beacon = {};
         this.currentLoadout.visuals.turret.type = this.turretTypeSelect.value;
         this.currentLoadout.visuals.turret.color = this.turretColorInput.value;
         this.currentLoadout.visuals.chassis.type = this.chassisTypeSelect.value;
         this.currentLoadout.visuals.chassis.color = this.chassisColorInput.value;
         this.currentLoadout.visuals.mobility.type = this.mobilityTypeSelect.value;
+        this.currentLoadout.visuals.beacon.type = this.beaconTypeSelect.value;
+        this.currentLoadout.visuals.beacon.color = this.beaconColorInput.value;
+        this.currentLoadout.visuals.beacon.strobe = this.beaconStrobeCheckbox.checked;
         this.currentLoadout.codeLoadoutName = this.builderCodeSelect.value; // Store the NAME selected
     }
 
@@ -227,6 +235,9 @@ class LoadoutBuilder {
         this.chassisTypeSelect.value = this.currentLoadout.visuals?.chassis?.type || 'medium';
         this.chassisColorInput.value = this.currentLoadout.visuals?.chassis?.color || '#cccccc';
         this.mobilityTypeSelect.value = this.currentLoadout.visuals?.mobility?.type || 'wheels';
+        this.beaconTypeSelect.value = this.currentLoadout.visuals?.beacon?.type || 'none';
+        this.beaconColorInput.value = this.currentLoadout.visuals?.beacon?.color || '#ff0000';
+        this.beaconStrobeCheckbox.checked = this.currentLoadout.visuals?.beacon?.strobe || false;
 
         // --- Sync Dropdowns ---
         // Sync Config Name dropdown
@@ -281,6 +292,9 @@ class LoadoutBuilder {
         this.chassisTypeSelect.addEventListener('change', this._handleVisualSelectionChange.bind(this));
         this.chassisColorInput.addEventListener('input', this._handleVisualSelectionChange.bind(this));
         this.mobilityTypeSelect.addEventListener('change', this._handleVisualSelectionChange.bind(this));
+        this.beaconTypeSelect.addEventListener('change', this._handleVisualSelectionChange.bind(this));
+        this.beaconColorInput.addEventListener('input', this._handleVisualSelectionChange.bind(this));
+        this.beaconStrobeCheckbox.addEventListener('change', this._handleVisualSelectionChange.bind(this));
 
         // Code
         this.builderCodeSelect.addEventListener('change', this._handleCodeSelectionChange.bind(this));
@@ -490,11 +504,15 @@ class LoadoutBuilder {
         if (!this.currentLoadout.visuals.turret) this.currentLoadout.visuals.turret = {};
         if (!this.currentLoadout.visuals.chassis) this.currentLoadout.visuals.chassis = {};
         if (!this.currentLoadout.visuals.mobility) this.currentLoadout.visuals.mobility = {};
+        if (!this.currentLoadout.visuals.beacon) this.currentLoadout.visuals.beacon = {};
         this.currentLoadout.visuals.turret.type = this.turretTypeSelect.value;
         this.currentLoadout.visuals.turret.color = this.turretColorInput.value;
         this.currentLoadout.visuals.chassis.type = this.chassisTypeSelect.value;
         this.currentLoadout.visuals.chassis.color = this.chassisColorInput.value;
         this.currentLoadout.visuals.mobility.type = this.mobilityTypeSelect.value;
+        this.currentLoadout.visuals.beacon.type = this.beaconTypeSelect.value;
+        this.currentLoadout.visuals.beacon.color = this.beaconColorInput.value;
+        this.currentLoadout.visuals.beacon.strobe = this.beaconStrobeCheckbox.checked;
         this._redrawPreview();
     }
 
@@ -534,6 +552,11 @@ class LoadoutBuilder {
         this._drawMobility(ctx, visuals.mobility?.type || 'wheels', baseRadius, visuals.chassis?.color || '#aaaaaa', scale);
         this._drawChassis(ctx, visuals.chassis?.type || 'medium', visuals.chassis?.color || '#aaaaaa', baseRadius, scale);
         this._drawTurret(ctx, visuals.turret?.type || 'standard', visuals.turret?.color || '#ffffff', baseRadius, scale);
+        
+        // Draw beacon if enabled
+        if (visuals.beacon?.type && visuals.beacon.type !== 'none') {
+            this._drawBeacon(ctx, visuals.beacon.type, visuals.beacon.color || '#ffffff', visuals.beacon.strobe || false, baseRadius, scale);
+        }
 
         ctx.restore(); // Restore translation
     }
@@ -1245,6 +1268,167 @@ class LoadoutBuilder {
               }
               this.statusTimeoutId = null;
          }, 4000);
+    }
+    
+    /**
+     * Draws a beacon/light on top of a robot in the preview
+     * @param {CanvasRenderingContext2D} ctx - The canvas context
+     * @param {string} beaconType - Type of beacon (led, robot, antenna)
+     * @param {string} beaconColor - Color of the beacon light
+     * @param {boolean} strobe - Whether the beacon should strobe/flash (for preview we always show it on)
+     * @param {number} baseRadius - Base radius for scaling
+     * @param {number} scale - Scale factor for preview
+     */
+    _drawBeacon(ctx, beaconType, beaconColor, strobe, baseRadius, scale) {
+        // Skip if type is none or not specified
+        if (!beaconType || beaconType === 'none') return;
+        
+        // For preview, we always show the light on (no strobing in preview)
+        const shouldFlash = true; // Always on for preview
+        
+        // Base beacon properties
+        const beaconSize = baseRadius * 0.3;
+        const beaconHeight = baseRadius * 0.6;
+        const yOffset = -baseRadius * 0.5; // Raise above the turret
+        
+        // Save context for glow effects
+        ctx.save();
+        
+        // Draw different beacon types
+        switch (beaconType) {
+            case 'led':
+                // Simple LED bulb with glow
+                // Base
+                ctx.fillStyle = '#333333';
+                ctx.beginPath();
+                ctx.arc(0, yOffset - beaconSize * 0.5, beaconSize * 1.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#222222';
+                ctx.lineWidth = 1 * scale;
+                ctx.stroke();
+                
+                // Light dome
+                if (shouldFlash) {
+                    // Light is on
+                    // Add glow effect
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.shadowColor = beaconColor;
+                    ctx.shadowBlur = beaconSize * 4;
+                    
+                    // Outer glow
+                    ctx.fillStyle = this._lightenColor(beaconColor, 0.7);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconSize, beaconSize * 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Bright center
+                    ctx.fillStyle = this._lightenColor(beaconColor, 1.2);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconSize, beaconSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                break;
+                
+            case 'robot':
+                // Robot-style light with tech details
+                // Base mounting plate
+                ctx.fillStyle = '#333333';
+                this._drawRoundedRect(ctx, -beaconSize * 1.5, yOffset - beaconSize * 0.5, beaconSize * 3, beaconSize, beaconSize * 0.3);
+                
+                // Tech details on base
+                ctx.fillStyle = '#222222';
+                this._drawRoundedRect(ctx, -beaconSize * 1.2, yOffset - beaconSize * 0.3, beaconSize * 0.7, beaconSize * 0.6, beaconSize * 0.2);
+                this._drawRoundedRect(ctx, beaconSize * 0.5, yOffset - beaconSize * 0.3, beaconSize * 0.7, beaconSize * 0.6, beaconSize * 0.2);
+                
+                // Light housing
+                ctx.fillStyle = '#444444';
+                ctx.beginPath();
+                ctx.arc(0, yOffset - beaconSize * 0.7, beaconSize * 0.8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#222222';
+                ctx.lineWidth = 1 * scale;
+                ctx.stroke();
+                
+                if (shouldFlash) {
+                    // Light is on
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.shadowColor = beaconColor;
+                    ctx.shadowBlur = beaconSize * 4;
+                    
+                    // Outer glow
+                    ctx.fillStyle = this._lightenColor(beaconColor, 0.8);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconSize * 0.7, beaconSize, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Bright center
+                    ctx.fillStyle = this._lightenColor(beaconColor, 1.3);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconSize * 0.7, beaconSize * 0.6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                break;
+                
+            case 'antenna':
+                // Antenna with light on top
+                // Antenna base
+                ctx.fillStyle = '#333333';
+                ctx.beginPath();
+                ctx.arc(0, yOffset, beaconSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#222222';
+                ctx.lineWidth = 1 * scale;
+                ctx.stroke();
+                
+                // Antenna pole
+                ctx.fillStyle = '#666666';
+                ctx.fillRect(-beaconSize * 0.2, yOffset - beaconHeight, beaconSize * 0.4, beaconHeight);
+                ctx.strokeStyle = '#444444';
+                ctx.strokeRect(-beaconSize * 0.2, yOffset - beaconHeight, beaconSize * 0.4, beaconHeight);
+                
+                // Optional antenna details
+                ctx.fillStyle = '#888888';
+                ctx.fillRect(-beaconSize * 0.3, yOffset - beaconHeight * 0.7, beaconSize * 0.6, beaconSize * 0.3);
+                ctx.strokeStyle = '#444444';
+                ctx.strokeRect(-beaconSize * 0.3, yOffset - beaconHeight * 0.7, beaconSize * 0.6, beaconSize * 0.3);
+                
+                if (shouldFlash) {
+                    // Light is on
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.shadowColor = beaconColor;
+                    ctx.shadowBlur = beaconSize * 4;
+                    
+                    // Outer glow
+                    ctx.fillStyle = this._lightenColor(beaconColor, 0.8);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconHeight - beaconSize * 0.5, beaconSize * 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Bright center
+                    ctx.fillStyle = this._lightenColor(beaconColor, 1.3);
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset - beaconHeight - beaconSize * 0.5, beaconSize * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                break;
+                
+            default:
+                // Simple beacon as fallback
+                if (shouldFlash) {
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.shadowColor = beaconColor;
+                    ctx.shadowBlur = beaconSize * 3;
+                    
+                    ctx.fillStyle = beaconColor;
+                    ctx.beginPath();
+                    ctx.arc(0, yOffset, beaconSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                break;
+        }
+        
+        // Restore context
+        ctx.restore();
     }
 
 } // End LoadoutBuilder Class

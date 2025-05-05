@@ -17,7 +17,8 @@ class Robot {
         this.visuals = {
             turret: { type: 'standard', color: this.color },
             chassis: { type: 'medium', color: this.color },
-            mobility: { type: 'wheels' }
+            mobility: { type: 'wheels' },
+            beacon: { type: 'none', color: '#ffffff', strobe: false } // New beacon property
         };
         
         // Damage visualization properties
