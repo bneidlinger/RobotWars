@@ -19,7 +19,7 @@ class ServerCollisionSystem {
     checkAllCollisions() {
         this.checkMissileRobotCollisions();
         this.checkRobotRobotCollisions();
-        // TODO: Add checkMissileBoundaryCollisions() if needed, which should also trigger game.createExplosion
+        // Note: Missile boundary collisions are handled within the missile update logic
     }
 
     /**

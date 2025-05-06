@@ -9,7 +9,7 @@
 class ServerCollisionSystem {
     constructor(gameInstance) {
         this.game = gameInstance; // Reference to the GameInstance
-        this.arenaWidth = 900; // TODO: Get from config/GameInstance
+        this.arenaWidth = 900; // Fixed arena dimensions
         this.arenaHeight = 900;
     }
 

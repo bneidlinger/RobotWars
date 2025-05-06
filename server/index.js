@@ -15,6 +15,7 @@ const initializeSocketHandler = require('./socket-handler');
 const authRoutes = require('./routes/auth');
 const snippetRoutes = require('./routes/snippets');
 const loadoutRoutes = require('./routes/loadouts');
+const preferencesRoutes = require('./routes/preferences');
 
 const app = express();
 const server = http.createServer(app);
@@ -84,6 +85,7 @@ io.engine.use(sessionMiddleware);
 app.use('/api/auth', authRoutes);
 app.use('/api/snippets', snippetRoutes); // Applies authMiddleware inside the route file
 app.use('/api/loadouts', loadoutRoutes); // Applies authMiddleware inside the route file
+app.use('/api/preferences', preferencesRoutes); // Applies authMiddleware inside the route file
 // --- End API Routes ---
 
 // --- Static Files ---

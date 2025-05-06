@@ -507,6 +507,13 @@ class Controls {
                  this.updateLoadoutStatus(`Loaded snippet: ${name}`);
                  if(this.loadSnippetSelect) this.loadSnippetSelect.value = name;
                  if(this.deleteSnippetButton) this.deleteSnippetButton.disabled = (this.uiState !== 'lobby');
+                 
+                 // Save this selection as the last used loadout
+                 if (window.PreferenceManager) {
+                     window.PreferenceManager.set('lastUsedLoadout', name)
+                        .catch(e => console.warn('[Controls] Failed to save last used loadout preference:', e));
+                 }
+                 
                  // --- START: Added Refresh after loading code ---
                  // Sometimes needed if editor was hidden or dimensions changed
                  setTimeout(() => {
@@ -590,9 +597,31 @@ class Controls {
                      this.loadSnippetSelect.appendChild(option);
                  });
 
-                 // Try to re-select the provided name, then the original value, then default
+                 // Try to select in this priority:
+                 // 1. Explicitly provided name parameter
+                 // 2. Last used loadout from preferences
+                 // 3. Current value in dropdown
+                 // 4. Default empty value
+                 
+                 let lastUsedLoadout = null;
+                 if (window.PreferenceManager) {
+                     try {
+                         lastUsedLoadout = await window.PreferenceManager.get('lastUsedLoadout');
+                     } catch (e) {
+                         console.warn('[Controls] Failed to get last used loadout from preferences:', e);
+                     }
+                 }
+                 
                  if (selectName && snippets.some(s => s.name === selectName)) {
                      this.loadSnippetSelect.value = selectName;
+                     // Save this selection as the last used loadout
+                     if (window.PreferenceManager) {
+                         window.PreferenceManager.set('lastUsedLoadout', selectName)
+                            .catch(e => console.warn('[Controls] Failed to save last used loadout preference:', e));
+                     }
+                 } else if (lastUsedLoadout && snippets.some(s => s.name === lastUsedLoadout)) {
+                     this.loadSnippetSelect.value = lastUsedLoadout;
+                     console.log(`[Controls] Restored last used loadout: ${lastUsedLoadout}`);
                  } else if (currentValue && snippets.some(s => s.name === currentValue)){
                       this.loadSnippetSelect.value = currentValue;
                  } else {

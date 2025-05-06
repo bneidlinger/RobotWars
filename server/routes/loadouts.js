@@ -183,9 +183,26 @@ router.delete('/:configName', async (req, res) => {
         const decodedConfigName = decodeURIComponent(configName);
         console.log(`[API Loadouts DELETE] Attempting to delete config '${decodedConfigName}' for user ${userId}`);
 
-        // TODO Optional: Check if this is the user's 'last_loadout_config_id' in the 'users' table
-        // If it is, you might want to clear that field or set it to null before/after deleting.
-        // Example: await db.query('UPDATE users SET last_loadout_config_id = NULL WHERE id = $1 AND last_loadout_config_id = (SELECT id FROM loadout_configs WHERE user_id = $1 AND config_name = $2)', [userId, decodedConfigName]);
+        // We now use the preferences API instead of a field in the users table
+        // Since we're removing this loadout, we should check if it's the user's last used config
+        // If it is, we should clear that preference to avoid issues
+        try {
+            // First get the user's last_config_name preference
+            const prefQuery = `SELECT preference_value FROM user_preferences 
+                                WHERE user_id = $1 AND preference_key = 'last_config_name'`;
+            const prefResult = await db.query(prefQuery, [userId]);
+            
+            // If the user has a last_config_name preference and it matches the config being deleted,
+            // delete the preference
+            if (prefResult.rows.length > 0 && prefResult.rows[0].preference_value === decodedConfigName) {
+                console.log(`[API Loadouts DELETE] Config '${decodedConfigName}' is the user's last used config. Removing preference.`);
+                await db.query('DELETE FROM user_preferences WHERE user_id = $1 AND preference_key = $2', 
+                              [userId, 'last_config_name']);
+            }
+        } catch (prefError) {
+            // Log but don't fail the delete operation if preference check fails
+            console.warn(`[API Loadouts DELETE] Error checking/clearing last_config_name preference:`, prefError);
+        }
 
         // Execute the delete operation
         const { rowCount } = await db.query(

@@ -101,8 +101,26 @@ class LoadoutBuilder {
                     console.log("[Builder Show] Auth check successful. Proceeding with data population.");
                     this.updateStatus("Loading data..."); // Update status
 
-                    // --- Fetch last used config (TODO remains) ---
+                    // --- Fetch last used config from preferences ---
                     let initialConfigToLoad = null;
+                    
+                    // Try to get the last config preference if preferenceManager is available
+                    if (typeof window.preferenceManager !== 'undefined') {
+                        try {
+                            const lastConfigName = await window.preferenceManager.getLastConfigName();
+                            if (lastConfigName) {
+                                console.log(`[Builder Show] Found last config preference: '${lastConfigName}'`);
+                                initialConfigToLoad = lastConfigName;
+                            } else {
+                                console.log('[Builder Show] No last config preference found.');
+                            }
+                        } catch (prefError) {
+                            console.warn('[Builder Show] Error fetching last config preference:', prefError);
+                            // Continue without preference data
+                        }
+                    } else {
+                        console.warn('[Builder Show] PreferenceManager not available. Skipping last config preference.');
+                    }
 
                     // Populate dropdowns via API now that session is confirmed
                     await Promise.all([
@@ -114,9 +132,9 @@ class LoadoutBuilder {
                     // --- Decide which config to load initially (logic remains the same) ---
                     if (!initialConfigToLoad && this.cachedLoadouts.length > 0) {
                          initialConfigToLoad = this.cachedLoadouts[0]; // Load the first available config data object
-                         console.log(`[Builder Show] No last config preference found, loading first available: '${initialConfigToLoad.config_name}'`);
+                         console.log(`[Builder Show] Using first available config: '${initialConfigToLoad.config_name}'`);
                     } else if (initialConfigToLoad) {
-                         console.log(`[Builder Show] TODO: Handle loading specific last config preference: '${initialConfigToLoad}'`);
+                         console.log(`[Builder Show] Attempting to load specified config preference: '${initialConfigToLoad}'`);
                          const foundConfig = this.cachedLoadouts.find(cfg => cfg.config_name === initialConfigToLoad || cfg.id === initialConfigToLoad);
                          initialConfigToLoad = foundConfig || null; // Use the found object or null
                     }
@@ -1143,9 +1161,18 @@ class LoadoutBuilder {
              savedSuccessfully = true;
              console.log(`[Enter Lobby] Configuration "${configName}" saved/updated via API.`);
              this.updateStatus(`Configuration "${configName}" saved.`);
-             // TODO: Add API call to set this as the 'last used' config
-             // Example: await apiCall('/api/users/me/last-config', 'PUT', { configName: configName });
-             console.log(`[Enter Lobby] TODO: Implement setting last config preference ('${configName}') via API.`);
+             // Save this as the 'last used' config in preferences
+             if (typeof window.preferenceManager !== 'undefined') {
+                 try {
+                     await window.preferenceManager.setLastConfigName(configName);
+                     console.log(`[Enter Lobby] Saved last config preference: '${configName}'`);
+                 } catch (prefError) {
+                     console.warn(`[Enter Lobby] Error saving last config preference:`, prefError);
+                     // Continue without saving preference
+                 }
+             } else {
+                console.warn('[Enter Lobby] PreferenceManager not available. Skipping save of last config preference.');
+             }
 
         } catch (error) {
             console.error(`[Enter Lobby] API Error saving final config "${configName}":`, error);
@@ -1206,10 +1233,25 @@ class LoadoutBuilder {
 
         this.loadConfiguration(null); // Reset UI to defaults
 
-        // TODO: Implement setting 'quick_start' preference via API
-        // Example: await apiCall('/api/users/me/last-config', 'PUT', { configName: "quick_start" });
-        console.log("[Quick Start] TODO: Implement setting 'quick_start' preference via API.");
-        this.updateStatus("Quick Start selected (Preference not saved yet).");
+        // Save quick_start preference
+        if (typeof window.preferenceManager !== 'undefined') {
+            try {
+                // We set quick_start_enabled to true and also clear the last_config_name
+                // so that next time the user logs in, they'll get the Quick Start experience
+                await Promise.all([
+                    window.preferenceManager.setQuickStartEnabled(true),
+                    window.preferenceManager.deletePreference(window.preferenceManager.KEYS.LAST_CONFIG)
+                ]);
+                console.log("[Quick Start] Saved quick_start preference and cleared last config.");
+                this.updateStatus("Quick Start selected.");
+            } catch (prefError) {
+                console.warn("[Quick Start] Error saving quick_start preference:", prefError);
+                this.updateStatus("Quick Start selected (Preference not saved).");
+            }
+        } else {
+            console.warn("[Quick Start] PreferenceManager not available. Skipping preference save.");
+            this.updateStatus("Quick Start selected.");
+        }
 
          this.hide(); // Hide builder AFTER attempting music start
 
