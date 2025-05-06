@@ -891,12 +891,48 @@ class Game {
     /** Handles the 'gameOver' event from the server */
     handleGameOver(data) {
         console.log(`Game: handleGameOver received for game ${data.gameId}. Winner: ${data.winnerName}`);
+        
+        // If we have a pending robot destruction, delay the game over
+        if (this.pendingGameEnd && this.robotDestroyedTime) {
+            const timeSinceDestruction = Date.now() - this.robotDestroyedTime;
+            
+            // If we haven't waited long enough, delay the game over
+            if (timeSinceDestruction < this.robotDestroyedDelay) {
+                const remainingDelay = this.robotDestroyedDelay - timeSinceDestruction;
+                console.log(`Delaying game over by ${remainingDelay}ms to complete explosion effects`);
+                
+                // Store game over data for delayed processing
+                this.pendingGameOverData = data;
+                
+                // Set timeout to handle game over after delay
+                setTimeout(() => {
+                    console.log('Delay complete, processing game over');
+                    this._processGameOver(this.pendingGameOverData);
+                    this.pendingGameOverData = null;
+                    this.pendingGameEnd = false;
+                    this.robotDestroyedTime = null;
+                }, remainingDelay);
+                
+                return; // Don't process game over yet
+            }
+        }
+        
+        // Process game over immediately if no delay needed
+        this._processGameOver(data);
+    }
+    
+    /** Internal method to process game over after any necessary delay */
+    _processGameOver(data) {
+        if (!data) return;
+        
         this.stop(); // Stop the game loop
         this.gameId = null; // Clear game ID
         this.gameName = null;
         this.isSpectating = false;
+        
         // Update controls state via global controls object
         if (window.controls?.setState) window.controls.setState('lobby');
+        
         // Optionally display winner message in event log
         if (window.addEventLogMessage) window.addEventLogMessage(`--- Game Over! Winner: ${data.winnerName || 'None'} ---`, 'event');
     }
@@ -917,10 +953,45 @@ class Game {
     /** Handles the 'spectateGameOver' event */
     handleSpectateEnd(data) {
         console.log(`Game: handleSpectateEnd received for game ${data.gameId}. Winner: ${data.winnerName}`);
+        
+        // If we have a pending robot destruction, delay the spectate end
+        if (this.pendingGameEnd && this.robotDestroyedTime) {
+            const timeSinceDestruction = Date.now() - this.robotDestroyedTime;
+            
+            // If we haven't waited long enough, delay the spectate end
+            if (timeSinceDestruction < this.robotDestroyedDelay) {
+                const remainingDelay = this.robotDestroyedDelay - timeSinceDestruction;
+                console.log(`Delaying spectate end by ${remainingDelay}ms to complete explosion effects`);
+                
+                // Store spectate end data for delayed processing
+                this.pendingSpectateEndData = data;
+                
+                // Set timeout to handle spectate end after delay
+                setTimeout(() => {
+                    console.log('Delay complete, processing spectate end');
+                    this._processSpectateEnd(this.pendingSpectateEndData);
+                    this.pendingSpectateEndData = null;
+                    this.pendingGameEnd = false;
+                    this.robotDestroyedTime = null;
+                }, remainingDelay);
+                
+                return; // Don't process spectate end yet
+            }
+        }
+        
+        // Process spectate end immediately if no delay needed
+        this._processSpectateEnd(data);
+    }
+    
+    /** Internal method to process spectate end after any necessary delay */
+    _processSpectateEnd(data) {
+        if (!data) return;
+        
         this.stop();
         this.gameId = null;
         this.gameName = null;
         this.isSpectating = false;
+        
         // Update controls state via global controls object
         if (window.controls?.setState) window.controls.setState('lobby');
         if (window.updateLobbyStatus) window.updateLobbyStatus('Spectated game finished. Ready Up or Test Code!');
@@ -928,7 +999,8 @@ class Game {
 
     /**
      * Handles the 'robotDestroyed' event from the server.
-     * Creates a particle explosion, triggers screen shake, and PLAYS THE NEW ROBOT DEATH SOUND.
+     * Creates a particle explosion, triggers screen shake, and plays robot death sounds.
+     * Also adds a delay before game end to allow explosion effects to play out.
      */
     handleRobotDestroyed(data) {
         // data should contain { robotId, x, y, cause }
@@ -938,30 +1010,64 @@ class Game {
         // If new particle system is available, use it
         if (window.particleSystem) {
             // Use the new particle system to create a large explosion
-            window.particleSystem.createExplosion(data.x, data.y, 2.0, {
+            window.particleSystem.createExplosion(data.x, data.y, 2.5, {
                 // Customize explosion with more intense parameters for robot death
-                lifetime: { min: 800, max: 1200 },
+                lifetime: { min: 1000, max: 2000 }, // Longer lifetime for more dramatic effect
                 glow: true,
-                glowSize: 3
+                glowSize: 4
             });
+            
+            // Add secondary explosions with slight delay for more dramatic effect
+            setTimeout(() => {
+                // Add smaller secondary explosion offset from the main one
+                const offsetAngle = Math.random() * Math.PI * 2;
+                const offsetDist = 30 + Math.random() * 20;
+                const secondaryX = data.x + Math.cos(offsetAngle) * offsetDist;
+                const secondaryY = data.y + Math.sin(offsetAngle) * offsetDist;
+                
+                window.particleSystem.createExplosion(secondaryX, secondaryY, 1.2, {
+                    lifetime: { min: 800, max: 1200 }
+                });
+            }, 150);
+            
+            // Add a third, smaller explosion for chain reaction effect
+            setTimeout(() => {
+                const offsetAngle = Math.random() * Math.PI * 2;
+                const offsetDist = 40 + Math.random() * 30;
+                const tertiaryX = data.x + Math.cos(offsetAngle) * offsetDist;
+                const tertiaryY = data.y + Math.sin(offsetAngle) * offsetDist;
+                
+                window.particleSystem.createExplosion(tertiaryX, tertiaryY, 0.8);
+            }, 300);
         } else {
             // Legacy fallback to old particle system
             const particleEffect = this.createParticleExplosion(data.x, data.y);
             this.activeParticleEffects.push(particleEffect);
         }
 
-        // Trigger screen shake
+        // Trigger screen shake with longer duration and stronger magnitude
+        this.shakeDuration = 500; // Make shake last longer (was 200ms)
+        this.baseShakeMagnitude = 8; // Make shake stronger (was 5)
         this.shakeEndTime = Date.now() + this.shakeDuration;
         this.shakeMagnitude = this.baseShakeMagnitude;
 
-        // --- START: Play specific robot death sound ---
-        // Play the new 'robotDeath' sound instead of the generic 'explode'
+        // --- START: Play robot death sounds ---
+        // Play both death sounds together for a more dramatic effect
         if (window.audioManager?.playSound) {
-            window.audioManager.playSound('robotDeath'); // <<< Use the new sound key
+            // Play the robot death voice
+            window.audioManager.playSound('robotDeath'); 
+            
+            // Play the new mega explosion sound
+            window.audioManager.playSound('explodeFinal');
         }
-        // --- END: Play specific robot death sound ---
+        // --- END: Play robot death sounds ---
 
-        // NOTE: We are no longer playing 'explode' sound here or adding to activeExplosions for robot death.
+        // Set a flag to delay game end and store when the robot was destroyed
+        this.robotDestroyedTime = Date.now();
+        this.robotDestroyedDelay = 3000; // 3 second delay before allowing game end
+        this.pendingGameEnd = true;
+        
+        console.log("Robot destroyed - delaying game end by 3 seconds to complete explosion effects");
     }
     
     /**

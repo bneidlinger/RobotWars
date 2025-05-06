@@ -19,7 +19,8 @@ class AudioManager {
             'fire': '/assets/sounds/fire.mp3',
             'hit': '/assets/sounds/hit.mp3',
             'explode': '/assets/sounds/explode.mp3', // Generic explosion
-            'robotDeath': '/assets/sounds/robotdeath.wav' // <<< ADDED NEW SOUND
+            'robotDeath': '/assets/sounds/robotdeath.wav', // Robot death voice
+            'explodeFinal': '/assets/sounds/explodefinal.mp3' // New mega explosion sound
             // Add more sounds here as needed
         };
 
