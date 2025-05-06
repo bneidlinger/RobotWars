@@ -1190,8 +1190,14 @@ class Arena { // File name remains Arena, class concept is Renderer
                 
                 ctx.fillStyle = smokeColor;
                 
-                // Draw smoke particle as a circle
+                // Draw smoke particle as a circle with soft edge
                 const size = smoke.size || 3; // Default size if missing
+                
+                // Add a subtle blur to soften smoke edges
+                ctx.shadowColor = smokeColor;
+                ctx.shadowBlur = size * 0.8;
+                
+                // Draw main smoke circle
                 ctx.beginPath();
                 ctx.arc(
                     baseX + rotatedX,
@@ -1201,6 +1207,30 @@ class Arena { // File name remains Arena, class concept is Renderer
                     Math.PI * 2
                 );
                 ctx.fill();
+                
+                // Add a subtle variation in the smoke (slight texture)
+                const currentAlpha = ctx.globalAlpha;
+                ctx.globalAlpha = currentAlpha * 0.6;
+                ctx.fillStyle = smokeColor;
+                
+                // Draw a smaller, offset circle within the smoke for texture
+                const innerSize = size * 0.6;
+                const offsetX = (Math.random() - 0.5) * size * 0.3;
+                const offsetY = (Math.random() - 0.5) * size * 0.3;
+                
+                ctx.beginPath();
+                ctx.arc(
+                    baseX + rotatedX + offsetX,
+                    baseY + rotatedY + offsetY,
+                    innerSize,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+                
+                // Reset
+                ctx.globalAlpha = currentAlpha;
+                ctx.shadowBlur = 0;
             } catch (e) {
                 // Silently skip rendering this particle if it has issues
                 console.warn("[RENDER WARNING] Failed to render smoke particle", e);
@@ -1250,21 +1280,48 @@ class Arena { // File name remains Arena, class concept is Renderer
                 
                 // Draw fire particle as a triangle-like shape
                 const size = fire.size || 3; // Default size if missing
-                const fireHeight = size * 1.5;
-                const fireWidth = size * 0.8;
+                const fireHeight = size * 1.6; // Taller flames
+                const fireWidth = size * 0.9; // Slightly wider flames
                 
+                // Add enhanced glow effect if the fire has the glow property
+                if (fire.glow) {
+                    // Add outer glow
+                    ctx.shadowColor = fire.color || '#ff7700';
+                    ctx.shadowBlur = size * 2.5;
+                    
+                    // Draw a subtle glow base
+                    const glowAlpha = ctx.globalAlpha;
+                    ctx.globalAlpha = glowAlpha * 0.3;
+                    ctx.beginPath();
+                    ctx.arc(0, -fireHeight * 0.3, fireHeight * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Restore normal alpha
+                    ctx.globalAlpha = glowAlpha;
+                }
+                
+                // Draw main flame shape
                 ctx.beginPath();
                 ctx.moveTo(0, -fireHeight); // Top
-                ctx.lineTo(-fireWidth, fireHeight * 0.3); // Bottom left
-                ctx.lineTo(fireWidth, fireHeight * 0.3); // Bottom right
+                ctx.bezierCurveTo(
+                    -fireWidth * 0.3, -fireHeight * 0.5, // Control point 1
+                    -fireWidth, fireHeight * 0.1, // Control point 2
+                    -fireWidth * 0.8, fireHeight * 0.3 // End point 1 (bottom left)
+                );
+                ctx.lineTo(fireWidth * 0.8, fireHeight * 0.3); // Bottom right corner
+                ctx.bezierCurveTo(
+                    fireWidth, fireHeight * 0.1, // Control point 1
+                    fireWidth * 0.3, -fireHeight * 0.5, // Control point 2
+                    0, -fireHeight // End point 2 (top)
+                );
                 ctx.closePath();
                 ctx.fill();
                 
-                // Add a small glow/inner fire
-                ctx.fillStyle = '#ffffaa';
-                ctx.globalAlpha = (fire.alpha || 0.7) * 0.7;
+                // Add inner hot core
+                ctx.fillStyle = fire.glow ? '#ffffcc' : '#ffffaa'; // Brighter core for glow flames
+                ctx.globalAlpha = (fire.alpha || 0.7) * 0.8;
                 ctx.beginPath();
-                ctx.arc(0, -fireHeight * 0.3, size * 0.3, 0, Math.PI * 2);
+                ctx.arc(0, -fireHeight * 0.4, size * 0.4, 0, Math.PI * 2);
                 ctx.fill();
                 
                 // Reset transformation

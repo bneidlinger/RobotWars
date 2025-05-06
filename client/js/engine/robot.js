@@ -31,8 +31,8 @@ class Robot {
         };
         
         // Constants for effect limits
-        this.MAX_SMOKE_PARTICLES = 25;
-        this.MAX_FIRE_PARTICLES = 15;
+        this.MAX_SMOKE_PARTICLES = 35; // Increased for more visible smoke
+        this.MAX_FIRE_PARTICLES = 20; // Increased for more visible fire
         this.MAX_BODY_DAMAGE = 12;
     }
 
@@ -171,48 +171,50 @@ class Robot {
         fireSource = smokeSource; // Use same source for simplicity
         
         // Emit smoke based on damage level and respecting limits
-        if (this.damage >= 40 && Math.random() < 0.05 + (this.damage / 500)) {
+        if (this.damage >= 40 && Math.random() < 0.15 + (this.damage / 300)) {
             if (this.damageEffects.smoke.length < this.MAX_SMOKE_PARTICLES) {
                 // Apply small random offset to source position
                 const offsetAngle = Math.random() * Math.PI * 2;
-                const offsetDist = Math.random() * this.radius * 0.3;
+                const offsetDist = Math.random() * this.radius * 0.5;
                 const sourceX = smokeSource.x + Math.cos(offsetAngle) * offsetDist;
                 const sourceY = smokeSource.y + Math.sin(offsetAngle) * offsetDist;
                 
                 this.damageEffects.smoke.push({
                     x: sourceX,
                     y: sourceY,
-                    vx: (Math.random() - 0.5) * 0.2,
-                    vy: -0.3 - Math.random() * 0.3,
-                    size: 2 + Math.random() * 3,
-                    alpha: 0.2 + Math.random() * 0.3,
-                    growth: 0.03 + Math.random() * 0.03,
-                    fadeSpeed: 0.005 + Math.random() * 0.005,
-                    color: this.damage > 70 ? 'rgba(40,40,40,0.6)' : 'rgba(120,120,120,0.5)',
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: -0.4 - Math.random() * 0.4, // Faster upward drift
+                    size: 4 + Math.random() * 4, // Larger starting size
+                    alpha: 0.5 + Math.random() * 0.3, // Higher starting alpha
+                    growth: 0.05 + Math.random() * 0.05, // Faster growth
+                    fadeSpeed: 0.008 + Math.random() * 0.006, // Slightly faster fade for balance
+                    color: this.damage > 70 ? 'rgba(40,40,40,0.8)' : 'rgba(150,150,150,0.7)', // More opaque
                     createdAt: now
                 });
             }
         }
         
         // Emit fire for severely damaged robots, respecting limits
-        if (this.damage >= 75 && Math.random() < 0.03 + ((this.damage - 75) / 200)) {
+        if (this.damage >= 70 && Math.random() < 0.12 + ((this.damage - 70) / 150)) {
             if (this.damageEffects.fire.length < this.MAX_FIRE_PARTICLES) {
                 // Apply small random offset to source position
                 const offsetAngle = Math.random() * Math.PI * 2;
-                const offsetDist = Math.random() * this.radius * 0.2;
+                const offsetDist = Math.random() * this.radius * 0.4;
                 const sourceX = fireSource.x + Math.cos(offsetAngle) * offsetDist;
                 const sourceY = fireSource.y + Math.sin(offsetAngle) * offsetDist;
                 
                 this.damageEffects.fire.push({
                     x: sourceX,
                     y: sourceY,
-                    vx: (Math.random() - 0.5) * 0.1,
-                    vy: -0.2 - Math.random() * 0.3,
-                    size: 3 + Math.random() * 2,
-                    alpha: 0.6 + Math.random() * 0.3,
-                    fadeSpeed: 0.01 + Math.random() * 0.01,
-                    shrinkSpeed: 0.02 + Math.random() * 0.03,
-                    color: Math.random() < 0.5 ? '#ff9900' : '#ff5500',
+                    vx: (Math.random() - 0.5) * 0.15,
+                    vy: -0.3 - Math.random() * 0.5, // Faster upward movement
+                    size: 5 + Math.random() * 3, // Larger flame size
+                    alpha: 0.8 + Math.random() * 0.2, // Higher alpha for visibility
+                    fadeSpeed: 0.008 + Math.random() * 0.008, // Slower fade
+                    shrinkSpeed: 0.01 + Math.random() * 0.02, // Slower shrink
+                    color: Math.random() < 0.6 ? '#ff9900' : 
+                          Math.random() < 0.3 ? '#ff5500' : '#ffcc00', // More color variety
+                    glow: true, // Add a flag for extra glow effect
                     createdAt: now
                 });
             } else if (this.damageEffects.fire.length > 0) {
@@ -228,13 +230,15 @@ class Robot {
                     this.damageEffects.fire[oldestIdx] = {
                         x: sourceX,
                         y: sourceY,
-                        vx: (Math.random() - 0.5) * 0.1,
-                        vy: -0.2 - Math.random() * 0.3,
-                        size: 3 + Math.random() * 2,
-                        alpha: 0.6 + Math.random() * 0.3,
-                        fadeSpeed: 0.01 + Math.random() * 0.01,
-                        shrinkSpeed: 0.02 + Math.random() * 0.03,
-                        color: Math.random() < 0.5 ? '#ff9900' : '#ff5500',
+                        vx: (Math.random() - 0.5) * 0.15,
+                        vy: -0.3 - Math.random() * 0.5, // Faster upward movement
+                        size: 5 + Math.random() * 3, // Larger flame size
+                        alpha: 0.8 + Math.random() * 0.2, // Higher alpha for visibility
+                        fadeSpeed: 0.008 + Math.random() * 0.008, // Slower fade
+                        shrinkSpeed: 0.01 + Math.random() * 0.02, // Slower shrink
+                        color: Math.random() < 0.6 ? '#ff9900' : 
+                              Math.random() < 0.3 ? '#ff5500' : '#ffcc00', // More color variety
+                        glow: true, // Add a flag for extra glow effect
                         createdAt: now
                     };
                 }
@@ -815,7 +819,7 @@ class Robot {
         // Add visual damage effects based on damage thresholds
         
         // Smoke at moderate damage (30%+)
-        if (this.damage >= 30 && Math.random() < 0.3) {
+        if (this.damage >= 30 && Math.random() < 0.4) {
             // Small chance to add smoke at each hit, respecting particle limit
             if (this.damageEffects.smoke.length < this.MAX_SMOKE_PARTICLES) {
                 // Use hit position as the smoke source
@@ -824,11 +828,11 @@ class Robot {
                     y: hitPosition.y,
                     vx: (Math.random() - 0.5) * 0.3,
                     vy: -0.5 - Math.random() * 0.5, // Upward drift
-                    size: 3 + Math.random() * 4,
-                    alpha: 0.3 + Math.random() * 0.3,
+                    size: 4 + Math.random() * 5, // Larger starting size
+                    alpha: 0.5 + Math.random() * 0.3, // Higher alpha for visibility
                     growth: 0.05 + Math.random() * 0.05,
-                    fadeSpeed: 0.005 + Math.random() * 0.01,
-                    color: this.damage > 70 ? 'rgba(30,30,30,0.7)' : 'rgba(150,150,150,0.6)',
+                    fadeSpeed: 0.008 + Math.random() * 0.006, // Balanced fade speed
+                    color: this.damage > 70 ? 'rgba(30,30,30,0.8)' : 'rgba(150,150,150,0.7)', // More opaque
                     createdAt: Date.now() // Track when this particle was created
                 });
             } else {
@@ -840,11 +844,11 @@ class Robot {
                         y: hitPosition.y,
                         vx: (Math.random() - 0.5) * 0.3,
                         vy: -0.5 - Math.random() * 0.5,
-                        size: 3 + Math.random() * 4,
-                        alpha: 0.3 + Math.random() * 0.3,
+                        size: 4 + Math.random() * 5, // Larger starting size
+                        alpha: 0.5 + Math.random() * 0.3, // Higher alpha for visibility
                         growth: 0.05 + Math.random() * 0.05,
-                        fadeSpeed: 0.005 + Math.random() * 0.01,
-                        color: this.damage > 70 ? 'rgba(30,30,30,0.7)' : 'rgba(150,150,150,0.6)',
+                        fadeSpeed: 0.008 + Math.random() * 0.006, // Balanced fade speed
+                        color: this.damage > 70 ? 'rgba(30,30,30,0.8)' : 'rgba(150,150,150,0.7)', // More opaque
                         createdAt: Date.now()
                     };
                 }
@@ -852,7 +856,7 @@ class Robot {
         }
         
         // Fire/flame effects at high damage (60%+)
-        if (this.damage >= 60 && Math.random() < 0.2) {
+        if (this.damage >= 60 && Math.random() < 0.3) {
             // Small chance to add fire at each hit when heavily damaged
             if (this.damageEffects.fire.length < this.MAX_FIRE_PARTICLES) {
                 // Use hit position as the fire source with small offset
@@ -863,12 +867,14 @@ class Robot {
                     x: hitPosition.x + Math.cos(offsetAngle) * offsetDist,
                     y: hitPosition.y + Math.sin(offsetAngle) * offsetDist,
                     vx: (Math.random() - 0.5) * 0.2,
-                    vy: -0.3 - Math.random() * 0.4, // Upward flame
-                    size: 4 + Math.random() * 3,
-                    alpha: 0.7 + Math.random() * 0.3,
-                    fadeSpeed: 0.01 + Math.random() * 0.01,
-                    shrinkSpeed: 0.02 + Math.random() * 0.02,
-                    color: Math.random() < 0.3 ? '#ff9900' : '#ff5500', // Orange/red flame color
+                    vy: -0.3 - Math.random() * 0.5, // Faster upward flame
+                    size: 5 + Math.random() * 4, // Larger size
+                    alpha: 0.8 + Math.random() * 0.2, // Higher alpha
+                    fadeSpeed: 0.008 + Math.random() * 0.008, // Slower fade
+                    shrinkSpeed: 0.01 + Math.random() * 0.015, // Slower shrinking
+                    color: Math.random() < 0.6 ? '#ff9900' : 
+                          Math.random() < 0.3 ? '#ff5500' : '#ffcc00', // More color variety
+                    glow: true, // Add flag for extra glow effect
                     createdAt: Date.now()
                 });
             } else {
@@ -882,12 +888,14 @@ class Robot {
                         x: hitPosition.x + Math.cos(offsetAngle) * offsetDist,
                         y: hitPosition.y + Math.sin(offsetAngle) * offsetDist,
                         vx: (Math.random() - 0.5) * 0.2,
-                        vy: -0.3 - Math.random() * 0.4,
-                        size: 4 + Math.random() * 3,
-                        alpha: 0.7 + Math.random() * 0.3,
-                        fadeSpeed: 0.01 + Math.random() * 0.01,
-                        shrinkSpeed: 0.02 + Math.random() * 0.02,
-                        color: Math.random() < 0.3 ? '#ff9900' : '#ff5500',
+                        vy: -0.3 - Math.random() * 0.5, // Faster upward flame
+                        size: 5 + Math.random() * 4, // Larger size
+                        alpha: 0.8 + Math.random() * 0.2, // Higher alpha
+                        fadeSpeed: 0.008 + Math.random() * 0.008, // Slower fade
+                        shrinkSpeed: 0.01 + Math.random() * 0.015, // Slower shrinking
+                        color: Math.random() < 0.6 ? '#ff9900' : 
+                              Math.random() < 0.3 ? '#ff5500' : '#ffcc00', // More color variety
+                        glow: true, // Add flag for extra glow effect
                         createdAt: Date.now()
                     };
                 }

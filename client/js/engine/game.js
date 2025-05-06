@@ -140,11 +140,32 @@ class Game {
             });
         });
         
+        // Track previous missiles to detect new ones
+        const previousMissileIds = new Set();
+        if (this.missiles && this.missiles.length > 0) {
+            this.missiles.forEach(missile => {
+                if (missile.id) {
+                    previousMissileIds.add(missile.id);
+                }
+            });
+        }
+        
         // Update core game entities
         this.robots = gameState.robots || [];
         this.missiles = gameState.missiles || [];
         this.gameId = gameState.gameId || this.gameId; // Keep existing if not provided
         this.gameName = gameState.gameName || this.gameName;
+        
+        // Check for new missiles to add particle trails
+        if (window.particleSystem && this.missiles && this.missiles.length > 0) {
+            this.missiles.forEach(missile => {
+                // If this is a new missile, create a trail for it
+                if (missile.id && !previousMissileIds.has(missile.id)) {
+                    // Create trail based on missile type
+                    window.particleSystem.createMissileTrail(missile, missile.type || 'standard');
+                }
+            });
+        }
         
         // Initialize damage effect properties for new robots
         this.robots.forEach(robot => {
@@ -597,6 +618,21 @@ class Game {
                                             (hitEvent.cause === 'missile' ? 10 : 
                                              hitEvent.cause === 'collision' ? 2 : 5);
                         
+                        // Add impact particle effect with new system if available
+                        if (window.particleSystem && hitEvent.cause === 'missile') {
+                            window.particleSystem.createEffect('impact', hitEvent.x, hitEvent.y, 8, {
+                                size: { min: 3, max: 6 },
+                                lifetime: { min: 200, max: 400 },
+                                speed: { min: 1, max: 3 }
+                            });
+                            
+                            // Add a few sparks
+                            window.particleSystem.createEffect('spark', hitEvent.x, hitEvent.y, 10, {
+                                size: { min: 1, max: 2 },
+                                speed: { min: 2, max: 4 }
+                            });
+                        }
+                        
                         // Apply visual damage to the robot
                         hitRobot.takeDamage(damageAmount, hitEvent.cause, hitEvent.x, hitEvent.y);
                     }
@@ -642,44 +678,44 @@ class Game {
 
     /** Update lifetimes and positions of particles in explosions */
     updateParticleEffects(deltaTime) {
-        const now = Date.now();
-        const gravity = 0; // Optional: Add downward acceleration
-        const friction = 0.99; // Optional: Air resistance
+        // Use the new global particle system instead of managing particles directly
+        if (window.particleSystem) {
+            window.particleSystem.update(deltaTime);
+        } else {
+            // Legacy particle system code for backwards compatibility
+            const now = Date.now();
+            const gravity = 0;
+            const friction = 0.99;
 
-        // Iterate backwards for safe removal of effects
-        for (let i = this.activeParticleEffects.length - 1; i >= 0; i--) {
-            const effect = this.activeParticleEffects[i];
+            // Iterate backwards for safe removal of effects
+            for (let i = this.activeParticleEffects.length - 1; i >= 0; i--) {
+                const effect = this.activeParticleEffects[i];
 
-            // Iterate backwards for safe removal of particles
-            for (let j = effect.particles.length - 1; j >= 0; j--) {
-                const p = effect.particles[j];
-                const elapsed = (now - p.startTime) / 1000.0; // Time in seconds
-                p.lifespan = Math.max(0, p.maxLifespan - elapsed);
+                // Iterate backwards for safe removal of particles
+                for (let j = effect.particles.length - 1; j >= 0; j--) {
+                    const p = effect.particles[j];
+                    const elapsed = (now - p.startTime) / 1000.0; // Time in seconds
+                    p.lifespan = Math.max(0, p.maxLifespan - elapsed);
 
-                if (p.lifespan <= 0) {
-                    effect.particles.splice(j, 1); // Remove dead particle
-                    continue; // Skip further updates for this particle
+                    if (p.lifespan <= 0) {
+                        effect.particles.splice(j, 1); // Remove dead particle
+                        continue; // Skip further updates for this particle
+                    }
+
+                    // Update position based on velocity and deltaTime
+                    p.x += p.vx * deltaTime * 60;
+                    p.y += p.vy * deltaTime * 60;
                 }
 
-                // Update position based on velocity and deltaTime
-                // Scale velocity by 60 to approximate pixels per second if velocity is per-tick
-                p.x += p.vx * deltaTime * 60;
-                p.y += p.vy * deltaTime * 60;
-
-                // Apply optional physics
-                // p.vy += gravity * deltaTime * 60;
-                // p.vx *= friction;
-                // p.vy *= friction;
+                // Check if the effect has any particles left
+                if (effect.particles.length === 0) {
+                    effect.isComplete = true; // Mark effect for removal
+                }
             }
 
-            // Check if the effect has any particles left
-            if (effect.particles.length === 0) {
-                effect.isComplete = true; // Mark effect for removal
-            }
+            // Filter out completed effects
+            this.activeParticleEffects = this.activeParticleEffects.filter(effect => !effect.isComplete);
         }
-
-        // Filter out completed effects
-        this.activeParticleEffects = this.activeParticleEffects.filter(effect => !effect.isComplete);
     }
 
     /** Updates the screen shake magnitude based on time */
@@ -899,9 +935,20 @@ class Game {
         if (!data) return;
         console.log(`Game: Robot ${data.robotId} destroyed at (${data.x}, ${data.y}) by ${data.cause}`);
 
-        // Create and add the new particle explosion
-        const particleEffect = this.createParticleExplosion(data.x, data.y);
-        this.activeParticleEffects.push(particleEffect);
+        // If new particle system is available, use it
+        if (window.particleSystem) {
+            // Use the new particle system to create a large explosion
+            window.particleSystem.createExplosion(data.x, data.y, 2.0, {
+                // Customize explosion with more intense parameters for robot death
+                lifetime: { min: 800, max: 1200 },
+                glow: true,
+                glowSize: 3
+            });
+        } else {
+            // Legacy fallback to old particle system
+            const particleEffect = this.createParticleExplosion(data.x, data.y);
+            this.activeParticleEffects.push(particleEffect);
+        }
 
         // Trigger screen shake
         this.shakeEndTime = Date.now() + this.shakeDuration;
