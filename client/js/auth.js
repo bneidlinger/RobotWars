@@ -397,9 +397,18 @@ class AuthHandler {
         });
         console.log("[AuthHandler] Event listeners attached.");
 
-        // 2. Check Initial Auth Status via API
+        // 2. Check Initial Auth Status via API - do this through the checkLoginState method
+        await this.checkLoginState();
+    } // End initialize()
+    
+    /**
+     * Checks the current login state by querying the server.
+     * This is the method called by main.js to check login status.
+     * It's also used internally by initialize().
+     */
+    async checkLoginState() {
+        console.log("[AuthHandler] Checking login state via /api/auth/me...");
         try {
-            console.log("[AuthHandler] Checking initial auth status via /api/auth/me...");
             const data = await apiCall('/api/auth/me');
             this._updateAuthState(data.isLoggedIn, data.user); // Update state first
 
@@ -410,8 +419,9 @@ class AuthHandler {
                 console.log("[AuthHandler] User is not logged in. Showing login modal.");
                 this._showModal('login-modal');
             }
+            return this._loggedIn; // Return current login state
         } catch (error) {
-             console.error("[AuthHandler] Error checking initial auth status:", error);
+             console.error("[AuthHandler] Error checking login state:", error);
              if (error.message.includes('Network error')) {
                  alert("Could not connect to the server to check login status. Please ensure the server is running and refresh the page.");
                  document.body.innerHTML = `<h2 style='color: orange; text-align: center; margin-top: 50px;'>Error connecting to server. Please try again later.</h2>`;
@@ -420,8 +430,9 @@ class AuthHandler {
                  this._updateAuthState(false, null);
                  this._showModal('login-modal');
              }
+             return false; // Return false on error
         }
-    } // End initialize()
+    }
 
 } // End AuthHandler Class
 

@@ -55,6 +55,14 @@ async function initializeComponents(retryCount = 0) {
     try {
         console.log("[main.js] All required classes found. Starting initialization...");
         
+        // Extra assertions to ensure all required classes are available
+        if (typeof LoadoutBuilder !== 'function') throw new Error("LoadoutBuilder class not found");
+        if (typeof AudioManager !== 'function') throw new Error("AudioManager class not found");
+        if (typeof Game !== 'function') throw new Error("Game class not found");
+        if (typeof Network !== 'function') throw new Error("Network class not found");
+        if (typeof Controls !== 'function') throw new Error("Controls class not found");
+        if (typeof AuthHandler !== 'function') throw new Error("AuthHandler class not found");
+        
         // 1. Create PreferenceManager instance if available
         if (typeof PreferenceManager === 'function') {
             try {
@@ -84,6 +92,14 @@ async function initializeComponents(retryCount = 0) {
 
         // 4. Initialize Game - validate it worked
         console.log('[main.js] Creating Game instance...');
+        
+        // Make sure 'arena' canvas exists before creating Game
+        const arenaCanvas = document.getElementById('arena');
+        if (!arenaCanvas) {
+            throw new Error("Arena canvas element not found. DOM may not be fully loaded.");
+        }
+        console.log('[main.js] Arena canvas element found. Creating Game instance...');
+        
         window.game = new Game('arena');
         if (!window.game.canvas) {
             throw new Error("Game initialization failed (missing canvas reference).");
@@ -103,11 +119,23 @@ async function initializeComponents(retryCount = 0) {
         // 7. Initialize AuthHandler LAST (depends on other modules)
         console.log('[main.js] Creating AuthHandler instance...');
         window.authHandler = new AuthHandler();
-        console.log('[main.js] AuthHandler initialized successfully.');
+        if (!window.authHandler) {
+            throw new Error("AuthHandler instantiation failed.");
+        }
+        console.log('[main.js] AuthHandler instance created.');
         
-        // Check login state after everything is initialized
-        console.log('[main.js] Checking initial login state...');
-        window.authHandler.checkLoginState();
+        // Initialize the auth handler and check login state
+        try {
+            console.log('[main.js] Initializing AuthHandler and checking login state...');
+            if (typeof window.authHandler.initialize !== 'function') {
+                throw new Error("AuthHandler.initialize is not a function");
+            }
+            await window.authHandler.initialize(); // This will call checkLoginState internally
+            console.log('[main.js] AuthHandler initialized successfully.');
+        } catch (authError) {
+            console.error('[main.js] AuthHandler initialization failed:', authError);
+            // Continue with application initialization even if auth fails
+        }
         
         console.log('[main.js] Initialization completed successfully ✓');
         return true;
@@ -167,12 +195,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Run initial diagnostic check
     debugClassAvailability();
     
-    // Add a delay to ensure all scripts are loaded
+    // Add a significant delay to ensure all scripts are fully loaded
     setTimeout(() => {
         // Run another diagnostic right before initialization
         debugClassAvailability();
         
         // Initialize the application
-        initializeComponents();
-    }, 500); // Increased delay for better script loading
+        console.log('[main.js] Starting component initialization...');
+        initializeComponents().catch(error => {
+            console.error("[main.js] Fatal error during initialization:", error);
+            alert("Fatal initialization error: " + error.message);
+        });
+    }, 1000); // Significantly increased delay for better script loading
 });
