@@ -10,7 +10,15 @@ document.addEventListener('DOMContentLoaded', async () => { // Make async
     console.log('[Main.js] Document loaded, initializing game components...');
 
     try {
-        // 1. Instantiate LoadoutBuilder (Assigns to window)
+        // 1. Create PreferenceManager instance if not already created
+        if (typeof PreferenceManager !== 'undefined' && !window.preferenceManager) {
+            window.preferenceManager = new PreferenceManager();
+            console.log('[Main.js] PreferenceManager instance created.');
+        } else if (!window.preferenceManager) {
+            console.warn('[Main.js] PreferenceManager class not found. Preferences will not be available.');
+        }
+        
+        // 2. Instantiate LoadoutBuilder (Assigns to window)
         window.loadoutBuilderInstance = new LoadoutBuilder();
         console.log('[Main.js] LoadoutBuilder instance created.');
         // Basic check if the builder seems okay (e.g., found its overlay)

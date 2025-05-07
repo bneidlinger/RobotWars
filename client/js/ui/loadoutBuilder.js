@@ -105,7 +105,7 @@ class LoadoutBuilder {
                     let initialConfigToLoad = null;
                     
                     // Try to get the last config preference if preferenceManager is available
-                    if (typeof window.preferenceManager !== 'undefined') {
+                    if (window && window.preferenceManager) {
                         try {
                             const lastConfigName = await window.preferenceManager.getLastConfigName();
                             if (lastConfigName) {
@@ -1162,7 +1162,7 @@ class LoadoutBuilder {
              console.log(`[Enter Lobby] Configuration "${configName}" saved/updated via API.`);
              this.updateStatus(`Configuration "${configName}" saved.`);
              // Save this as the 'last used' config in preferences
-             if (typeof window.preferenceManager !== 'undefined') {
+             if (window && window.preferenceManager) {
                  try {
                      await window.preferenceManager.setLastConfigName(configName);
                      console.log(`[Enter Lobby] Saved last config preference: '${configName}'`);
@@ -1234,7 +1234,7 @@ class LoadoutBuilder {
         this.loadConfiguration(null); // Reset UI to defaults
 
         // Save quick_start preference
-        if (typeof window.preferenceManager !== 'undefined') {
+        if (window && window.preferenceManager) {
             try {
                 // We set quick_start_enabled to true and also clear the last_config_name
                 // so that next time the user logs in, they'll get the Quick Start experience

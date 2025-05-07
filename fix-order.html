@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Script Loading</title>
+</head>
+<body>
+    <h1>Script Loading Debug</h1>
+    
+    <script>
+    window.loadingStatus = {};
+
+    function updateStatus(name, status) {
+        window.loadingStatus[name] = status;
+        console.log(`${name}: ${status}`);
+        
+        const statusDiv = document.getElementById('status');
+        if (statusDiv) {
+            let html = '<h2>Script Status:</h2><ul>';
+            for (const [script, state] of Object.entries(window.loadingStatus)) {
+                html += `<li>${script}: ${state}</li>`;
+            }
+            html += '</ul>';
+            statusDiv.innerHTML = html;
+        }
+    }
+
+    // Set initial loading status
+    document.addEventListener('DOMContentLoaded', () => {
+        updateStatus('DOMContentLoaded', 'Ready');
+    });
+    </script>
+
+    <div id="status"></div>
+
+    <!-- Load utils first -->
+    <script src="js/utils/preferences.js" 
+            onload="updateStatus('preferences.js', 'Loaded')" 
+            onerror="updateStatus('preferences.js', 'Error')"></script>
+    
+    <!-- Then UI components -->
+    <script src="js/ui/loadoutBuilder.js"
+            onload="updateStatus('loadoutBuilder.js', 'Loaded')" 
+            onerror="updateStatus('loadoutBuilder.js', 'Error')"></script>
+    
+    <!-- Then instantiate -->
+    <script>
+    window.addEventListener('load', () => {
+        updateStatus('window.load', 'Ready');
+        
+        try {
+            console.log("PreferenceManager available:", typeof PreferenceManager);
+            if (typeof PreferenceManager !== 'undefined') {
+                const pm = new PreferenceManager();
+                updateStatus('PreferenceManager instance', 'Created');
+                window.preferenceManager = pm;
+            } else {
+                updateStatus('PreferenceManager class', 'Not Found');
+            }
+        } catch (e) {
+            updateStatus('PreferenceManager', `Error: ${e.message}`);
+        }
+        
+        try {
+            console.log("LoadoutBuilder available:", typeof LoadoutBuilder);
+            if (typeof LoadoutBuilder !== 'undefined') {
+                updateStatus('LoadoutBuilder class', 'Found');
+            } else {
+                updateStatus('LoadoutBuilder class', 'Not Found');
+            }
+        } catch (e) {
+            updateStatus('LoadoutBuilder', `Error: ${e.message}`);
+        }
+    });
+    </script>
+</body>
+</html>
