@@ -427,4 +427,10 @@ class AuthHandler {
 
 // No instantiation or DOMContentLoaded listener here.
 // main.js handles creating the instance and calling initialize().
+
+// Expose AuthHandler class to the global window object
+window.AuthHandler = AuthHandler;
+// Ensure apiCall is also available globally
+window.apiCall = apiCall;
+
 console.log("AuthHandler class defined (auth.js). Global apiCall function available.");

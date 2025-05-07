@@ -2824,3 +2824,6 @@ class Arena { // File name remains Arena, class concept is Renderer
         // --- Screen Shake End ---
     }
 } // End Arena (Renderer) Class
+
+// Expose class to window global scope
+window.Arena = Arena;

@@ -1,5 +1,6 @@
 // client/js/ui/editor.js
 
+// Define editor variable that will be accessible globally
 let editor;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -65,3 +66,6 @@ if (scanResult) {
 
 // Sample code loading can be removed or kept if you define samples differently later
 // function loadSampleCode(sampleName) { ... } // Keep or remove as needed
+
+// Make sure editor is accessible in the global scope
+window.editor = editor;

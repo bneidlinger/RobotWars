@@ -146,6 +146,9 @@ class Dashboard {
     }
 }
 
+// Expose the Dashboard class to the global window object
+window.Dashboard = Dashboard;
+
 // Initialize dashboard when document is loaded
 document.addEventListener('DOMContentLoaded', () => {
     // Ensure the dashboard object is created and attached to window for global access

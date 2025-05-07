@@ -238,4 +238,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- End Placeholder Clearing ---
 });
 
+// Expose lobby functions to the global window object
+window.updateLobbyStatus = updateLobbyStatus;
+window.addEventLogMessage = addEventLogMessage;
+window.addRobotLogMessage = addRobotLogMessage; 
+window.addOpponentLogMessage = addOpponentLogMessage;
+window.clearRobotLog = clearRobotLog;
+window.clearOpponentLog = clearOpponentLog;
+
 console.log("Lobby UI functions initialized (lobby.js). Includes Player AND Opponent Log handlers.");
