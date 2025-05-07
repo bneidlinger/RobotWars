@@ -10,64 +10,31 @@ window.controls = null;
 window.authHandler = null;
 window.preferenceManager = null;
 
-// Enhanced error handling and reporting
+// Simple error handling
 window.onerror = function(message, source, lineno, colno, error) {
-    console.error(`[GLOBAL ERROR] ${message} at ${source}:${lineno}:${colno}`, error);
-    // Log major errors but don't show alert - let the initialization error handler show UI errors
+    console.error(`Error: ${message} at ${source}:${lineno}`, error);
     return false; // Allow default error handling to continue
 };
 
-// Enhanced diagnostics for script loading
-function performDiagnostics() {
-    console.log('\n[DIAGNOSTICS] ===========================================');
-    
-    // Check script loader
-    if (!window.scriptLoader) {
-        console.error('[DIAGNOSTICS] Script loader not available. Critical failure.');
-        return false;
-    }
-    
-    // Log loaded scripts
-    const loadedScripts = window.scriptLoader.listLoadedScripts();
-    console.log(`[DIAGNOSTICS] Loaded scripts (${loadedScripts.length}): ${loadedScripts.join(', ')}`);
-    
-    // Check required constructor classes
-    const requiredClasses = ['LoadoutBuilder', 'AudioManager', 'Game', 'Network', 'Controls', 'AuthHandler', 'PreferenceManager'];
-    const missingClasses = [];
-    
-    requiredClasses.forEach(className => {
-        const isAvailable = typeof window[className] === 'function';
-        console.log(`[DIAGNOSTICS] Class '${className}' is ${isAvailable ? 'AVAILABLE ✓' : 'MISSING ✗'}`);
-        if (!isAvailable) missingClasses.push(className);
+// Basic diagnostics function
+function logAvailableClasses() {
+    const classes = ['LoadoutBuilder', 'AudioManager', 'Game', 'Network', 'Controls', 'AuthHandler', 'PreferenceManager'];
+    classes.forEach(className => {
+        console.log(`Class ${className} is ${typeof window[className] === 'function' ? 'available' : 'NOT available'}`);
     });
-    
-    // Check DOM elements needed by components
-    const criticalElements = [
-        { name: 'loadout-builder-overlay', element: document.getElementById('loadout-builder-overlay') },
-        { name: 'arena', element: document.getElementById('arena') },
-        { name: 'background-music', element: document.getElementById('background-music') }
-    ];
-    
-    criticalElements.forEach(item => {
-        console.log(`[DIAGNOSTICS] DOM element '${item.name}' is ${item.element ? 'FOUND ✓' : 'MISSING ✗'}`);
-    });
-    
-    console.log('[DIAGNOSTICS] ===========================================\n');
-    
-    return missingClasses.length === 0;
 }
 
-// Enhanced initialization with retry mechanism
+// Simple initialization with retry mechanism
 async function initializeComponents(retryCount = 0) {
     console.log(`[main.js] Initialization attempt ${retryCount + 1}...`);
     
-    // Run full diagnostics on first attempt
+    // Log available classes on first attempt
     if (retryCount === 0) {
-        performDiagnostics();
+        logAvailableClasses();
     }
     
     const MAX_RETRIES = 3;
-    const RETRY_DELAY_MS = 800; // Longer delay between retries
+    const RETRY_DELAY_MS = 500;
     
     // Key classes we MUST have to function
     const requiredClasses = ['LoadoutBuilder', 'AudioManager', 'Game', 'Network', 'Controls'];
@@ -77,15 +44,6 @@ async function initializeComponents(retryCount = 0) {
     if (missingClasses.length > 0) {
         if (retryCount < MAX_RETRIES) {
             console.warn(`[main.js] Missing required classes: ${missingClasses.join(', ')}. Retrying in ${RETRY_DELAY_MS}ms...`);
-            
-            // Force registration of missing classes if class-registration.js exists
-            if (window.scriptLoader && window.scriptLoader.isScriptLoaded('class-registration.js')) {
-                console.log('[main.js] Attempting to re-run class registration...');
-                const script = document.createElement('script');
-                script.src = 'js/engine/class-registration.js?nocache=' + new Date().getTime();
-                document.head.appendChild(script);
-            }
-            
             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
             return initializeComponents(retryCount + 1);
         } else {
@@ -183,73 +141,12 @@ async function initializeComponents(retryCount = 0) {
     }
 }
 
-// Enhanced script loading check
-function waitForScriptsAndInitialize() {
-    console.log('[main.js] Checking critical scripts availability...');
-    
-    if (!window.scriptLoader) {
-        console.error('[main.js] Script loader not available. Attempting direct initialization after delay...');
-        setTimeout(() => initializeComponents(), 1000);
-        return;
-    }
-    
-    // Check for critical scripts
-    const criticalScripts = [
-        'script-loader.js',
-        'loadoutBuilder.js', 
-        'audio.js',
-        'game.js',
-        'network.js'
-        // class-registration.js is optional now
-    ];
-    
-    const checkResult = window.scriptLoader.areAllScriptsLoaded(criticalScripts);
-    
-    if (checkResult.loaded) {
-        console.log("[main.js] All critical scripts loaded ✓ Proceeding with initialization");
-        initializeComponents();
-    } else {
-        console.warn(`[main.js] Still waiting for scripts: ${checkResult.missing.join(', ')}`);
-        
-        // Register any missing classes directly
-        if (window.scriptLoader) {
-            const classes = ['LoadoutBuilder', 'AudioManager', 'Game', 'Network'];
-            classes.forEach(className => {
-                if (typeof window[className] === 'function') {
-                    const filename = className.toLowerCase() + '.js';
-                    window.scriptLoader.scriptLoaded(filename);
-                    console.log(`[main.js] ✓ Manually registered class: ${className}`);
-                }
-            });
-        }
-        
-        // Retry with a slightly longer delay
-        setTimeout(waitForScriptsAndInitialize, 600);
-    }
-}
-
-// Ensure the DOM is fully loaded before starting initialization
+// Simple initialization
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('[main.js] Document loaded, beginning initialization sequence');
+    console.log('[main.js] Document loaded, initializing application');
     
-    // Force registration of critical scripts that we know should be loaded
-    if (window.scriptLoader) {
-        // Register this script itself first
-        window.scriptLoader.scriptLoaded('main.js');
-        
-        // Pre-register classes that we can detect
-        const classes = ['LoadoutBuilder', 'AudioManager', 'Game', 'Network', 'Robot'];
-        classes.forEach(className => {
-            if (typeof window[className] === 'function') {
-                const filename = className.toLowerCase() + '.js';
-                window.scriptLoader.scriptLoaded(filename);
-                console.log(`[main.js] ✓ Pre-registered class: ${className}`);
-            }
-        });
-    }
-    
-    // Adding a shorter delay now that we've pre-registered classes
+    // Add a small delay to ensure all scripts are loaded
     setTimeout(() => {
-        waitForScriptsAndInitialize();
-    }, 300);
+        initializeComponents();
+    }, 100);
 });

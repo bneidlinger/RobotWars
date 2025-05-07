@@ -1,10 +1,4 @@
 // client/js/engine/robot.js
-console.log('[robot.js] Defining Robot class');
-
-// Register this script with the script loader if available
-if (window.scriptLoader) {
-    window.scriptLoader.scriptLoaded('robot.js');
-}
 
 /**
  * Represents a robot in the game
