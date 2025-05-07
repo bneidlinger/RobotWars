@@ -139,4 +139,26 @@ if (typeof window !== 'undefined') {
     // Also expose the class constructor globally
     window.PreferenceManager = PreferenceManager;
     console.log('[preferences.js] PreferenceManager instantiated and class exposed globally');
+    
+    // Add fallback support in case the API calls fail
+    // Use a flag to track preference API availability
+    window.preferenceApiAvailable = true;
+    
+    // Test if the preferences API is available by making a test request
+    apiCall('/api/preferences', 'GET')
+        .then(() => {
+            console.log('[preferences.js] API-based preferences are available');
+            window.preferenceApiAvailable = true;
+        })
+        .catch((err) => {
+            console.warn('[preferences.js] API-based preferences are NOT available:', err.message);
+            console.log('[preferences.js] Switching to localStorage-based preference fallback');
+            window.preferenceApiAvailable = false;
+            
+            // Replace the API-based preference manager with the fallback
+            if (window.preferenceManagerFallback) {
+                console.log('[preferences.js] Replacing API preferences with fallback');
+                window.preferenceManager = window.preferenceManagerFallback;
+            }
+        });
 }

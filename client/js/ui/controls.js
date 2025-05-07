@@ -509,8 +509,8 @@ class Controls {
                  if(this.deleteSnippetButton) this.deleteSnippetButton.disabled = (this.uiState !== 'lobby');
                  
                  // Save this selection as the last used loadout
-                 if (window.PreferenceManager) {
-                     window.PreferenceManager.set('lastUsedLoadout', name)
+                 if (window.preferenceManager) {
+                     window.preferenceManager.setPreference('lastUsedLoadout', name)
                         .catch(e => console.warn('[Controls] Failed to save last used loadout preference:', e));
                  }
                  
@@ -604,9 +604,9 @@ class Controls {
                  // 4. Default empty value
                  
                  let lastUsedLoadout = null;
-                 if (window.PreferenceManager) {
+                 if (window.preferenceManager) {
                      try {
-                         lastUsedLoadout = await window.PreferenceManager.get('lastUsedLoadout');
+                         lastUsedLoadout = await window.preferenceManager.getPreference('lastUsedLoadout');
                      } catch (e) {
                          console.warn('[Controls] Failed to get last used loadout from preferences:', e);
                      }
@@ -615,8 +615,8 @@ class Controls {
                  if (selectName && snippets.some(s => s.name === selectName)) {
                      this.loadSnippetSelect.value = selectName;
                      // Save this selection as the last used loadout
-                     if (window.PreferenceManager) {
-                         window.PreferenceManager.set('lastUsedLoadout', selectName)
+                     if (window.preferenceManager) {
+                         window.preferenceManager.setPreference('lastUsedLoadout', selectName)
                             .catch(e => console.warn('[Controls] Failed to save last used loadout preference:', e));
                      }
                  } else if (lastUsedLoadout && snippets.some(s => s.name === lastUsedLoadout)) {
