@@ -463,18 +463,22 @@
     <!-- START: Added Audio Element for Background Music -->
     <audio id="background-music" loop preload="auto" src="/assets/sounds/soundtrack.mp3"></audio>
 
-    <!-- Scripts (Corrected Order) -->
+    <!-- Scripts (Optimized Loading Order) -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
     
-    <!-- Utils (load before everything else) -->
-    <script src="js/utils/preferences.js"></script> <!-- Defines PreferenceManager -->
-    <script src="js/utils/storage.js"></script> <!-- Storage utilities if needed -->
+    <!-- Step 1: Script Loader (MUST be first) -->
+    <script src="js/utils/script-loader.js"></script>
     
-    <!-- Engine -->
+    <!-- Step 2: Utils (must load before components) -->
+    <script src="js/utils/preferences.js"></script>
+    <script src="js/utils/storage.js"></script>
+    
+    <!-- Step 3: Engine Core Components -->
+    <script src="js/engine/robot.js"></script>
     <script src="js/engine/arena.js"></script>
     <script src="js/engine/interpreter.js"></script>
     <script src="js/engine/collision.js"></script>
@@ -484,16 +488,23 @@
     <script src="js/engine/particle-system-integration.js"></script>
     <script src="js/engine/arena-particle-patch.js"></script>
     
-    <!-- UI Components -->
+    <!-- Step 4: UI Components -->
     <script src="js/ui/editor.js"></script>
     <script src="js/ui/dashboard.js"></script>
-    <script src="js/ui/loadoutBuilder.js"></script> <!-- Defines LoadoutBuilder -->
+    <script src="js/ui/loadoutBuilder.js"></script>
     <script src="js/ui/lobby.js"></script>
     <script src="js/ui/history.js"></script>
-    <script src="js/network.js"></script> <!-- Defines Network -->
-    <script src="js/ui/testBotSelector.js"></script> <!-- Defines TestBotSelector -->
-    <script src="js/ui/controls.js"></script> <!-- Defines Controls -->
-    <script src="js/auth.js"></script> <!-- Defines AuthHandler, apiCall, uses controls -->
-    <script src="js/main.js"></script> <!-- Instantiates globals, uses others -->
+    <script src="js/ui/testBotSelector.js"></script>
+    
+    <!-- Step 5: Network and Non-UI Components -->
+    <script src="js/network.js"></script>
+    <script src="js/ui/controls.js"></script>
+    <script src="js/auth.js"></script>
+    
+    <!-- Step 6: Class Registration Helper (ensures all classes are properly registered) -->
+    <script src="js/engine/class-registration.js"></script>
+    
+    <!-- Step 7: Main Initialization (with defer attribute to run last) -->
+    <script src="js/main.js" defer></script>
 </body>
 </html>

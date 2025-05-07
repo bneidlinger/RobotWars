@@ -128,7 +128,13 @@ class PreferenceManager {
     }
 }
 
+// Register that this script has loaded (if script loader is available)
+if (window.scriptLoader) {
+    window.scriptLoader.scriptLoaded('preferences.js');
+}
+
 // Create global instance
 if (typeof window !== 'undefined') {
     window.preferenceManager = new PreferenceManager();
+    console.log('[preferences.js] PreferenceManager instantiated');
 }

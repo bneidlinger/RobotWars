@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RobotWars Class Checker</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2 {
+            color: #4CAF50;
+        }
+        .box {
+            background-color: #333;
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .error {
+            color: #f44336;
+        }
+        .warning {
+            color: #ff9800;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        pre {
+            background-color: #222;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>RobotWars Class Checker</h1>
+    <p>This simple tool checks for available classes and their definitions.</p>
+    
+    <div class="box">
+        <h2>Available Classes</h2>
+        <div id="class-list">Loading...</div>
+    </div>
+    
+    <div class="box">
+        <h2>Class Inspection</h2>
+        <select id="class-select">
+            <option value="">Select a class to inspect</option>
+        </select>
+        <div id="class-details">Select a class above to inspect its properties</div>
+    </div>
+    
+    <div class="box">
+        <h2>Object Instances</h2>
+        <div id="object-list">Loading...</div>
+    </div>
+    
+    <div class="box">
+        <h2>Actions</h2>
+        <button id="refresh">Refresh</button>
+        <button id="force-load" title="Attempts to force-load common classes">Force Load Classes</button>
+        <button id="go-to-main">Go to Main App</button>
+        <button id="go-to-diagnostic">Go to Diagnostics</button>
+    </div>
+
+    <script>
+        // Classes to check for
+        const classesToCheck = [
+            'LoadoutBuilder',
+            'AudioManager',
+            'Game',
+            'Network',
+            'Controls',
+            'AuthHandler',
+            'PreferenceManager',
+            'Arena',
+            'Interpreter',
+            'Robot',
+            'Editor',
+            'Dashboard',
+            'History',
+            'Lobby',
+            'TestBotSelector',
+            'ParticleSystem'
+        ];
+        
+        // Objects to check for
+        const objectsToCheck = [
+            'loadoutBuilderInstance',
+            'audioManager',
+            'game',
+            'network',
+            'controls',
+            'authHandler',
+            'preferenceManager',
+            'scriptLoader'
+        ];
+        
+        // Display available classes
+        function checkClasses() {
+            const classListDiv = document.getElementById('class-list');
+            const classSelect = document.getElementById('class-select');
+            
+            let html = '';
+            let selectHtml = '<option value="">Select a class to inspect</option>';
+            
+            classesToCheck.forEach(className => {
+                const isAvailable = typeof window[className] === 'function';
+                html += `<div class="${isAvailable ? 'success' : 'error'}">
+                    ${className}: <strong>${isAvailable ? 'AVAILABLE ✓' : 'MISSING ✗'}</strong>
+                </div>`;
+                
+                if (isAvailable) {
+                    selectHtml += `<option value="${className}">${className}</option>`;
+                }
+            });
+            
+            classListDiv.innerHTML = html;
+            classSelect.innerHTML = selectHtml;
+        }
+        
+        // Display available object instances
+        function checkObjects() {
+            const objectListDiv = document.getElementById('object-list');
+            let html = '';
+            
+            objectsToCheck.forEach(objectName => {
+                const exists = window[objectName] !== undefined;
+                const type = exists ? typeof window[objectName] : 'undefined';
+                
+                html += `<div class="${exists ? 'success' : 'error'}">
+                    ${objectName}: <strong>${exists ? 'EXISTS ✓' : 'MISSING ✗'}</strong> (${type})
+                </div>`;
+            });
+            
+            objectListDiv.innerHTML = html;
+        }
+        
+        // Inspect a class's properties
+        function inspectClass(className) {
+            const detailsDiv = document.getElementById('class-details');
+            const classObj = window[className];
+            
+            if (typeof classObj !== 'function') {
+                detailsDiv.innerHTML = `<div class="error">Class ${className} is not available</div>`;
+                return;
+            }
+            
+            // Get prototype methods
+            const prototype = classObj.prototype;
+            const methods = Object.getOwnPropertyNames(prototype).filter(name => 
+                name !== 'constructor' && typeof prototype[name] === 'function'
+            );
+            
+            // Get static properties
+            const staticProps = Object.getOwnPropertyNames(classObj).filter(name =>
+                name !== 'prototype' && name !== 'length' && name !== 'name'
+            );
+            
+            let html = `<h3>${className} Class</h3>`;
+            
+            if (methods.length > 0) {
+                html += `<h4>Methods (${methods.length})</h4>
+                <pre>${methods.join('\n')}</pre>`;
+            }
+            
+            if (staticProps.length > 0) {
+                html += `<h4>Static Properties (${staticProps.length})</h4>
+                <pre>${staticProps.join('\n')}</pre>`;
+            }
+            
+            detailsDiv.innerHTML = html;
+        }
+        
+        // Try to force-load common classes via script tags
+        function forceLoadClasses() {
+            const scripts = [
+                'js/utils/script-loader.js',
+                'js/utils/preferences.js',
+                'js/engine/game.js',
+                'js/engine/audio.js',
+                'js/ui/loadoutBuilder.js',
+                'js/network.js',
+                'js/engine/class-registration.js'
+            ];
+            
+            scripts.forEach(src => {
+                const script = document.createElement('script');
+                script.src = src + '?nocache=' + new Date().getTime();
+                document.head.appendChild(script);
+            });
+            
+            // Wait a moment then refresh
+            setTimeout(() => {
+                checkClasses();
+                checkObjects();
+            }, 500);
+        }
+        
+        // Setup event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial checks
+            checkClasses();
+            checkObjects();
+            
+            // Setup refresh button
+            document.getElementById('refresh').addEventListener('click', () => {
+                checkClasses();
+                checkObjects();
+            });
+            
+            // Setup force load button
+            document.getElementById('force-load').addEventListener('click', forceLoadClasses);
+            
+            // Setup navigation buttons
+            document.getElementById('go-to-main').addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+            
+            document.getElementById('go-to-diagnostic').addEventListener('click', () => {
+                window.location.href = 'diagnostic.html';
+            });
+            
+            // Setup class selector
+            document.getElementById('class-select').addEventListener('change', (e) => {
+                const selected = e.target.value;
+                if (selected) {
+                    inspectClass(selected);
+                } else {
+                    document.getElementById('class-details').innerHTML = 'Select a class above to inspect its properties';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

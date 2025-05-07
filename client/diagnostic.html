@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RobotWars Script Loading Diagnostic</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2 {
+            color: #4CAF50;
+        }
+        .box {
+            background-color: #333;
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .error {
+            color: #f44336;
+        }
+        .warning {
+            color: #ff9800;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #log {
+            height: 300px;
+            overflow-y: auto;
+            background-color: #222;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #555;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #333;
+        }
+        tr:nth-child(even) {
+            background-color: #2a2a2a;
+        }
+    </style>
+</head>
+<body>
+    <h1>RobotWars Script Loading Diagnostic</h1>
+    
+    <div class="box">
+        <h2>Scripts Status</h2>
+        <div id="script-status">Loading...</div>
+        <button id="check-scripts">Check Scripts</button>
+        <button id="reload-page">Reload Page</button>
+    </div>
+    
+    <div class="box">
+        <h2>Class Availability</h2>
+        <div id="class-status">Loading...</div>
+        <button id="check-classes">Check Classes</button>
+    </div>
+    
+    <div class="box">
+        <h2>Global Objects</h2>
+        <div id="global-objects">Loading...</div>
+        <button id="check-objects">Check Objects</button>
+    </div>
+    
+    <div class="box">
+        <h2>Console Log</h2>
+        <div id="log"></div>
+    </div>
+    
+    <!-- Script loader -->
+    <script src="js/utils/script-loader.js"></script>
+
+    <!-- Minimal scripts for diagnostic -->
+    <script>
+        // Override console.log to capture in our diagnostic
+        const originalConsoleLog = console.log;
+        const originalConsoleWarn = console.warn;
+        const originalConsoleError = console.error;
+        
+        console.log = function(...args) {
+            addToLog('log', ...args);
+            originalConsoleLog.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            addToLog('warn', ...args);
+            originalConsoleWarn.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addToLog('error', ...args);
+            originalConsoleError.apply(console, args);
+        };
+        
+        function addToLog(type, ...args) {
+            const logDiv = document.getElementById('log');
+            if (logDiv) {
+                const line = document.createElement('div');
+                line.className = type;
+                
+                const timestamp = new Date().toLocaleTimeString();
+                const message = args.map(arg => {
+                    if (typeof arg === 'object') return JSON.stringify(arg);
+                    return arg;
+                }).join(' ');
+                
+                line.innerHTML = `<small>[${timestamp}]</small> <span class="${type}">${message}</span>`;
+                logDiv.appendChild(line);
+                logDiv.scrollTop = logDiv.scrollHeight; // Auto-scroll to bottom
+            }
+        }
+        
+        // Check which scripts have loaded
+        function checkScripts() {
+            const scriptPathsToCheck = [
+                'js/utils/script-loader.js',
+                'js/utils/preferences.js',
+                'js/ui/loadoutBuilder.js',
+                'js/engine/game.js',
+                'js/engine/audio.js',
+                'js/network.js',
+                'js/ui/controls.js',
+                'js/auth.js',
+                'js/main.js'
+            ];
+            
+            const statusDiv = document.getElementById('script-status');
+            if (!statusDiv) return;
+            
+            if (window.scriptLoader) {
+                const loadedScripts = window.scriptLoader.listLoadedScripts();
+                
+                let html = '<table><tr><th>Script</th><th>Status</th></tr>';
+                
+                scriptPathsToCheck.forEach(scriptPath => {
+                    const scriptName = scriptPath.split('/').pop();
+                    const isLoaded = loadedScripts.includes(scriptName);
+                    
+                    html += `<tr>
+                        <td>${scriptPath}</td>
+                        <td class="${isLoaded ? 'success' : 'error'}">${isLoaded ? 'Loaded' : 'Not Loaded'}</td>
+                    </tr>`;
+                });
+                
+                html += '</table>';
+                statusDiv.innerHTML = html;
+            } else {
+                statusDiv.innerHTML = '<p class="error">Script loader not available. Cannot check script loading status.</p>';
+            }
+        }
+        
+        // Check if classes are available
+        function checkClasses() {
+            const classesToCheck = [
+                'LoadoutBuilder',
+                'AudioManager',
+                'Game',
+                'Network',
+                'Controls',
+                'AuthHandler',
+                'PreferenceManager'
+            ];
+            
+            const statusDiv = document.getElementById('class-status');
+            if (!statusDiv) return;
+            
+            let html = '<table><tr><th>Class</th><th>Status</th></tr>';
+            
+            classesToCheck.forEach(className => {
+                const isAvailable = typeof window[className] === 'function';
+                
+                html += `<tr>
+                    <td>${className}</td>
+                    <td class="${isAvailable ? 'success' : 'error'}">${isAvailable ? 'Available' : 'Not Available'}</td>
+                </tr>`;
+            });
+            
+            html += '</table>';
+            statusDiv.innerHTML = html;
+        }
+        
+        // Check global objects
+        function checkObjects() {
+            const objectsToCheck = [
+                'loadoutBuilderInstance',
+                'audioManager',
+                'game',
+                'network',
+                'controls',
+                'authHandler',
+                'preferenceManager'
+            ];
+            
+            const statusDiv = document.getElementById('global-objects');
+            if (!statusDiv) return;
+            
+            let html = '<table><tr><th>Object</th><th>Status</th></tr>';
+            
+            objectsToCheck.forEach(objectName => {
+                const exists = window[objectName] !== null && window[objectName] !== undefined;
+                const type = exists ? typeof window[objectName] : 'undefined';
+                
+                html += `<tr>
+                    <td>${objectName}</td>
+                    <td class="${exists ? 'success' : 'error'}">${exists ? 'Exists' : 'Missing'} (${type})</td>
+                </tr>`;
+            });
+            
+            html += '</table>';
+            statusDiv.innerHTML = html;
+        }
+        
+        // Setup event listeners once the page is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('check-scripts').addEventListener('click', checkScripts);
+            document.getElementById('check-classes').addEventListener('click', checkClasses);
+            document.getElementById('check-objects').addEventListener('click', checkObjects);
+            document.getElementById('reload-page').addEventListener('click', () => location.reload());
+            
+            // Initial checks
+            setTimeout(() => {
+                checkScripts();
+                checkClasses();
+                checkObjects();
+                console.log('[diagnostic.html] Initial checks completed');
+            }, 500);
+        });
+        
+        // Log when the page loads
+        console.log('[diagnostic.html] Diagnostic page loaded');
+    </script>
+</body>
+</html>

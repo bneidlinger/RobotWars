@@ -1,5 +1,14 @@
 // client/js/ui/loadoutBuilder.js
 
+// Register this script with the script loader if available
+if (window.scriptLoader) {
+    window.scriptLoader.scriptLoaded('loadoutBuilder.js');
+}
+
+// Log that we're defining LoadoutBuilder
+console.log('[loadoutBuilder.js] Defining LoadoutBuilder class');
+
+
 /**
  * Manages the Loadout Builder overlay UI.
  * Handles selection of visual components, colors, code snippets, presets, robot name, config name,
@@ -1220,7 +1229,7 @@ class LoadoutBuilder {
 
 
     /** Handles the Quick Start button click */
-    async _handleQuickStartClick() {
+    _handleQuickStartClick() {
         console.log("[Quick Start] Button clicked. Loading Quick Start defaults...");
 
         // --- START: Attempt Music Start ---
@@ -1233,48 +1242,46 @@ class LoadoutBuilder {
 
         this.loadConfiguration(null); // Reset UI to defaults
 
-        // Save quick_start preference
+        // Save quick_start preference - properly handle async operations
         if (window && window.preferenceManager) {
-            try {
-                // We set quick_start_enabled to true and also clear the last_config_name
-                // so that next time the user logs in, they'll get the Quick Start experience
-                await Promise.all([
-                    window.preferenceManager.setQuickStartEnabled(true),
-                    window.preferenceManager.deletePreference(window.preferenceManager.KEYS.LAST_CONFIG)
-                ]);
+            // Use Promise pattern but don't make the method itself async
+            Promise.all([
+                window.preferenceManager.setQuickStartEnabled(true),
+                window.preferenceManager.deletePreference(window.preferenceManager.KEYS.LAST_CONFIG)
+            ]).then(() => {
                 console.log("[Quick Start] Saved quick_start preference and cleared last config.");
                 this.updateStatus("Quick Start selected.");
-            } catch (prefError) {
+            }).catch(prefError => {
                 console.warn("[Quick Start] Error saving quick_start preference:", prefError);
                 this.updateStatus("Quick Start selected (Preference not saved).");
-            }
+            });
         } else {
             console.warn("[Quick Start] PreferenceManager not available. Skipping preference save.");
             this.updateStatus("Quick Start selected.");
         }
 
-         this.hide(); // Hide builder AFTER attempting music start
+        this.hide(); // Hide builder AFTER attempting music start
 
-         // Update header icon (using global controls instance)
-         if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
-              controls.updatePlayerHeaderDisplay();
-         }
+        // Update header icon (using global controls instance)
+        if (typeof controls !== 'undefined' && controls?.updatePlayerHeaderDisplay) {
+            controls.updatePlayerHeaderDisplay();
+        }
 
-         // Connect network / Update state (Similar logic as Enter Lobby)
-         // Use global network instance
-         if (typeof network !== 'undefined') {
-             if (network.socket?.connected) {
-                 console.log(`[Quick Start] Network connected. Setting Controls state.`);
-                  // Use global controls instance
-                  if(typeof controls !== 'undefined') controls.setState('lobby');
-             } else {
-                 console.log(`[Quick Start] Network not connected, attempting connect.`);
-                 network.connect();
-             }
-         } else {
-              console.error("Network object not found!");
-              alert("Internal error: Cannot connect to network.");
-         }
+        // Connect network / Update state (Similar logic as Enter Lobby)
+        // Use global network instance
+        if (typeof network !== 'undefined') {
+            if (network.socket?.connected) {
+                console.log(`[Quick Start] Network connected. Setting Controls state.`);
+                // Use global controls instance
+                if (typeof controls !== 'undefined') controls.setState('lobby');
+            } else {
+                console.log(`[Quick Start] Network not connected, attempting connect.`);
+                network.connect();
+            }
+        } else {
+            console.error("Network object not found!");
+            alert("Internal error: Cannot connect to network.");
+        }
     } // End _handleQuickStartClick
 
     /** Refreshes the code snippet dropdown when notified by Controls */
