@@ -1,89 +1,100 @@
 // client/js/engine/class-registration.js
-// This file registers all classes with the script loader to ensure they're properly tracked
+// This script registers all class definitions with the script loader
 
-// Wait for script loader to be available
-(function() {
-    function registerClasses() {
-        if (!window.scriptLoader) {
-            console.warn('[class-registration] Script loader not available, retrying in 100ms...');
-            setTimeout(registerClasses, 100);
-            return;
-        }
+console.log('[class-registration.js] Starting class registration...');
 
-        // Register all core classes with the script loader
-        const engineClasses = [
-            { file: 'audio.js', constructor: 'AudioManager' },
-            { file: 'game.js', constructor: 'Game' },
-            { file: 'arena.js', constructor: 'Arena' },
-            { file: 'interpreter.js', constructor: 'Interpreter' },
-            { file: 'collision.js', constructor: 'Collision' },
-            { file: 'robot.js', constructor: 'Robot' },
-            { file: 'particle-system.js', constructor: 'ParticleSystem' }
-        ];
+// Register this script with the script loader
+if (window.scriptLoader) {
+    window.scriptLoader.scriptLoaded('class-registration.js');
+}
 
-        const uiClasses = [
-            { file: 'loadoutBuilder.js', constructor: 'LoadoutBuilder' },
-            { file: 'controls.js', constructor: 'Controls' },
-            { file: 'dashboard.js', constructor: 'Dashboard' },
-            { file: 'editor.js', constructor: 'Editor' },
-            { file: 'history.js', constructor: 'History' },
-            { file: 'lobby.js', constructor: 'Lobby' },
-            { file: 'testBotSelector.js', constructor: 'TestBotSelector' }
-        ];
+// Define lists of classes to check and register
+const engineClasses = [
+    { file: 'audio.js', className: 'AudioManager' },
+    { file: 'game.js', className: 'Game' },
+    { file: 'arena.js', className: 'Arena' },
+    { file: 'interpreter.js', className: 'Interpreter' },
+    { file: 'collision.js', className: 'Collision' },
+    { file: 'robot.js', className: 'Robot' },
+    { file: 'particle-system.js', className: 'ParticleSystem' }
+];
 
-        const utilClasses = [
-            { file: 'preferences.js', constructor: 'PreferenceManager' },
-            { file: 'storage.js', constructor: 'StorageManager' }
-        ];
+const uiClasses = [
+    { file: 'loadoutBuilder.js', className: 'LoadoutBuilder' },
+    { file: 'controls.js', className: 'Controls' },
+    { file: 'dashboard.js', className: 'Dashboard' },
+    { file: 'editor.js', className: 'Editor' },
+    { file: 'history.js', className: 'History' },
+    { file: 'lobby.js', className: 'Lobby' },
+    { file: 'testBotSelector.js', className: 'TestBotSelector' }
+];
 
-        const otherClasses = [
-            { file: 'network.js', constructor: 'Network' },
-            { file: 'auth.js', constructor: 'AuthHandler' }
-        ];
+const utilClasses = [
+    { file: 'preferences.js', className: 'PreferenceManager' },
+    { file: 'storage.js', className: 'StorageManager' }
+];
 
-        // Register engine classes
-        engineClasses.forEach(cls => {
-            if (typeof window[cls.constructor] === 'function') {
-                window.scriptLoader.scriptLoaded(cls.file);
-                console.log(`[class-registration] Registered engine class: ${cls.constructor} (${cls.file})`);
-            } else {
-                console.warn(`[class-registration] Engine class not found: ${cls.constructor} (${cls.file})`);
-            }
-        });
+const otherClasses = [
+    { file: 'network.js', className: 'Network' },
+    { file: 'auth.js', className: 'AuthHandler' }
+];
 
-        // Register UI classes
-        uiClasses.forEach(cls => {
-            if (typeof window[cls.constructor] === 'function') {
-                window.scriptLoader.scriptLoaded(cls.file);
-                console.log(`[class-registration] Registered UI class: ${cls.constructor} (${cls.file})`);
-            } else {
-                console.warn(`[class-registration] UI class not found: ${cls.constructor} (${cls.file})`);
-            }
-        });
-
-        // Register utility classes
-        utilClasses.forEach(cls => {
-            if (typeof window[cls.constructor] === 'function') {
-                window.scriptLoader.scriptLoaded(cls.file);
-                console.log(`[class-registration] Registered utility class: ${cls.constructor} (${cls.file})`);
-            } else {
-                console.warn(`[class-registration] Utility class not found: ${cls.constructor} (${cls.file})`);
-            }
-        });
-
-        // Register other classes
-        otherClasses.forEach(cls => {
-            if (typeof window[cls.constructor] === 'function') {
-                window.scriptLoader.scriptLoaded(cls.file);
-                console.log(`[class-registration] Registered other class: ${cls.constructor} (${cls.file})`);
-            } else {
-                console.warn(`[class-registration] Other class not found: ${cls.constructor} (${cls.file})`);
-            }
-        });
-
-        console.log('[class-registration] All class registrations processed');
+// Register all classes
+function registerClasses() {
+    // Make sure scriptLoader is available
+    if (!window.scriptLoader) {
+        console.warn('[class-registration.js] Script loader not available');
+        return;
     }
 
-    // Start registration process - delay slightly to ensure all scripts have a chance to load
-    setTimeout(registerClasses, 200);
-})();
+    console.log('[class-registration.js] Registering engine classes...');
+    engineClasses.forEach(cls => {
+        if (typeof window[cls.className] === 'function') {
+            window.scriptLoader.scriptLoaded(cls.file);
+            console.log(`[class-registration.js] ✓ Registered engine class: ${cls.className}`);
+        } else {
+            console.warn(`[class-registration.js] ✗ Engine class not found: ${cls.className}`);
+        }
+    });
+
+    console.log('[class-registration.js] Registering UI classes...');
+    uiClasses.forEach(cls => {
+        if (typeof window[cls.className] === 'function') {
+            window.scriptLoader.scriptLoaded(cls.file);
+            console.log(`[class-registration.js] ✓ Registered UI class: ${cls.className}`);
+        } else {
+            console.warn(`[class-registration.js] ✗ UI class not found: ${cls.className}`);
+        }
+    });
+
+    console.log('[class-registration.js] Registering utility classes...');
+    utilClasses.forEach(cls => {
+        if (typeof window[cls.className] === 'function') {
+            window.scriptLoader.scriptLoaded(cls.file);
+            console.log(`[class-registration.js] ✓ Registered utility class: ${cls.className}`);
+        } else {
+            console.warn(`[class-registration.js] ✗ Utility class not found: ${cls.className}`);
+        }
+    });
+
+    console.log('[class-registration.js] Registering other classes...');
+    otherClasses.forEach(cls => {
+        if (typeof window[cls.className] === 'function') {
+            window.scriptLoader.scriptLoaded(cls.file);
+            console.log(`[class-registration.js] ✓ Registered other class: ${cls.className}`);
+        } else {
+            console.warn(`[class-registration.js] ✗ Other class not found: ${cls.className}`);
+        }
+    });
+
+    console.log('[class-registration.js] Class registration completed');
+}
+
+// Register all critical classes after a short delay to ensure they're loaded
+setTimeout(registerClasses, 50);
+
+// Force registration of core classes that must exist
+if (window.scriptLoader) {
+    window.scriptLoader.scriptLoaded('script-loader.js');
+    console.log('[class-registration.js] ✓ Registered script-loader.js');
+}

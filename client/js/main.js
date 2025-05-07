@@ -199,8 +199,8 @@ function waitForScriptsAndInitialize() {
         'loadoutBuilder.js', 
         'audio.js',
         'game.js',
-        'network.js',
-        'class-registration.js'
+        'network.js'
+        // class-registration.js is optional now
     ];
     
     const checkResult = window.scriptLoader.areAllScriptsLoaded(criticalScripts);
@@ -211,9 +211,16 @@ function waitForScriptsAndInitialize() {
     } else {
         console.warn(`[main.js] Still waiting for scripts: ${checkResult.missing.join(', ')}`);
         
-        // If class-registration.js is missing, that's especially problematic
-        if (checkResult.missing.includes('class-registration.js')) {
-            console.error('[main.js] Critical class-registration.js script is missing');
+        // Register any missing classes directly
+        if (window.scriptLoader) {
+            const classes = ['LoadoutBuilder', 'AudioManager', 'Game', 'Network'];
+            classes.forEach(className => {
+                if (typeof window[className] === 'function') {
+                    const filename = className.toLowerCase() + '.js';
+                    window.scriptLoader.scriptLoaded(filename);
+                    console.log(`[main.js] ✓ Manually registered class: ${className}`);
+                }
+            });
         }
         
         // Retry with a slightly longer delay
@@ -225,9 +232,24 @@ function waitForScriptsAndInitialize() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('[main.js] Document loaded, beginning initialization sequence');
     
-    // Adding a longer delay before initialization to ensure all scripts have loaded
-    // This is especially important for the class-registration.js which needs to run
+    // Force registration of critical scripts that we know should be loaded
+    if (window.scriptLoader) {
+        // Register this script itself first
+        window.scriptLoader.scriptLoaded('main.js');
+        
+        // Pre-register classes that we can detect
+        const classes = ['LoadoutBuilder', 'AudioManager', 'Game', 'Network', 'Robot'];
+        classes.forEach(className => {
+            if (typeof window[className] === 'function') {
+                const filename = className.toLowerCase() + '.js';
+                window.scriptLoader.scriptLoaded(filename);
+                console.log(`[main.js] ✓ Pre-registered class: ${className}`);
+            }
+        });
+    }
+    
+    // Adding a shorter delay now that we've pre-registered classes
     setTimeout(() => {
         waitForScriptsAndInitialize();
-    }, 500);
+    }, 300);
 });
