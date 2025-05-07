@@ -6,7 +6,8 @@ const GameManager = require('./game-manager'); // Assuming GameManager is update
  * Now uses session data for user identification.
  */
 function initializeSocketHandler(io, db) { // db might be needed by GameManager now
-    const gameManager = new GameManager(io, db); // Pass db if needed
+    // Pass the database connection to GameManager for stats tracking
+    const gameManager = new GameManager(io, db);
 
     io.on('connection', (socket) => {
         // Access session data associated with this socket

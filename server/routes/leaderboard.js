@@ -9,6 +9,16 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         const db = req.app.get('db');
+        
+        // If database isn't available, return empty data structures
+        if (!db) {
+            console.error('Database connection not available');
+            return res.json({
+                pvpStats: [],
+                botStats: [],
+                codeStats: []
+            });
+        }
 
         // Get PvP leaderboard data (top 10)
         const pvpQuery = `
@@ -77,32 +87,45 @@ router.get('/', async (req, res) => {
             LIMIT 5
         `;
 
-        // Execute all queries in parallel
-        const [pvpStats, botStats, fewestLinesStats, mostWinsStats] = await Promise.all([
-            db.query(pvpQuery).then(result => result.rows),
-            db.query(botQuery).then(result => result.rows),
-            db.query(fewestLinesQuery).then(result => result.rows),
-            db.query(mostWinsQuery).then(result => result.rows)
-        ]);
+        // Execute all queries, handling errors individually
+        try {
+            const pvpStats = await db.query(pvpQuery).then(result => result.rows);
+            const botStats = await db.query(botQuery).then(result => result.rows);
+            const fewestLinesStats = await db.query(fewestLinesQuery).then(result => result.rows);
+            const mostWinsStats = await db.query(mostWinsQuery).then(result => result.rows);
+            
+            // Combine the code stats into one array
+            const codeStats = [
+                ...fewestLinesStats.map(stat => ({ ...stat, type: 'fewest_lines' })),
+                ...mostWinsStats.map(stat => ({ ...stat, type: 'most_wins' }))
+            ].sort((a, b) => {
+                if (a.type === 'fewest_lines' && b.type !== 'fewest_lines') return -1;
+                if (a.type !== 'fewest_lines' && b.type === 'fewest_lines') return 1;
+                return 0;
+            });
 
-        // Combine the code stats into one array
-        const codeStats = [
-            ...fewestLinesStats.map(stat => ({ ...stat, type: 'fewest_lines' })),
-            ...mostWinsStats.map(stat => ({ ...stat, type: 'most_wins' }))
-        ].sort((a, b) => {
-            if (a.type === 'fewest_lines' && b.type !== 'fewest_lines') return -1;
-            if (a.type !== 'fewest_lines' && b.type === 'fewest_lines') return 1;
-            return 0;
-        });
-
-        res.json({
-            pvpStats,
-            botStats,
-            codeStats
-        });
+            res.json({
+                pvpStats,
+                botStats,
+                codeStats
+            });
+        } catch (dbErr) {
+            console.error('Database query error:', dbErr);
+            // Return empty arrays on query error
+            res.json({
+                pvpStats: [],
+                botStats: [],
+                codeStats: []
+            });
+        }
     } catch (err) {
         console.error('Error fetching leaderboard data:', err);
-        res.status(500).json({ message: 'Internal server error fetching leaderboard data' });
+        // Return empty data instead of error to prevent client errors
+        res.json({
+            pvpStats: [],
+            botStats: [],
+            codeStats: []
+        });
     }
 });
 

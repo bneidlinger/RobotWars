@@ -144,6 +144,30 @@ if (typeof window !== 'undefined') {
     // Use a flag to track preference API availability
     window.preferenceApiAvailable = true;
     
+    // Helper function for API calls
+    const apiCall = async (url, method = 'GET', data = null) => {
+        const options = {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin'
+        };
+        
+        if (data && (method === 'POST' || method === 'PUT')) {
+            options.body = JSON.stringify(data);
+        }
+        
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            throw new Error(`API call failed: ${response.status}`);
+        }
+        
+        // Only try to parse JSON if there's content
+        if (response.status !== 204) {
+            return response.json();
+        }
+        return null;
+    };
+    
     // Test if the preferences API is available by making a test request
     apiCall('/api/preferences', 'GET')
         .then(() => {
