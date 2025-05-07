@@ -1,4 +1,5 @@
 // client/js/engine/robot.js
+// This class will be exposed to the global window object at the end of this file
 
 /**
  * Represents a robot in the game
@@ -203,3 +204,7 @@ class Missile {
         ctx.fill();
     }
 }
+
+// Expose classes to window global scope
+window.Robot = Robot;
+window.Missile = Missile;

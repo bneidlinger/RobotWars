@@ -1094,3 +1094,6 @@ class Game {
     }
 
 } // End Game Class
+
+// Expose class to window global scope
+window.Game = Game;

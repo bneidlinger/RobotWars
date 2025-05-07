@@ -136,5 +136,7 @@ if (window.scriptLoader) {
 // Create global instance
 if (typeof window !== 'undefined') {
     window.preferenceManager = new PreferenceManager();
-    console.log('[preferences.js] PreferenceManager instantiated');
+    // Also expose the class constructor globally
+    window.PreferenceManager = PreferenceManager;
+    console.log('[preferences.js] PreferenceManager instantiated and class exposed globally');
 }

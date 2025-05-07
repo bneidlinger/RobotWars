@@ -373,3 +373,6 @@ class Network {
     }
 
 } // End Network Class
+
+// Expose class to window global scope
+window.Network = Network;

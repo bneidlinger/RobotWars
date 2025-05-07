@@ -1,4 +1,5 @@
 // client/js/engine/audio.js
+// This class will be exposed to the global window object at the end of this file
 
 /**
  * Manages loading and playing audio assets (sound effects and background music).
@@ -272,3 +273,6 @@ class AudioManager {
     }
 
 } // End AudioManager Class
+
+// Expose class to window global scope
+window.AudioManager = AudioManager;

@@ -8,6 +8,8 @@ if (window.scriptLoader) {
 // Log that we're defining LoadoutBuilder
 console.log('[loadoutBuilder.js] Defining LoadoutBuilder class');
 
+// Class will be added to window object at the end of the file
+
 
 /**
  * Manages the Loadout Builder overlay UI.
@@ -1481,3 +1483,6 @@ class LoadoutBuilder {
     }
 
 } // End LoadoutBuilder Class
+
+// Explicitly make LoadoutBuilder available globally
+window.LoadoutBuilder = LoadoutBuilder;

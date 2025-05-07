@@ -736,3 +736,6 @@ class Controls {
     }
 
 } // End Controls Class
+
+// Expose class to window global scope
+window.Controls = Controls;
