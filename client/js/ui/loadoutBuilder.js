@@ -1220,7 +1220,7 @@ class LoadoutBuilder {
 
 
     /** Handles the Quick Start button click */
-    _handleQuickStartClick() {
+    async _handleQuickStartClick() {
         console.log("[Quick Start] Button clicked. Loading Quick Start defaults...");
 
         // --- START: Attempt Music Start ---

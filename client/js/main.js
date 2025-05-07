@@ -6,73 +6,90 @@ window.network = null;
 window.controls = null;
 window.authHandler = null; // Reference to the auth handler instance
 
-document.addEventListener('DOMContentLoaded', async () => { // Make async
-    console.log('[Main.js] Document loaded, initializing game components...');
-
+// Initialization function with retry mechanism
+async function initializeComponents(retryCount = 0) {
+    console.log(`[Main.js] Initialization attempt ${retryCount + 1}...`);
+    
+    const MAX_RETRIES = 3;
+    const requiredClasses = ['LoadoutBuilder', 'AudioManager', 'Game', 'Network'];
+    const missingClasses = [];
+    
+    // Check which required classes are available
+    for (const className of requiredClasses) {
+        if (typeof window[className] !== 'function') {
+            missingClasses.push(className);
+        }
+    }
+    
+    // If we're missing classes and have retries left, wait and try again
+    if (missingClasses.length > 0) {
+        if (retryCount < MAX_RETRIES) {
+            console.warn(`[Main.js] Missing required classes: ${missingClasses.join(', ')}. Retrying in 200ms...`);
+            await new Promise(resolve => setTimeout(resolve, 200));
+            return initializeComponents(retryCount + 1);
+        } else {
+            throw new Error(`[Main.js] Failed to initialize after ${MAX_RETRIES} attempts. Missing classes: ${missingClasses.join(', ')}`);
+        }
+    }
+    
+    // Initialize components in order with proper error handling
     try {
-        // 1. Create PreferenceManager instance if not already created
-        if (typeof PreferenceManager !== 'undefined' && !window.preferenceManager) {
-            window.preferenceManager = new PreferenceManager();
-            console.log('[Main.js] PreferenceManager instance created.');
-        } else if (!window.preferenceManager) {
-            console.warn('[Main.js] PreferenceManager class not found. Preferences will not be available.');
+        // 1. Create PreferenceManager instance if available
+        if (typeof PreferenceManager === 'function' && !window.preferenceManager) {
+            try {
+                window.preferenceManager = new PreferenceManager();
+                console.log('[Main.js] PreferenceManager instance created.');
+            } catch (prefError) {
+                console.warn('[Main.js] Error creating PreferenceManager:', prefError);
+                // Continue without preferences
+            }
         }
         
-        // 2. Instantiate LoadoutBuilder (Assigns to window)
+        // 2. Instantiate LoadoutBuilder
         window.loadoutBuilderInstance = new LoadoutBuilder();
-        console.log('[Main.js] LoadoutBuilder instance created.');
-        // Basic check if the builder seems okay (e.g., found its overlay)
         if (!window.loadoutBuilderInstance.overlayElement) {
-            throw new Error("LoadoutBuilder instantiation failed basic check (missing overlayElement).");
+            throw new Error("LoadoutBuilder instantiation failed (missing overlayElement).");
         }
+        console.log('[Main.js] LoadoutBuilder instance created.');
 
-        // 2. Initialize AudioManager (Assigns to window)
+        // 3. Initialize AudioManager
         window.audioManager = new AudioManager();
         console.log('[Main.js] AudioManager initialized.');
 
-        // 3. Initialize Game (Assigns to window)
+        // 4. Initialize Game
         window.game = new Game('arena');
         console.log('[Main.js] Game instance created.');
 
-        // 4. Initialize Network (Assigns to window)
+        // 5. Initialize Network
         window.network = new Network(window.game);
-        console.log('[Main.js] Network handler created.');
-
-        // 5. Initialize Controls (Assigns to window)
-        // Controls now needs the globally available game and network instances
+        console.log('[Main.js] Network instance created.');
+        
+        // 6. Initialize Controls
         window.controls = new Controls(window.game, window.network);
-        console.log('[Main.js] Controls handler created.');
-
-        // 6. Initialize AuthHandler (Assigns to window)
-        // Assuming AuthHandler class is defined in auth.js
+        console.log('[Main.js] Controls initialized.');
+        
+        // --- Initialize Authentication Module LAST (depends on other modules) ---
         window.authHandler = new AuthHandler();
-        console.log('[Main.js] Auth handler created.');
-
-        // 7. Initialize Auth Flow (critical step AFTER other instances exist)
-        // This checks login, sets up UI, and calls _onLoginSuccess or shows modal
-        console.log('[Main.js] Initializing auth flow...');
-        await window.authHandler.initialize(); // Call the async init method
-        console.log('[Main.js] Auth flow initialization complete.');
-
-        // 8. Initial Draw (background is always useful)
-        if (window.game && window.game.renderer) {
-            window.game.renderer.redrawArenaBackground();
-            console.log('[Main.js] Initial arena background drawn.');
-        }
-
-        // 9. Initialization Complete
-        console.log('[Main.js] Core components initialization complete.');
-        console.log('[Main.js] Application ready.');
-
+        console.log('[Main.js] AuthHandler initialized.');
+        window.authHandler.checkLoginState(); // Check initial login state
+        
+        return true; // Successfully initialized
     } catch (error) {
-        console.error("[Main.js] CRITICAL ERROR during initialization:", error);
-        // Display a user-friendly error message covering the whole page
-        document.body.innerHTML = `<div style="padding: 20px; background-color: #330000; border: 2px solid red; color: white; font-family: monospace; text-align: center;">
-            <h2>Critical Error During Initialization</h2>
-            <p>The application could not start correctly.</p>
-            <p><strong>Error:</strong> ${error.message}</p>
-            <p>Please check the browser console (F12) for more details or try refreshing the page.</p>
-        </div>`;
-        // alert("Failed to initialize the game client. Check the console for details."); // Alert might be annoying
+        console.error('[Main.js] CRITICAL ERROR during initialization:', error);
+        document.body.innerHTML = `
+            <div style="padding: 20px; background-color: #f8d7da; color: #721c24; margin: 20px; border-radius: 5px; max-width: 600px; margin: 50px auto; font-family: Arial, sans-serif;">
+                <h2>Critical Error During Initialization</h2>
+                <p>The application could not start correctly.</p>
+                <p><strong>Error:</strong> ${error.message}</p>
+                <p>Please check the browser console (F12) for more details or try refreshing the page.</p>
+            </div>
+        `;
+        return false; // Failed to initialize
     }
+}
+
+// Main initialization on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('[Main.js] Document loaded, attempting to initialize game components...');
+    await initializeComponents();
 });
