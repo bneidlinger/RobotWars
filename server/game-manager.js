@@ -2,6 +2,7 @@
 const GameInstance = require('./game-instance');
 const fs = require('fs');
 const path = require('path');
+const StatsManager = require('./stats-manager');
 
 /**
  * Manages the overall flow of players joining, waiting, and starting games.
@@ -12,8 +13,9 @@ const path = require('path');
  * broadcasting game history, and broadcasting lobby events and status updates.
  */
 class GameManager {
-    constructor(io) {
+    constructor(io, db) {
         this.io = io;
+        this.db = db;
         // Stores players waiting to join a game.
         // Key: socket.id
         // Value: { socket: SocketIO.Socket, loadout: { visuals: object, code: string, name: string }, isReady: boolean } // <-- Updated value structure
@@ -27,10 +29,13 @@ class GameManager {
         // Bot profiles map
         this.botProfiles = new Map();
         
+        // Initialize the stats manager if database is available
+        this.statsManager = db ? new StatsManager(db) : null;
+        
         // Load all bot profiles
         this.loadBotProfiles();
         
-        console.log("[GameManager] Initialized.");
+        console.log("[GameManager] Initialized." + (this.statsManager ? " Stats tracking enabled." : " Stats tracking disabled - no database."));
     }
     
     /**
@@ -452,23 +457,77 @@ class GameManager {
             }
         });
 
-        // Log completed game (if not test game)
-        if (!isTestGame && gameInstance?.players) {
-            const completedGameData = {
-                name: gameName, winnerName: winnerName,
-                // Get player names from the loadout object within the gameInstance.players map
-                players: Array.from(gameInstance.players.values()).map(p => ({ id: p.robot.id, name: p.loadout.name })),
-                endTime: Date.now()
+        // Log completed game and update stats
+        if (gameInstance?.players) {
+            // Extract additional data for stats tracking
+            const gameEndTime = Date.now();
+            const gameData = {
+                name: gameName,
+                id: gameId,
+                startTime: gameInstance.startTime || (gameEndTime - 60000), // Default to 1 minute ago
+                endTime: gameEndTime,
+                winnerName: winnerName,
+                isTestGame: isTestGame,
+                // Enhanced player data for stats tracking
+                players: Array.from(gameInstance.players.values()).map(p => {
+                    // Get user ID from socket session if available
+                    const userId = p.socket?.request?.session?.userId;
+                    return {
+                        id: p.robot.id,
+                        name: p.loadout.name,
+                        userId: userId,
+                        code: p.loadout.code,
+                        died: p.robot.health <= 0,
+                        kills: p.robot.kills || 0,
+                        isBot: !p.socket // If no socket, it's a bot
+                    };
+                })
             };
-            this.recentlyCompletedGames.set(gameId, completedGameData);
-            while (this.recentlyCompletedGames.size > this.maxCompletedGames) {
-                const oldestGameId = this.recentlyCompletedGames.keys().next().value;
-                this.recentlyCompletedGames.delete(oldestGameId);
+            
+            // Update appropriate stats based on game type
+            if (this.statsManager) {
+                if (isTestGame) {
+                    // Update bot challenge stats
+                    this.statsManager.updateBotStats(gameData, winnerData)
+                        .catch(err => console.error("[GameManager] Error updating bot stats:", err));
+                } else {
+                    // Update PvP stats for real games
+                    this.statsManager.updatePvPStats(gameData, winnerData)
+                        .catch(err => console.error("[GameManager] Error updating PvP stats:", err));
+                }
+                
+                // Update code efficiency stats for both game types if there's a winner
+                if (winnerData.winnerId) {
+                    this.statsManager.updateCodeStats(gameData, winnerData)
+                        .catch(err => console.error("[GameManager] Error updating code stats:", err));
+                }
             }
-            console.log(`[GameManager] Logged completed game: ${gameId} ('${gameName}')`);
-            this.broadcastGameHistory(); // Broadcast if non-test game ended
-        } else if (isTestGame) {
-             console.log(`[GameManager] Test game ${gameId} ('${gameName}') ended. Not adding to public history.`);
+            
+            // Only add non-test games to public history
+            if (!isTestGame) {
+                // Simplified version for history display
+                const completedGameData = {
+                    name: gameName,
+                    winnerName: winnerName,
+                    players: gameData.players.map(p => ({ id: p.id, name: p.name })),
+                    endTime: gameEndTime
+                };
+                
+                this.recentlyCompletedGames.set(gameId, completedGameData);
+                while (this.recentlyCompletedGames.size > this.maxCompletedGames) {
+                    const oldestGameId = this.recentlyCompletedGames.keys().next().value;
+                    this.recentlyCompletedGames.delete(oldestGameId);
+                }
+                console.log(`[GameManager] Logged completed game: ${gameId} ('${gameName}')`);
+                this.broadcastGameHistory(); // Broadcast if non-test game ended
+            } else {
+                console.log(`[GameManager] Test game ${gameId} ('${gameName}') ended. Not adding to public history.`);
+            }
+            
+            // Broadcast leaderboard update to all clients
+            if (this.statsManager) {
+                this.io.emit('leaderboardUpdate');
+            }
         }
 
         // Clean up Game Instance

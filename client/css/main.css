@@ -959,7 +959,7 @@ input#loadout-name-input, input#builder-player-name {
 #send-chat { padding: 6px 12px; font-size: 0.9rem; }
 
 /* Reduced max-height for history panel */
-#game-history-log { max-height: 200px; }
+#game-history-log { max-height: 180px; }
 #game-history-list {
     overflow-y: auto; flex-grow: 1;
     /* Reduce history list font size */
@@ -972,6 +972,112 @@ input#loadout-name-input, input#builder-player-name {
 #game-history-list::-webkit-scrollbar-thumb { background-color: #666; border-radius: 4px; border: 2px solid #333; }
 #game-history-list > div { margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #444; color: #cccccc; }
 #game-history-list > div:last-child { border-bottom: none; margin-bottom: 0; }
+
+/* === Leaderboard Styles === */
+#leaderboard-container {
+    background-color: #333;
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid #444;
+    flex-shrink: 0;
+    max-height: 350px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    scrollbar-width: thin;
+    scrollbar-color: #666 #333;
+}
+
+#leaderboard-container::-webkit-scrollbar { width: 8px; }
+#leaderboard-container::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
+#leaderboard-container::-webkit-scrollbar-thumb { background-color: #666; border-radius: 4px; border: 2px solid #333; }
+
+#leaderboard-container h4 {
+    font-family: 'VT323', monospace;
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    color: #4CAF50;
+    flex-shrink: 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #555;
+}
+
+.leaderboard-section {
+    margin-bottom: 12px;
+}
+
+.leaderboard-title {
+    font-size: 0.95rem;
+    font-weight: bold;
+    margin: 5px 0;
+    color: #2196F3;
+    padding-bottom: 3px;
+    border-bottom: 1px dashed #444;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.leaderboard-table th, 
+.leaderboard-table td {
+    padding: 3px 5px;
+    text-align: left;
+}
+
+.leaderboard-table th {
+    color: #ccc;
+    font-weight: normal;
+    border-bottom: 1px solid #555;
+}
+
+.leaderboard-table tr:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.rank-cell {
+    text-align: center;
+    font-weight: bold;
+    width: 30px;
+}
+
+.rank-1 {
+    color: gold;
+}
+
+.rank-2 {
+    color: silver;
+}
+
+.rank-3 {
+    color: #cd7f32; /* bronze */
+}
+
+/* Show only top entries in small screens */
+@media (max-width: 768px) {
+    #leaderboard-container {
+        max-height: 250px;
+    }
+}
+
+@media (max-width: 480px) {
+    #leaderboard-container {
+        max-height: 200px;
+        padding: 6px 8px;
+    }
+    #leaderboard-container h4 {
+        font-size: 0.95rem;
+    }
+    .leaderboard-title {
+        font-size: 0.85rem;
+    }
+    .leaderboard-table {
+        font-size: 0.75rem;
+    }
+}
 
 
 /* === Console Log Specific Themes === */

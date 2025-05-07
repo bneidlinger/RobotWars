@@ -16,6 +16,7 @@ const authRoutes = require('./routes/auth');
 const snippetRoutes = require('./routes/snippets');
 const loadoutRoutes = require('./routes/loadouts');
 const preferencesRoutes = require('./routes/preferences');
+const leaderboardRoutes = require('./routes/leaderboard');
 
 const app = express();
 const server = http.createServer(app);
@@ -86,6 +87,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/snippets', snippetRoutes); // Applies authMiddleware inside the route file
 app.use('/api/loadouts', loadoutRoutes); // Applies authMiddleware inside the route file
 app.use('/api/preferences', preferencesRoutes); // Applies authMiddleware inside the route file
+app.use('/api/leaderboard', leaderboardRoutes); // Public endpoint, no auth required
 // --- End API Routes ---
 
 // --- Static Files ---

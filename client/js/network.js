@@ -253,6 +253,11 @@ class Network {
                 if (typeof window.updateGameHistory === 'function') window.updateGameHistory(historyData);
                 else console.warn("updateGameHistory function not found!");
             });
+            
+            // Handle leaderboard updates
+            this.socket.on('leaderboardUpdate', () => {
+                fetchLeaderboardData();
+            });
 
 
         } catch (error) {
@@ -376,3 +381,28 @@ class Network {
 
 // Expose class to window global scope
 window.Network = Network;
+
+/**
+ * Fetches leaderboard data from the server and updates the UI.
+ * Called when a game ends and periodically to refresh leaderboard data.
+ */
+function fetchLeaderboardData() {
+    fetch('/api/leaderboard')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Network response was not ok: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (typeof window.leaderboard?.updateAllLeaderboards === 'function') {
+                window.leaderboard.updateAllLeaderboards(data);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching leaderboard data:', error);
+        });
+}
+
+// Set up periodic leaderboard refresh (every 2 minutes)
+setInterval(fetchLeaderboardData, 120000);
