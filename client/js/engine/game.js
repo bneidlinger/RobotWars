@@ -36,6 +36,12 @@ class Game {
             this.renderer = new Arena(this.canvasId);
             console.log("Game: Arena renderer initialized successfully.");
             
+            // Store a direct reference to the canvas for main.js validation
+            this.canvas = document.getElementById(this.canvasId);
+            if (!this.canvas) {
+                console.error(`Game: Canvas element '${this.canvasId}' not found!`);
+            }
+            
             // Store current lighting mode
             this.currentLightingMode = this.renderer.getLightingMode();
         } catch (error) {

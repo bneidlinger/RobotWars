@@ -141,12 +141,38 @@ async function initializeComponents(retryCount = 0) {
     }
 }
 
-// Simple initialization
+// Debug function to log the availability of important classes and objects
+function debugClassAvailability() {
+    console.log("=== DEBUG: Class Availability Check ===");
+    const classes = [
+        'LoadoutBuilder', 'AudioManager', 'Game', 'Network', 'Controls', 
+        'AuthHandler', 'Arena', 'Dashboard', 'PreferenceManager'
+    ];
+    
+    classes.forEach(className => {
+        console.log(`${className}: ${typeof window[className] === 'function' ? 'AVAILABLE ✓' : 'MISSING ✗'}`);
+    });
+    
+    // Check for canvas element
+    const canvas = document.getElementById('arena');
+    console.log(`Arena Canvas: ${canvas ? 'FOUND ✓' : 'MISSING ✗'}`);
+    
+    console.log("=======================================");
+}
+
+// Simple initialization with diagnostic checks
 document.addEventListener('DOMContentLoaded', () => {
     console.log('[main.js] Document loaded, initializing application');
     
-    // Add a small delay to ensure all scripts are loaded
+    // Run initial diagnostic check
+    debugClassAvailability();
+    
+    // Add a delay to ensure all scripts are loaded
     setTimeout(() => {
+        // Run another diagnostic right before initialization
+        debugClassAvailability();
+        
+        // Initialize the application
         initializeComponents();
-    }, 100);
+    }, 500); // Increased delay for better script loading
 });

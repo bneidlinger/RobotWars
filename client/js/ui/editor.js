@@ -3,6 +3,14 @@
 // Define editor variable that will be accessible globally
 let editor;
 
+// This function will ensure editor is immediately available to the window
+function ensureEditorGlobal() {
+    if (editor && !window.editor) {
+        window.editor = editor;
+        console.log("[editor.js] Exposed editor to window global scope");
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- START: Define Default Code Directly ---
     const defaultCode = `// Simple Tank Bot (using state object)
@@ -50,7 +58,9 @@ if (scanResult) {
         // Set the default code defined above
         editor.setValue(defaultCode);
         console.log(`Editor initialized with built-in default code.`);
-
+        
+        // Ensure editor is exposed to window
+        ensureEditorGlobal();
 
     } catch(editorError) {
         console.error("FATAL: Failed to initialize CodeMirror editor:", editorError);
@@ -68,4 +78,5 @@ if (scanResult) {
 // function loadSampleCode(sampleName) { ... } // Keep or remove as needed
 
 // Make sure editor is accessible in the global scope
-window.editor = editor;
+// Call this function at intervals to ensure the editor is always globally accessible
+setInterval(ensureEditorGlobal, 100);

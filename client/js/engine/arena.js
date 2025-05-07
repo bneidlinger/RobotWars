@@ -1,4 +1,5 @@
 // client/js/engine/arena.js
+// This class will be exposed to the global window object at the end of the file
 
 /**
  * Manages the rendering of the game arena canvas, including the background,
