@@ -51,13 +51,25 @@ if (process.env.NODE_ENV !== 'production' && cookieOptions.secure) {
 }
 // --- END: Perform the check HERE ---
 
-const sessionMiddleware = session({
-    store: new pgSession({
+// Create session store with error handling
+let sessionStore;
+try {
+    sessionStore = new pgSession({
         pool: db.pool,                // Use the exported pool from db.js
         tableName: 'session',         // Match the table name created earlier
         // pruneSessionInterval: 60    // Optional: Check for expired sessions every 60 seconds
         errorLog: (error) => console.error('[SESSION STORE ERROR]', error)  // Log session store errors
-    }),
+    });
+    console.log('[Session] Successfully created PG session store');
+} catch (e) {
+    console.error('[Session] Error creating session store:', e);
+    // Fallback to memory store in case of critical error
+    console.warn('[Session] Using memory store as fallback (sessions will not persist across restarts)');
+    sessionStore = null; // Express-session will use MemoryStore as fallback
+}
+
+const sessionMiddleware = session({
+    store: sessionStore, // Will use memory store if sessionStore is null
     secret: sessionSecret || 'default_insecure_secret_for_dev', // Use loaded secret or fallback
     resave: false,                     // Don't save session if unmodified
     saveUninitialized: false,          // Don't create session until something stored

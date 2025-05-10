@@ -16,9 +16,9 @@ const pool = new Pool({
 
 pool.on('connect', (client) => {
     console.log('[DB] Client connected to the database pool', {
-        totalCount: pool.totalCount,
-        idleCount: pool.idleCount,
-        waitingCount: pool.waitingCount
+        totalCount: pool.totalCount || 'N/A',
+        idleCount: pool.idleCount || 'N/A',
+        waitingCount: pool.waitingCount || 'N/A'
     });
 });
 
@@ -29,19 +29,27 @@ pool.on('error', (err, client) => {
 
 // Add acquire and remove event handlers to track connection lifecycle
 pool.on('acquire', (client) => {
-    console.log('[DB] Client acquired from pool', {
-        totalCount: pool.totalCount,
-        idleCount: pool.idleCount,
-        waitingCount: pool.waitingCount
-    });
+    try {
+        console.log('[DB] Client acquired from pool', {
+            totalCount: pool.totalCount || 'N/A',
+            idleCount: pool.idleCount || 'N/A',
+            waitingCount: pool.waitingCount || 'N/A'
+        });
+    } catch (e) {
+        console.log('[DB] Client acquired from pool (details unavailable)');
+    }
 });
 
 pool.on('remove', (client) => {
-    console.log('[DB] Client removed from pool', {
-        totalCount: pool.totalCount,
-        idleCount: pool.idleCount,
-        waitingCount: pool.waitingCount
-    });
+    try {
+        console.log('[DB] Client removed from pool', {
+            totalCount: pool.totalCount || 'N/A',
+            idleCount: pool.idleCount || 'N/A',
+            waitingCount: pool.waitingCount || 'N/A'
+        });
+    } catch (e) {
+        console.log('[DB] Client removed from pool (details unavailable)');
+    }
 });
 
 module.exports = {
