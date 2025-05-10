@@ -41,7 +41,7 @@ const cookieOptions = {
     maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week validity for the session cookie
     secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (requires HTTPS)
     httpOnly: true,                  // Prevents client-side JS from reading the cookie
-    sameSite: 'lax'                  // Basic CSRF protection
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'  // Use 'none' in production for cross-site requests with Render
 };
 
 // --- START: Perform the check HERE ---
@@ -56,11 +56,14 @@ const sessionMiddleware = session({
         pool: db.pool,                // Use the exported pool from db.js
         tableName: 'session',         // Match the table name created earlier
         // pruneSessionInterval: 60    // Optional: Check for expired sessions every 60 seconds
+        errorLog: (error) => console.error('[SESSION STORE ERROR]', error)  // Log session store errors
     }),
     secret: sessionSecret || 'default_insecure_secret_for_dev', // Use loaded secret or fallback
     resave: false,                     // Don't save session if unmodified
     saveUninitialized: false,          // Don't create session until something stored
-    cookie: cookieOptions // --- Use the defined cookie options object ---
+    cookie: cookieOptions, // --- Use the defined cookie options object ---
+    rolling: true,         // Reset the cookie maxAge on each response
+    unset: 'destroy'       // Remove session from store when req.session is set to null
 });
 
 // --- Express Middleware ---

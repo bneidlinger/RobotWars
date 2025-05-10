@@ -14,13 +14,34 @@ const pool = new Pool({
     ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false }
 });
 
-pool.on('connect', () => {
-    console.log('[DB] Client connected to the database pool');
+pool.on('connect', (client) => {
+    console.log('[DB] Client connected to the database pool', {
+        totalCount: pool.totalCount,
+        idleCount: pool.idleCount,
+        waitingCount: pool.waitingCount
+    });
 });
 
 pool.on('error', (err, client) => {
     console.error('[DB] Unexpected error on idle client', err);
     // process.exit(-1); // Decide if errors are fatal
+});
+
+// Add acquire and remove event handlers to track connection lifecycle
+pool.on('acquire', (client) => {
+    console.log('[DB] Client acquired from pool', {
+        totalCount: pool.totalCount,
+        idleCount: pool.idleCount,
+        waitingCount: pool.waitingCount
+    });
+});
+
+pool.on('remove', (client) => {
+    console.log('[DB] Client removed from pool', {
+        totalCount: pool.totalCount,
+        idleCount: pool.idleCount,
+        waitingCount: pool.waitingCount
+    });
 });
 
 module.exports = {

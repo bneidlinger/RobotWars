@@ -421,16 +421,40 @@ class AuthHandler {
             }
             return this._loggedIn; // Return current login state
         } catch (error) {
-             console.error("[AuthHandler] Error checking login state:", error);
-             if (error.message.includes('Network error')) {
-                 alert("Could not connect to the server to check login status. Please ensure the server is running and refresh the page.");
-                 document.body.innerHTML = `<h2 style='color: orange; text-align: center; margin-top: 50px;'>Error connecting to server. Please try again later.</h2>`;
-             } else {
-                 alert(`An error occurred checking login status: ${error.message}`);
-                 this._updateAuthState(false, null);
-                 this._showModal('login-modal');
-             }
-             return false; // Return false on error
+            console.error("[AuthHandler] Error checking login state:", error);
+
+            // More detailed error logging to help diagnose issues
+            if (error.status) {
+                console.error(`[AuthHandler] Server returned status ${error.status}`);
+            }
+
+            // Check for specific connection issues
+            if (error.message.includes('Network error')) {
+                console.error("[AuthHandler] Network connectivity issue detected");
+
+                // Don't show destructive alerts in production - simply show login modal
+                if (window.location.hostname === 'localhost') {
+                    alert("Could not connect to the server to check login status. Please ensure the server is running and refresh the page.");
+                    document.body.innerHTML = `<h2 style='color: orange; text-align: center; margin-top: 50px;'>Error connecting to server. Please try again later.</h2>`;
+                } else {
+                    // In production, just show login modal and reset state
+                    this._updateAuthState(false, null);
+                    this._showModal('login-modal');
+                }
+            } else if (error.status === 401) {
+                console.log("[AuthHandler] Authentication required (401). Showing login modal.");
+                this._updateAuthState(false, null);
+                this._showModal('login-modal');
+            } else {
+                console.error(`[AuthHandler] Unexpected error: ${error.message}`);
+                // Don't show alerts in production environment
+                if (window.location.hostname === 'localhost') {
+                    alert(`An error occurred checking login status: ${error.message}`);
+                }
+                this._updateAuthState(false, null);
+                this._showModal('login-modal');
+            }
+            return false; // Return false on error
         }
     }
 
