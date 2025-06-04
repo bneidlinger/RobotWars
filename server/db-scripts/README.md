@@ -61,4 +61,4 @@ The `utils/` directory contains helpful scripts for common database operations:
 - The utility scripts are meant to be modified before running to specify usernames, preference keys, etc.
 - Always back up your database before running scripts that modify data
 - The creation scripts include checks to avoid errors if objects already exist
-- Some analysis scripts may need to be modified based on your actual database schema
+- Some analysis scripts may need to be modified based on your actual database schema.
