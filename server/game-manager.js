@@ -477,7 +477,7 @@ class GameManager {
                         name: p.loadout.name,
                         userId: userId,
                         code: p.loadout.code,
-                        died: p.robot.health <= 0,
+                        died: p.robot.state === 'destroyed',
                         kills: p.robot.kills || 0,
                         isBot: !p.socket // If no socket, it's a bot
                     };
