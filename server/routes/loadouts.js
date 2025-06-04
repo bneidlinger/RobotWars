@@ -121,7 +121,6 @@ router.post('/', async (req, res) => {
         if (snippetRes.rows.length === 0) {
             // If snippet not found, rollback and return error
             await client.query('ROLLBACK');
-            client.release(); // Release client before returning
             console.log(`[API Loadouts POST] Snippet '${codeLoadoutName}' not found for user ${userId}.`);
             return res.status(400).json({ message: `Selected code snippet '${codeLoadoutName}' not found.` });
         }
