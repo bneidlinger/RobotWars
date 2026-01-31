@@ -1160,6 +1160,69 @@ input#loadout-name-input, input#builder-player-name {
 }
 #builder-preset-select:hover { background-color: #444; }
 
+/* Randomize Button */
+#btn-randomize-loadout {
+    background-color: #9C27B0;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'VT323', monospace;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+#btn-randomize-loadout:hover {
+    background-color: #7B1FA2;
+}
+
+/* Preview Controls */
+.preview-controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 5px;
+}
+
+#btn-toggle-preview-animation {
+    background-color: #607D8B;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'VT323', monospace;
+    font-size: 0.85rem;
+    transition: background-color 0.2s;
+}
+#btn-toggle-preview-animation:hover {
+    background-color: #455A64;
+}
+
+/* Preview Canvas Enhanced - Override default size */
+#loadout-preview {
+    width: 200px !important;
+    height: 200px !important;
+    border: 2px solid #555;
+    background-color: #1a1a1a;
+    border-radius: 6px;
+    cursor: grab;
+    transition: border-color 0.2s;
+}
+#loadout-preview:hover {
+    border-color: #2196F3;
+}
+#loadout-preview:active {
+    cursor: grabbing;
+}
+
+/* Preview Hint Text */
+.preview-hint {
+    font-size: 0.75rem !important;
+    color: #666 !important;
+    font-style: italic;
+}
+
 /* ============================================ */
 /* === END: Loadout Builder Overlay Styles === */
 /* ============================================ */

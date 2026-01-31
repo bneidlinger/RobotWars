@@ -41,6 +41,8 @@ class LoadoutBuilder {
         this.previewCanvas = document.getElementById('loadout-preview');
         this.enterLobbyButton = document.getElementById('btn-enter-lobby');
         this.quickStartButton = document.getElementById('btn-quick-start');
+        this.randomizeButton = document.getElementById('btn-randomize-loadout');
+        this.toggleAnimationButton = document.getElementById('btn-toggle-preview-animation');
 
         // Basic check for critical elements
         if (!this.overlayElement || !this.contentElement || !this.robotNameInput || !this.configNameInput ||
@@ -57,6 +59,20 @@ class LoadoutBuilder {
         this.cachedSnippets = []; // Store snippets fetched from API: [{id, name, code}, ...]
         this.isVisible = false;
         this.statusTimeoutId = null;
+
+        // --- Animation State ---
+        this.previewAnimationId = null;
+        this.previewRotation = 0; // Current rotation in degrees
+        this.previewRotationSpeed = 0.5; // Degrees per frame
+        this.isPreviewAnimating = true; // Toggle for animation
+        this.beaconFlashState = true; // For beacon strobe animation
+        this.beaconFlashTimer = 0;
+        this.lastFrameTime = 0;
+
+        // --- Drag Rotation State ---
+        this.isDragging = false;
+        this.dragStartX = 0;
+        this.dragStartRotation = 0;
 
         // --- Preview Canvas Context ---
         this.previewCtx = this.previewCanvas.getContext('2d');
@@ -151,6 +167,15 @@ class LoadoutBuilder {
                     }
                     this.loadConfiguration(initialConfigToLoad); // Load the selected config data (or null for defaults)
                     console.log("[Builder Show] Initial configuration loaded/set.");
+
+                    // Start preview animation
+                    if (this.isPreviewAnimating) {
+                        this._startPreviewAnimation();
+                    }
+                    // Set preview canvas cursor
+                    if (this.previewCanvas) {
+                        this.previewCanvas.style.cursor = 'grab';
+                    }
                     return; // <<< EXIT show() successfully after population
                 } else {
                     // Auth check returned isLoggedIn: false
@@ -193,6 +218,8 @@ class LoadoutBuilder {
         if (!this.overlayElement) return;
         this.overlayElement.style.display = 'none';
         this.isVisible = false;
+        // Stop animation when hidden
+        this._stopPreviewAnimation();
         console.log("Loadout Builder hidden.");
     }
 
@@ -331,6 +358,28 @@ class LoadoutBuilder {
         // Actions
         this.enterLobbyButton.addEventListener('click', this._handleEnterLobbyClick.bind(this));
         this.quickStartButton.addEventListener('click', this._handleQuickStartClick.bind(this));
+
+        // Randomize Button
+        if (this.randomizeButton) {
+            this.randomizeButton.addEventListener('click', this._handleRandomizeClick.bind(this));
+        }
+
+        // Toggle Animation Button
+        if (this.toggleAnimationButton) {
+            this.toggleAnimationButton.addEventListener('click', this._handleToggleAnimationClick.bind(this));
+        }
+
+        // Preview Canvas Drag Rotation
+        if (this.previewCanvas) {
+            this.previewCanvas.addEventListener('mousedown', this._handlePreviewMouseDown.bind(this));
+            this.previewCanvas.addEventListener('mousemove', this._handlePreviewMouseMove.bind(this));
+            this.previewCanvas.addEventListener('mouseup', this._handlePreviewMouseUp.bind(this));
+            this.previewCanvas.addEventListener('mouseleave', this._handlePreviewMouseUp.bind(this));
+            // Touch support
+            this.previewCanvas.addEventListener('touchstart', this._handlePreviewTouchStart.bind(this));
+            this.previewCanvas.addEventListener('touchmove', this._handlePreviewTouchMove.bind(this));
+            this.previewCanvas.addEventListener('touchend', this._handlePreviewMouseUp.bind(this));
+        }
 
         // Global Snippet Update Listener (from Controls potentially)
         window.addEventListener('snippetListUpdated', this._handleSnippetListUpdate.bind(this));
@@ -508,22 +557,212 @@ class LoadoutBuilder {
         console.log(`[Loadout Builder] Preset selected: ${presetValue}`);
         let visualsToApply;
         switch (presetValue) {
-             case 'tank': visualsToApply = { turret: { type: 'cannon', color: '#A9A9A9' }, chassis: { type: 'heavy', color: '#696969' }, mobility: { type: 'treads' } }; break;
-             case 'spike': visualsToApply = { turret: { type: 'laser', color: '#FFD700' }, chassis: { type: 'light', color: '#B22222' }, mobility: { type: 'hover' } }; break;
-             case 'tri': visualsToApply = { turret: { type: 'standard', color: '#4682B4' }, chassis: { type: 'medium', color: '#ADD8E6' }, mobility: { type: 'wheels' } }; break;
-             default: visualsToApply = { turret: { type: 'standard', color: '#D3D3D3' }, chassis: { type: 'medium', color: '#808080' }, mobility: { type: 'wheels' } }; break;
+            case 'tank':
+                visualsToApply = {
+                    turret: { type: 'cannon', color: '#A9A9A9' },
+                    chassis: { type: 'heavy', color: '#696969' },
+                    mobility: { type: 'treads' },
+                    beacon: { type: 'none', color: '#FF0000', strobe: false }
+                };
+                break;
+            case 'spike':
+                visualsToApply = {
+                    turret: { type: 'laser', color: '#FFD700' },
+                    chassis: { type: 'light', color: '#B22222' },
+                    mobility: { type: 'hover' },
+                    beacon: { type: 'led', color: '#FF4500', strobe: true }
+                };
+                break;
+            case 'tri':
+                visualsToApply = {
+                    turret: { type: 'dual', color: '#4682B4' },
+                    chassis: { type: 'triangular', color: '#ADD8E6' },
+                    mobility: { type: 'wheels' },
+                    beacon: { type: 'robot', color: '#00BFFF', strobe: false }
+                };
+                break;
+            case 'spider':
+                visualsToApply = {
+                    turret: { type: 'missile', color: '#8B0000' },
+                    chassis: { type: 'hexagonal', color: '#2F4F4F' },
+                    mobility: { type: 'legs' },
+                    beacon: { type: 'led', color: '#FF0000', strobe: true }
+                };
+                break;
+            case 'rover':
+                visualsToApply = {
+                    turret: { type: 'standard', color: '#CD853F' },
+                    chassis: { type: 'medium', color: '#D2691E' },
+                    mobility: { type: 'quad' },
+                    beacon: { type: 'antenna', color: '#00FF00', strobe: false }
+                };
+                break;
+            case 'stealth':
+                visualsToApply = {
+                    turret: { type: 'laser', color: '#1a1a1a' },
+                    chassis: { type: 'light', color: '#0a0a0a' },
+                    mobility: { type: 'hover' },
+                    beacon: { type: 'none', color: '#000000', strobe: false }
+                };
+                break;
+            case 'warbot':
+                visualsToApply = {
+                    turret: { type: 'missile', color: '#556B2F' },
+                    chassis: { type: 'heavy', color: '#4B5320' },
+                    mobility: { type: 'treads' },
+                    beacon: { type: 'robot', color: '#FFD700', strobe: true }
+                };
+                break;
+            default:
+                visualsToApply = {
+                    turret: { type: 'standard', color: '#D3D3D3' },
+                    chassis: { type: 'medium', color: '#808080' },
+                    mobility: { type: 'wheels' },
+                    beacon: { type: 'none', color: '#FF0000', strobe: false }
+                };
+                break;
         }
         this.currentLoadout.visuals = visualsToApply;
-        // Sync only visual parts of the UI
+        // Sync visual parts of the UI
         this.turretTypeSelect.value = visualsToApply.turret.type;
         this.turretColorInput.value = visualsToApply.turret.color;
         this.chassisTypeSelect.value = visualsToApply.chassis.type;
         this.chassisColorInput.value = visualsToApply.chassis.color;
         this.mobilityTypeSelect.value = visualsToApply.mobility.type;
+        this.beaconTypeSelect.value = visualsToApply.beacon?.type || 'none';
+        this.beaconColorInput.value = visualsToApply.beacon?.color || '#FF0000';
+        this.beaconStrobeCheckbox.checked = visualsToApply.beacon?.strobe || false;
         // --- End Sync ---
         this._redrawPreview();
         this.updateStatus(`Loaded appearance preset: ${presetValue}`);
         this.presetSelect.value = ""; // Reset dropdown
+    }
+
+    /** Handles the Randomize button click */
+    _handleRandomizeClick() {
+        console.log("[Loadout Builder] Randomize clicked.");
+
+        // Available options for each component
+        const turretTypes = ['standard', 'cannon', 'laser', 'dual', 'missile'];
+        const chassisTypes = ['light', 'medium', 'heavy', 'hexagonal', 'triangular'];
+        const mobilityTypes = ['wheels', 'treads', 'hover', 'quad', 'legs'];
+        const beaconTypes = ['none', 'led', 'robot', 'antenna'];
+
+        // Helper to pick random item from array
+        const randomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+        // Helper to generate random hex color
+        const randomColor = () => {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        };
+
+        // Generate random visuals
+        const randomVisuals = {
+            turret: { type: randomItem(turretTypes), color: randomColor() },
+            chassis: { type: randomItem(chassisTypes), color: randomColor() },
+            mobility: { type: randomItem(mobilityTypes) },
+            beacon: {
+                type: randomItem(beaconTypes),
+                color: randomColor(),
+                strobe: Math.random() > 0.5
+            }
+        };
+
+        // Apply to current loadout
+        this.currentLoadout.visuals = randomVisuals;
+
+        // Update UI
+        this.turretTypeSelect.value = randomVisuals.turret.type;
+        this.turretColorInput.value = randomVisuals.turret.color;
+        this.chassisTypeSelect.value = randomVisuals.chassis.type;
+        this.chassisColorInput.value = randomVisuals.chassis.color;
+        this.mobilityTypeSelect.value = randomVisuals.mobility.type;
+        this.beaconTypeSelect.value = randomVisuals.beacon.type;
+        this.beaconColorInput.value = randomVisuals.beacon.color;
+        this.beaconStrobeCheckbox.checked = randomVisuals.beacon.strobe;
+
+        this._redrawPreview();
+        this.updateStatus("Random configuration generated!");
+    }
+
+    /** Handles the Toggle Animation button click */
+    _handleToggleAnimationClick() {
+        this.isPreviewAnimating = !this.isPreviewAnimating;
+        console.log(`[Loadout Builder] Preview animation ${this.isPreviewAnimating ? 'enabled' : 'disabled'}`);
+
+        if (this.toggleAnimationButton) {
+            this.toggleAnimationButton.textContent = this.isPreviewAnimating ? '⏸ Pause' : '▶ Rotate';
+            this.toggleAnimationButton.title = this.isPreviewAnimating ? 'Pause rotation animation' : 'Resume rotation animation';
+        }
+
+        if (this.isPreviewAnimating) {
+            this._startPreviewAnimation();
+        } else {
+            this._stopPreviewAnimation();
+        }
+    }
+
+    /** Handles mouse down on preview canvas for drag rotation */
+    _handlePreviewMouseDown(e) {
+        this.isDragging = true;
+        this.dragStartX = e.clientX;
+        this.dragStartRotation = this.previewRotation;
+        this.previewCanvas.style.cursor = 'grabbing';
+
+        // Stop automatic rotation while dragging
+        if (this.isPreviewAnimating) {
+            this._stopPreviewAnimation();
+        }
+    }
+
+    /** Handles mouse move on preview canvas for drag rotation */
+    _handlePreviewMouseMove(e) {
+        if (!this.isDragging) return;
+
+        const deltaX = e.clientX - this.dragStartX;
+        this.previewRotation = (this.dragStartRotation + deltaX) % 360;
+        this._redrawPreviewFrame();
+    }
+
+    /** Handles mouse up on preview canvas */
+    _handlePreviewMouseUp() {
+        if (this.isDragging) {
+            this.isDragging = false;
+            this.previewCanvas.style.cursor = 'grab';
+
+            // Resume automatic rotation if it was enabled
+            if (this.isPreviewAnimating) {
+                this._startPreviewAnimation();
+            }
+        }
+    }
+
+    /** Handles touch start on preview canvas */
+    _handlePreviewTouchStart(e) {
+        if (e.touches.length === 1) {
+            this.isDragging = true;
+            this.dragStartX = e.touches[0].clientX;
+            this.dragStartRotation = this.previewRotation;
+
+            if (this.isPreviewAnimating) {
+                this._stopPreviewAnimation();
+            }
+        }
+    }
+
+    /** Handles touch move on preview canvas */
+    _handlePreviewTouchMove(e) {
+        if (!this.isDragging || e.touches.length !== 1) return;
+
+        const deltaX = e.touches[0].clientX - this.dragStartX;
+        this.previewRotation = (this.dragStartRotation + deltaX) % 360;
+        this._redrawPreviewFrame();
+        e.preventDefault();
     }
 
     /** Handles changes to individual visual selects/inputs */
@@ -551,8 +790,60 @@ class LoadoutBuilder {
         console.log(`[Loadout Builder] Code snippet selection changed to: '${this.currentLoadout.codeLoadoutName || 'None'}'`);
     }
 
-    /** Redraws the robot preview canvas based on current selections */
+    /** Starts the preview animation loop */
+    _startPreviewAnimation() {
+        if (this.previewAnimationId) return; // Already running
+
+        const animate = (currentTime) => {
+            if (!this.isVisible || !this.isPreviewAnimating) {
+                this._stopPreviewAnimation();
+                return;
+            }
+
+            // Calculate delta time for smooth animation
+            const deltaTime = currentTime - this.lastFrameTime;
+            this.lastFrameTime = currentTime;
+
+            // Update rotation
+            if (!this.isDragging) {
+                this.previewRotation = (this.previewRotation + this.previewRotationSpeed) % 360;
+            }
+
+            // Update beacon flash timer (for strobe effect)
+            this.beaconFlashTimer += deltaTime;
+            if (this.beaconFlashTimer > 300) { // Flash every 300ms
+                this.beaconFlashState = !this.beaconFlashState;
+                this.beaconFlashTimer = 0;
+            }
+
+            this._redrawPreviewFrame();
+            this.previewAnimationId = requestAnimationFrame(animate);
+        };
+
+        this.lastFrameTime = performance.now();
+        this.previewAnimationId = requestAnimationFrame(animate);
+    }
+
+    /** Stops the preview animation loop */
+    _stopPreviewAnimation() {
+        if (this.previewAnimationId) {
+            cancelAnimationFrame(this.previewAnimationId);
+            this.previewAnimationId = null;
+        }
+    }
+
+    /** Redraws the robot preview canvas based on current selections (static version) */
     _redrawPreview() {
+        // If animation is running, just trigger a frame redraw
+        if (this.isPreviewAnimating && this.isVisible) {
+            this._startPreviewAnimation();
+            return;
+        }
+        this._redrawPreviewFrame();
+    }
+
+    /** Renders a single frame of the preview (used by both static and animated modes) */
+    _redrawPreviewFrame() {
         if (!this.previewCtx || !this.currentLoadout?.visuals) return;
         const ctx = this.previewCtx;
         const W = this.previewCanvas.width;
@@ -560,8 +851,37 @@ class LoadoutBuilder {
         const visuals = this.currentLoadout.visuals;
 
         ctx.clearRect(0, 0, W, H);
-        ctx.fillStyle = '#1a1a1a'; // Background matching builder area
+
+        // Draw background with subtle grid pattern
+        ctx.fillStyle = '#1a1a1a';
         ctx.fillRect(0, 0, W, H);
+
+        // Draw subtle grid
+        ctx.strokeStyle = '#252525';
+        ctx.lineWidth = 1;
+        const gridSize = 20;
+        for (let x = 0; x < W; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, H);
+            ctx.stroke();
+        }
+        for (let y = 0; y < H; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(W, y);
+            ctx.stroke();
+        }
+
+        // Draw center crosshair
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(W/2 - 20, H/2);
+        ctx.lineTo(W/2 + 20, H/2);
+        ctx.moveTo(W/2, H/2 - 20);
+        ctx.lineTo(W/2, H/2 + 20);
+        ctx.stroke();
 
         // Simplified drawing centered in the preview canvas
         const centerX = W / 2;
@@ -571,7 +891,19 @@ class LoadoutBuilder {
 
         ctx.save();
         ctx.translate(centerX, centerY);
-        // No rotation for static preview
+
+        // Apply rotation
+        const rotationRad = (this.previewRotation * Math.PI) / 180;
+        ctx.rotate(rotationRad);
+
+        // --- Draw Shadow ---
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(5, 5, baseRadius * 1.2, baseRadius * 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
 
         // --- Draw Robot Components (Enhanced versions matching Arena.js) ---
         ctx.lineWidth = 1 * scale;
@@ -581,13 +913,23 @@ class LoadoutBuilder {
         this._drawMobility(ctx, visuals.mobility?.type || 'wheels', baseRadius, visuals.chassis?.color || '#aaaaaa', scale);
         this._drawChassis(ctx, visuals.chassis?.type || 'medium', visuals.chassis?.color || '#aaaaaa', baseRadius, scale);
         this._drawTurret(ctx, visuals.turret?.type || 'standard', visuals.turret?.color || '#ffffff', baseRadius, scale);
-        
-        // Draw beacon if enabled
+
+        // Draw beacon if enabled (pass current flash state for strobe effect)
         if (visuals.beacon?.type && visuals.beacon.type !== 'none') {
-            this._drawBeacon(ctx, visuals.beacon.type, visuals.beacon.color || '#ffffff', visuals.beacon.strobe || false, baseRadius, scale);
+            const shouldShowBeacon = !visuals.beacon.strobe || this.beaconFlashState;
+            this._drawBeacon(ctx, visuals.beacon.type, visuals.beacon.color || '#ffffff', visuals.beacon.strobe || false, baseRadius, scale, shouldShowBeacon);
         }
 
-        ctx.restore(); // Restore translation
+        ctx.restore(); // Restore translation and rotation
+
+        // Draw rotation indicator
+        ctx.save();
+        ctx.fillStyle = '#555';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${Math.round(this.previewRotation)}°`, W/2, H - 10);
+        ctx.fillText('Drag to rotate', W/2, H - 25);
+        ctx.restore();
     }
 
     /**
@@ -1326,16 +1668,17 @@ class LoadoutBuilder {
      * @param {CanvasRenderingContext2D} ctx - The canvas context
      * @param {string} beaconType - Type of beacon (led, robot, antenna)
      * @param {string} beaconColor - Color of the beacon light
-     * @param {boolean} strobe - Whether the beacon should strobe/flash (for preview we always show it on)
+     * @param {boolean} strobe - Whether the beacon should strobe/flash
      * @param {number} baseRadius - Base radius for scaling
      * @param {number} scale - Scale factor for preview
+     * @param {boolean} shouldShowLight - Whether to show the light (for strobe animation)
      */
-    _drawBeacon(ctx, beaconType, beaconColor, strobe, baseRadius, scale) {
+    _drawBeacon(ctx, beaconType, beaconColor, strobe, baseRadius, scale, shouldShowLight = true) {
         // Skip if type is none or not specified
         if (!beaconType || beaconType === 'none') return;
-        
-        // For preview, we always show the light on (no strobing in preview)
-        const shouldFlash = true; // Always on for preview
+
+        // Use the provided shouldShowLight parameter for strobe effect
+        const shouldFlash = shouldShowLight;
         
         // Base beacon properties
         const beaconSize = baseRadius * 0.3;

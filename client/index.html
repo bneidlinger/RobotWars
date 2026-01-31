@@ -130,7 +130,10 @@
                                  <option value="tri">Tri Bot</option>
                                  <option value="spider">Spider Bot</option>
                                  <option value="rover">Rover Bot</option>
+                                 <option value="stealth">Stealth Bot</option>
+                                 <option value="warbot">War Bot</option>
                              </select>
+                             <button id="btn-randomize-loadout" title="Generate random configuration">🎲 Random</button>
                          </div>
                      </div>
 
@@ -201,8 +204,11 @@
                 <!-- Right Column: Preview -->
                 <div class="loadout-preview-area">
                     <h3>Preview</h3>
-                    <canvas id="loadout-preview"></canvas>
-                    <span>(Static Preview)</span>
+                    <canvas id="loadout-preview" width="200" height="200"></canvas>
+                    <div class="preview-controls">
+                        <button id="btn-toggle-preview-animation" title="Pause rotation animation">⏸ Pause</button>
+                    </div>
+                    <span class="preview-hint">(Drag to rotate manually)</span>
                 </div><!-- End Right Column -->
 
             </div><!-- End Main Grid -->
