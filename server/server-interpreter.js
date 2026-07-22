@@ -119,7 +119,17 @@ class ServerRobotInterpreter {
                     // Store both the VM instance and the compiled function
                     this.robotVMs[robot.id] = vm;
                     this.robotTickFunctions[robot.id] = compiledFunction;
-                    
+
+                    // IMPORTANT: vm2's `vm.run(code, { timeout })` IGNORES the per-call
+                    // timeout option — it only honors the VM instance's own `timeout`
+                    // property (set at construction to INITIALIZATION_TIMEOUT for
+                    // compilation headroom). Now that compilation is done, lower it to
+                    // the per-tick execution budget so a runaway bot (e.g. `while(true){}`)
+                    // can't freeze the entire synchronous game loop for the full 500ms
+                    // every tick. The game loop is single-threaded, so this ceiling
+                    // directly bounds the worst-case stall for both players and spectators.
+                    vm.timeout = EXECUTION_TIMEOUT;
+
                     console.log(`[Interpreter Init] Successfully compiled function for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'})`);
                 } catch (compileError) {
                     throw new Error(`Code compilation error: ${compileError.message}`);
@@ -158,10 +168,13 @@ class ServerRobotInterpreter {
                 const playerSocket = playerData?.socket;
 
                 try {
-                    // Execute with proper timeout
+                    // Execute with proper timeout.
+                    // The execution ceiling comes from vm.timeout (set to
+                    // EXECUTION_TIMEOUT after compilation) — NOT from any option
+                    // passed here, which vm2 ignores. `filename` only labels stack traces.
                     vm.setGlobal('__tickFunction', tickFunction);
-                    
-                    // Run the tick function with a timeout
+
+                    // Run the tick function; vm.timeout bounds how long it may run.
                     vm.run(`
                         (function() {
                             try {
@@ -170,8 +183,8 @@ class ServerRobotInterpreter {
                                 console.log("Error in robot code: " + e.message);
                             }
                         })();
-                    `, { timeout: EXECUTION_TIMEOUT });
-                    
+                    `, { filename: `robot_tick_${robot.id}.js` });
+
                 } catch (error) {
                     console.error(`[Interpreter Tick] Runtime error for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}):`, error.message);
                     if (playerSocket?.connected) {
