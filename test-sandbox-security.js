@@ -1,5 +1,7 @@
 // test-sandbox-security.js
-// This script tests the security of our VM2 sandbox implementation
+// This script tests the security of our isolated-vm sandbox implementation.
+// Run: node test-sandbox-security.js
+// (For a more thorough, canary-based harness see server/db-scripts/utils/sandbox-harness.js)
 
 const ServerRobotInterpreter = require('./server/server-interpreter');
 
@@ -175,9 +177,11 @@ runTest('Memory exhaustion attempt', `
 `);
 
 console.log('\n🔐 Security test summary:');
-console.log('The VM2 implementation provides much stronger security than the native VM module.');
-console.log('It prevents access to Node.js internals, blocks prototype pollution, and limits resource usage.');
-console.log('For production use, consider adding:');
-console.log('1. Regular security audits of sandbox implementation');
-console.log('2. Consider using isolated-vm for even stronger isolation');
-console.log('3. For maximum security, implement a container-based approach with Docker');
+console.log('The isolated-vm implementation runs each robot in its own V8 isolate with a hard');
+console.log('memory limit and a per-tick execution timeout. User code shares no objects or');
+console.log('realm with the host: no require/process/Buffer/global, and the Function constructor');
+console.log('only reaches the isolate realm. Prototype pollution stays contained to the isolate.');
+console.log('For production, consider additionally:');
+console.log('1. Regular security audits and keeping isolated-vm up to date');
+console.log('2. Running the game server itself as an unprivileged user / in a container');
+console.log('3. Rate-limiting code submissions and match creation');

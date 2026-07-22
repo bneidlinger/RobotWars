@@ -23,7 +23,7 @@ The server uses an authoritative game model where all game logic runs server-sid
 - **game-manager.js** - Orchestrates matchmaking, manages pending players, creates/destroys GameInstance objects, handles lobby state and game history
 - **game-instance.js** - Runs a single match: game loop (30 tick/sec), manages robots/missiles, broadcasts state updates to participants and spectators
 - **server-robot.js** - Server-side robot state (position, damage, missiles, visuals)
-- **server-interpreter.js** - Executes player robot AI code in a sandboxed VM (vm2) with timeouts and memory limits
+- **server-interpreter.js** - Executes player robot AI code in a sandboxed V8 isolate (isolated-vm) with per-tick timeouts and a per-robot memory limit
 - **server-collision.js** - Collision detection between robots, missiles, and arena boundaries
 - **stats-manager.js** - Tracks player statistics and leaderboard data
 

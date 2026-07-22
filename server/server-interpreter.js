@@ -1,148 +1,209 @@
 // server/server-interpreter.js
-const { VM, VMScript } = require('vm2');
+const ivm = require('isolated-vm');
 
 // Define consistent timeouts and memory limits
 const EXECUTION_TIMEOUT = 100; // 100ms execution timeout per tick
-const INITIALIZATION_TIMEOUT = 500; // 500ms for initial compilation
-const MEMORY_LIMIT = 10; // 10MB memory limit
+const INITIALIZATION_TIMEOUT = 500; // 500ms for initial compilation/setup
+const MEMORY_LIMIT = 10; // 10MB memory limit per robot isolate
 
 /**
  * Executes robot AI code safely within a properly sandboxed environment on the server.
- * Uses vm2 for improved security over Node's built-in vm module.
+ *
+ * Uses `isolated-vm` (V8 isolates) rather than vm2. Each robot runs in its own
+ * isolate with a hard memory limit and a per-tick execution timeout. The isolate
+ * shares NO objects or prototypes with the host: user code sees only the standard
+ * ECMAScript built-ins (Math, Number, JSON, Array, ...) plus the specific host
+ * functions we explicitly bridge in as `ivm.Reference`s (the robot API and
+ * console.log). There is no `require`, `process`, `Buffer`, or any path back to
+ * the host realm, which closes the sandbox-escape/RCE exposure that vm2 carried.
+ *
+ * Bridging model:
+ *  - Host callbacks are injected as `ivm.Reference`s and invoked synchronously
+ *    from inside the isolate via `.applySync(...)`. Arguments and return values
+ *    cross the isolate boundary by structured copy (`{ copy: true }`), so only
+ *    plain data — never live host objects — is ever exchanged.
+ *  - `state` lives as a global object INSIDE the isolate and persists across
+ *    ticks (the isolate/context is reused each tick), matching the previous
+ *    per-robot persistent `state` behavior.
  */
 class ServerRobotInterpreter {
     constructor() {
-        this.robotVMs = {}; // Stores the VM instance for each robot
-        this.robotTickFunctions = {}; // Stores the executable function compiled from robot code
-        this.currentRobotId = null; // Temporarily holds the ID of the robot currently executing
+        this.isolates = {};          // robotId -> ivm.Isolate
+        this.contexts = {};          // robotId -> ivm.Context
+        this.tickScripts = {};       // robotId -> ivm.Script (compiled per-tick runner)
+        this.currentRobotId = null;  // Temporarily holds the ID of the robot currently executing
         this.currentGameInstance = null; // Temporarily holds a reference to the GameInstance
     }
 
     /**
-     * Initializes the interpreter contexts and compiles functions for each robot.
+     * Initializes an isolate and compiles the tick function for each robot.
      * @param {ServerRobot[]} robots - Array of robot instances.
      * @param {Map<string, object>} playersDataMap - Map where key is robotId and value is
      *        { socket, loadout: { name, visuals, code }, robot: ServerRobot }.
      */
     initialize(robots, playersDataMap) {
-        console.log("[Interpreter] Initializing robot interpreters with VM2 secure sandbox...");
+        console.log("[Interpreter] Initializing robot interpreters with isolated-vm secure sandbox...");
         robots.forEach(robot => {
             const playerData = playersDataMap.get(robot.id);
             const playerSocket = playerData ? playerData.socket : null;
             const robotCode = playerData?.loadout?.code;
 
-            // Debug logging
             console.log(`[Interpreter Init] Preparing to compile for ${robot.id} (${playerData?.loadout?.name || 'Unknown'})`);
 
             if (!playerData || typeof robotCode !== 'string' || robotCode.trim() === '') {
                 const reason = !playerData ? 'No player data found' : (!robotCode ? 'Code missing in loadout' : 'Code is empty');
                 console.error(`[Interpreter Init] No valid code for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}). Reason: ${reason}. Disabling.`);
-                this.robotTickFunctions[robot.id] = null;
-                this.robotVMs[robot.id] = null;
+                this._disableRobot(robot.id);
                 if (playerSocket?.connected) {
                     playerSocket.emit('codeError', { robotId: robot.id, message: `Initialization Error: Robot code is missing or empty.` });
                 }
                 return; // Skip this robot
             }
 
+            let isolate = null;
             try {
-                // Create a new VM instance with proper security settings
-                const vm = new VM({
-                    timeout: INITIALIZATION_TIMEOUT,
-                    sandbox: {
-                        state: {},
-                        console: {
-                            log: (...args) => {
-                                const messageString = args.map(arg => {
-                                    try {
-                                        return (typeof arg === 'object' && arg !== null) ? JSON.stringify(arg) : String(arg);
-                                    } catch (e) { return '[Unloggable Object]'; }
-                                }).join(' ');
+                // Each robot gets its own isolate with a hard memory ceiling.
+                isolate = new ivm.Isolate({ memoryLimit: MEMORY_LIMIT });
+                const context = isolate.createContextSync();
+                const jail = context.global;
 
-                                if (this.currentGameInstance && this.currentGameInstance.io && this.currentGameInstance.gameId) {
-                                    this.currentGameInstance.io.to(this.currentGameInstance.gameId).emit('robotLog', {
-                                        robotId: robot.id,
-                                        message: messageString
-                                    });
-                                } else if (playerSocket?.connected) {
-                                    playerSocket.emit('robotLog', {
-                                        robotId: robot.id,
-                                        message: `(Context Issue) ${messageString}`
-                                    });
-                                }
-                            }
-                        },
-                        Math: {
-                            abs: Math.abs, acos: Math.acos, asin: Math.asin, atan: Math.atan, atan2: Math.atan2,
-                            ceil: Math.ceil, cos: Math.cos, floor: Math.floor, max: Math.max, min: Math.min,
-                            pow: Math.pow, random: Math.random, round: Math.round, sin: Math.sin, sqrt: Math.sqrt,
-                            tan: Math.tan, PI: Math.PI
-                        },
-                        Number: {
-                            isFinite: Number.isFinite, isNaN: Number.isNaN, parseFloat: Number.parseFloat, parseInt: Number.parseInt
-                        }
-                    },
-                    // Disable all Node.js internal modules
-                    require: false,
-                    // Prevent access to process, Buffer, etc.
-                    wasm: false,
-                    // Set memory limit (in MB)
-                    fixAsync: true,
-                    // Additional security settings
-                    allowAsync: false
-                });
-
-                // Add the robot API to the sandbox safely
-                vm.freeze({
-                    drive: (direction, speed) => this.safeDrive(robot.id, direction, speed),
-                    scan: (direction, resolution) => this.safeScan(robot.id, direction, resolution),
-                    fire: (direction, power) => this.safeFire(robot.id, direction, power),
-                    damage: () => this.safeDamage(robot.id),
-                    getX: () => this.safeGetX(robot.id),
-                    getY: () => this.safeGetY(robot.id),
-                    getDirection: () => this.safeGetDirection(robot.id),
-                }, 'robot');
-
-                // Wrap user code in a function for proper scoping and strict mode
-                const wrappedCode = `(function() { "use strict";\n${robotCode}\n});`;
-                
-                try {
-                    // Compile the script (but don't run it yet)
-                    const script = new VMScript(wrappedCode, `robot_${robot.id}.js`);
-                    const compiledFunction = vm.run(script);
-                    
-                    // Validate that we got a function
-                    if (typeof compiledFunction !== 'function') {
-                        throw new Error("Compiled code did not produce a function. Ensure your code is properly formatted.");
+                // --- Bridge host functions in as References ---
+                // Each closes over robot.id so the host-side safe* methods can verify
+                // the caller is the robot currently executing.
+                jail.setSync('_log', new ivm.Reference((messageString) => {
+                    const msg = String(messageString);
+                    // Prefer broadcasting to the whole game room (players + spectators);
+                    // fall back to the owning socket if the game context isn't set.
+                    if (this.currentGameInstance && this.currentGameInstance.io && this.currentGameInstance.gameId) {
+                        this.currentGameInstance.io.to(this.currentGameInstance.gameId).emit('robotLog', {
+                            robotId: robot.id,
+                            message: msg
+                        });
+                    } else if (playerSocket?.connected) {
+                        playerSocket.emit('robotLog', {
+                            robotId: robot.id,
+                            message: `(Context Issue) ${msg}`
+                        });
                     }
-                    
-                    // Store both the VM instance and the compiled function
-                    this.robotVMs[robot.id] = vm;
-                    this.robotTickFunctions[robot.id] = compiledFunction;
+                }));
+                jail.setSync('_drive', new ivm.Reference((direction, speed) => this.safeDrive(robot.id, direction, speed)));
+                jail.setSync('_scan', new ivm.Reference((direction, resolution) => this.safeScan(robot.id, direction, resolution)));
+                jail.setSync('_fire', new ivm.Reference((direction, power) => this.safeFire(robot.id, direction, power)));
+                jail.setSync('_damage', new ivm.Reference(() => this.safeDamage(robot.id)));
+                jail.setSync('_getX', new ivm.Reference(() => this.safeGetX(robot.id)));
+                jail.setSync('_getY', new ivm.Reference(() => this.safeGetY(robot.id)));
+                jail.setSync('_getDirection', new ivm.Reference(() => this.safeGetDirection(robot.id)));
 
-                    // IMPORTANT: vm2's `vm.run(code, { timeout })` IGNORES the per-call
-                    // timeout option — it only honors the VM instance's own `timeout`
-                    // property (set at construction to INITIALIZATION_TIMEOUT for
-                    // compilation headroom). Now that compilation is done, lower it to
-                    // the per-tick execution budget so a runaway bot (e.g. `while(true){}`)
-                    // can't freeze the entire synchronous game loop for the full 500ms
-                    // every tick. The game loop is single-threaded, so this ceiling
-                    // directly bounds the worst-case stall for both players and spectators.
-                    vm.timeout = EXECUTION_TIMEOUT;
+                // --- Bootstrap the in-isolate API surface ---
+                // Builds `state`, `console`, and `robot` from the raw References, then
+                // clears the raw References off the global so user code interacts only
+                // with the friendly wrappers. Arguments/returns are structured-copied
+                // across the boundary; a non-cloneable argument (e.g. a function) makes
+                // the call a safe no-op, matching the previous type-checked behavior.
+                const bootstrap = `
+                    (function() {
+                        var refs = {
+                            log: _log, drive: _drive, scan: _scan, fire: _fire,
+                            damage: _damage, getX: _getX, getY: _getY, getDirection: _getDirection
+                        };
+                        var COPY = { arguments: { copy: true }, result: { copy: true } };
+                        var ARGS_COPY = { arguments: { copy: true } };
 
-                    console.log(`[Interpreter Init] Successfully compiled function for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'})`);
+                        globalThis.state = {};
+
+                        globalThis.console = Object.freeze({
+                            log: function() {
+                                var args = Array.prototype.slice.call(arguments);
+                                var msg;
+                                try {
+                                    msg = args.map(function(a) {
+                                        if (typeof a === 'object' && a !== null) {
+                                            try { return JSON.stringify(a); } catch (e) { return '[Unloggable Object]'; }
+                                        }
+                                        return String(a);
+                                    }).join(' ');
+                                } catch (e) { msg = '[Unloggable Object]'; }
+                                try { refs.log.applySync(undefined, [msg], ARGS_COPY); } catch (e) {}
+                            }
+                        });
+
+                        globalThis.robot = Object.freeze({
+                            drive: function(direction, speed) {
+                                try { refs.drive.applySync(undefined, [direction, speed], ARGS_COPY); } catch (e) {}
+                            },
+                            scan: function(direction, resolution) {
+                                try { return refs.scan.applySync(undefined, [direction, resolution], COPY); } catch (e) { return null; }
+                            },
+                            fire: function(direction, power) {
+                                try { return refs.fire.applySync(undefined, [direction, power], COPY); } catch (e) { return false; }
+                            },
+                            damage: function() {
+                                try { return refs.damage.applySync(undefined, [], COPY); } catch (e) { return 100; }
+                            },
+                            getX: function() {
+                                try { return refs.getX.applySync(undefined, [], COPY); } catch (e) { return null; }
+                            },
+                            getY: function() {
+                                try { return refs.getY.applySync(undefined, [], COPY); } catch (e) { return null; }
+                            },
+                            getDirection: function() {
+                                try { return refs.getDirection.applySync(undefined, [], COPY); } catch (e) { return null; }
+                            }
+                        });
+
+                        // Hide the raw References from user code (defense in depth).
+                        globalThis._log = undefined; globalThis._drive = undefined; globalThis._scan = undefined;
+                        globalThis._fire = undefined; globalThis._damage = undefined; globalThis._getX = undefined;
+                        globalThis._getY = undefined; globalThis._getDirection = undefined;
+                    })();
+                `;
+                isolate.compileScriptSync(bootstrap).runSync(context, { timeout: INITIALIZATION_TIMEOUT });
+
+                // --- Compile the user code into a persistent tick function ---
+                // Wrapped in a strict-mode function so `state`/`robot`/`console` resolve
+                // to the globals above. Defining it does not execute the body.
+                const defineTick = `globalThis.__tickFunction = (function() { "use strict";\n${robotCode}\n});`;
+                try {
+                    isolate.compileScriptSync(defineTick).runSync(context, { timeout: INITIALIZATION_TIMEOUT });
                 } catch (compileError) {
                     throw new Error(`Code compilation error: ${compileError.message}`);
                 }
+
+                // Validate that we actually produced a callable tick function.
+                const isFn = isolate.compileScriptSync(`typeof globalThis.__tickFunction === 'function'`).runSync(context, { timeout: INITIALIZATION_TIMEOUT });
+                if (!isFn) {
+                    throw new Error("Compiled code did not produce a function. Ensure your code is properly formatted.");
+                }
+
+                // Pre-compile the per-tick runner once; reused every tick.
+                const tickRunner = `
+                    (function() {
+                        try {
+                            globalThis.__tickFunction();
+                        } catch (e) {
+                            globalThis.console.log("Error in robot code: " + (e && e.message ? e.message : e));
+                        }
+                    })();
+                `;
+                const tickScript = isolate.compileScriptSync(tickRunner);
+
+                // Store isolate, context, and compiled tick script.
+                this.isolates[robot.id] = isolate;
+                this.contexts[robot.id] = context;
+                this.tickScripts[robot.id] = tickScript;
+
+                console.log(`[Interpreter Init] Successfully compiled function for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'})`);
 
             } catch (error) {
                 console.error(`[Interpreter Init] Error initializing/compiling function for robot ${robot.id}:`, error.message);
                 if (playerSocket?.connected) {
                     playerSocket.emit('codeError', { robotId: robot.id, message: `Initialization Error: ${error.message}` });
                 }
-                // Ensure cleanup on error
-                this.robotTickFunctions[robot.id] = null;
-                this.robotVMs[robot.id] = null;
+                // Ensure cleanup on error (dispose the partially-created isolate).
+                if (isolate && !isolate.isDisposed) {
+                    try { isolate.dispose(); } catch (e) { /* ignore */ }
+                }
+                this._disableRobot(robot.id);
             }
         });
         console.log("[Interpreter] Initialization complete.");
@@ -152,43 +213,40 @@ class ServerRobotInterpreter {
      * Executes one tick of AI code for all active robots with proper security timeouts.
      * @param {ServerRobot[]} robots - Array of all robot instances in the game.
      * @param {GameInstance} gameInstance - Reference to the current game instance.
-     * @returns {Array} An empty array (events are now triggered via side effects in safe API calls).
+     * @returns {Array} An empty array (events are triggered via side effects in safe API calls).
      */
     executeTick(robots, gameInstance) {
         this.currentGameInstance = gameInstance;
-        const results = [];
 
         robots.forEach(robot => {
-            // Only execute if robot is active and has a valid VM/function
-            if (robot.state === 'active' && this.robotTickFunctions[robot.id] && this.robotVMs[robot.id]) {
+            const isolate = this.isolates[robot.id];
+            const context = this.contexts[robot.id];
+            const tickScript = this.tickScripts[robot.id];
+
+            // Only execute if robot is active and has a live isolate/context/script.
+            if (robot.state === 'active' && isolate && !isolate.isDisposed && context && tickScript) {
                 this.currentRobotId = robot.id;
-                const tickFunction = this.robotTickFunctions[robot.id];
-                const vm = this.robotVMs[robot.id];
                 const playerData = gameInstance.players.get(robot.id);
                 const playerSocket = playerData?.socket;
 
                 try {
-                    // Execute with proper timeout.
-                    // The execution ceiling comes from vm.timeout (set to
-                    // EXECUTION_TIMEOUT after compilation) — NOT from any option
-                    // passed here, which vm2 ignores. `filename` only labels stack traces.
-                    vm.setGlobal('__tickFunction', tickFunction);
-
-                    // Run the tick function; vm.timeout bounds how long it may run.
-                    vm.run(`
-                        (function() {
-                            try {
-                                __tickFunction();
-                            } catch (e) {
-                                console.log("Error in robot code: " + e.message);
-                            }
-                        })();
-                    `, { filename: `robot_tick_${robot.id}.js` });
-
+                    // vm.run/runSync enforces the timeout on the isolate's execution.
+                    tickScript.runSync(context, { timeout: EXECUTION_TIMEOUT });
                 } catch (error) {
-                    console.error(`[Interpreter Tick] Runtime error for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}):`, error.message);
-                    if (playerSocket?.connected) {
-                        playerSocket.emit('codeError', { robotId: robot.id, message: `Runtime Error: ${error.message}` });
+                    // A memory-limit breach DISPOSES the isolate permanently; a timeout or
+                    // ordinary runtime error leaves it reusable. Distinguish the two so a
+                    // single runaway tick doesn't take out an otherwise-recoverable bot.
+                    if (isolate.isDisposed) {
+                        console.error(`[Interpreter Tick] Isolate for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}) was disposed (likely memory limit exceeded). Disabling robot.`);
+                        this._disableRobot(robot.id);
+                        if (playerSocket?.connected) {
+                            playerSocket.emit('codeError', { robotId: robot.id, message: `Runtime Error: Robot exceeded the memory limit and was disabled.` });
+                        }
+                    } else {
+                        console.error(`[Interpreter Tick] Runtime error for robot ${robot.id} (${playerData?.loadout?.name || 'Unknown'}):`, error.message);
+                        if (playerSocket?.connected) {
+                            playerSocket.emit('codeError', { robotId: robot.id, message: `Runtime Error: ${error.message}` });
+                        }
                     }
                 } finally {
                     this.currentRobotId = null;
@@ -197,11 +255,23 @@ class ServerRobotInterpreter {
         });
 
         this.currentGameInstance = null;
-        return results;
+        return [];
+    }
+
+    /** Tears down and forgets a single robot's isolate. @private */
+    _disableRobot(robotId) {
+        const isolate = this.isolates[robotId];
+        if (isolate && !isolate.isDisposed) {
+            try { isolate.dispose(); } catch (e) { /* already gone */ }
+        }
+        this.isolates[robotId] = null;
+        this.contexts[robotId] = null;
+        this.tickScripts[robotId] = null;
     }
 
     // --- Safe API Methods ---
-    // These methods remain mostly the same but with improved security checks
+    // Called (synchronously) from inside the isolate via bridged References. They
+    // verify the caller is the currently-executing robot and validate all inputs.
 
     /** Safely retrieves the ServerRobot instance for the currently executing robot. @private */
     getCurrentRobot() {
@@ -274,27 +344,23 @@ class ServerRobotInterpreter {
         return robot ? robot.direction : null;
     }
 
-    /** Cleans up interpreter state when the game ends. */
+    /** Cleans up interpreter state when the game ends. Disposes every isolate. */
     stop() {
-        console.log("[Interpreter] Stopping and cleaning up VMs/functions.");
-        
-        // Properly dispose of VM instances
-        Object.keys(this.robotVMs).forEach(robotId => {
-            const vm = this.robotVMs[robotId];
-            if (vm) {
+        console.log("[Interpreter] Stopping and cleaning up isolates.");
+        Object.keys(this.isolates).forEach(robotId => {
+            const isolate = this.isolates[robotId];
+            if (isolate && !isolate.isDisposed) {
                 try {
-                    // Clear any remaining state
-                    vm.setGlobal('state', {});
-                    vm.setGlobal('__tickFunction', null);
+                    isolate.dispose();
                 } catch (e) {
-                    // Ignore errors during cleanup
-                    console.log(`[Interpreter] Error during VM cleanup for robot ${robotId}: ${e.message}`);
+                    console.log(`[Interpreter] Error disposing isolate for robot ${robotId}: ${e.message}`);
                 }
             }
         });
-        
-        this.robotVMs = {};
-        this.robotTickFunctions = {};
+
+        this.isolates = {};
+        this.contexts = {};
+        this.tickScripts = {};
         this.currentRobotId = null;
         this.currentGameInstance = null;
     }
