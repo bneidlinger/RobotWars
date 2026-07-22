@@ -1026,55 +1026,26 @@ class LoadoutBuilder {
                 break;
                 
             case 'legs':
-                // Spider-like leg arrangement
+                // Spider-like leg arrangement (matches Arena.js geometry)
                 ctx.fillStyle = darkAccent;
-                const legLength = baseRadius * 0.7;
-                const legWidth = baseRadius * 0.2;
-                
-                // Four legs with joints
-                // Front-right leg
-                ctx.save();
-                ctx.rotate(Math.PI/6);
-                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
-                ctx.translate(legLength, 0);
-                ctx.rotate(Math.PI/4);
-                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.restore();
-                
-                // Back-right leg
-                ctx.save();
-                ctx.rotate(-Math.PI/6);
-                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
-                ctx.translate(legLength, 0);
-                ctx.rotate(-Math.PI/4);
-                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.restore();
-                
-                // Front-left leg
-                ctx.save();
-                ctx.rotate(Math.PI*5/6);
-                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
-                ctx.translate(legLength, 0);
-                ctx.rotate(-Math.PI/4);
-                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.restore();
-                
-                // Back-left leg
-                ctx.save();
-                ctx.rotate(-Math.PI*5/6);
-                ctx.fillRect(0, -legWidth/2, legLength, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
-                ctx.translate(legLength, 0);
-                ctx.rotate(Math.PI/4);
-                ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
-                ctx.restore();
+                // Legs must reach past the widest chassis (~1.2 * baseRadius) to stay visible
+                const legLength = baseRadius * 1.05;
+                const legWidth = baseRadius * 0.22;
+                const drawLeg = (angle, kneeBend) => {
+                    ctx.save(); ctx.rotate(angle);
+                    ctx.fillRect(0, -legWidth/2, legLength, legWidth);
+                    ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
+                    ctx.translate(legLength, 0); ctx.rotate(kneeBend);
+                    ctx.fillRect(0, -legWidth/2, legLength*0.75, legWidth);
+                    ctx.strokeRect(0, -legWidth/2, legLength*0.75, legWidth);
+                    ctx.restore();
+                };
+                drawLeg(Math.PI / 6, Math.PI / 4);       // Front-right
+                drawLeg(Math.PI / 2, Math.PI / 5);       // Mid-right
+                drawLeg(Math.PI * 5 / 6, -Math.PI / 4);  // Back-right
+                drawLeg(-Math.PI / 6, -Math.PI / 4);     // Front-left
+                drawLeg(-Math.PI / 2, -Math.PI / 5);     // Mid-left
+                drawLeg(-Math.PI * 5 / 6, Math.PI / 4);  // Back-left
                 break;
 
             case 'wheels': default:

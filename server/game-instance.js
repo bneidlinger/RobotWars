@@ -487,15 +487,13 @@ class GameInstance {
         const playerName = playerData?.loadout?.name || robotId.substring(0,8)+'...';
         console.log(`[${this.gameId}] Handling removal of participant ${playerName} (${robotId}).`);
 
-        // Mark the robot as destroyed immediately if it exists
+        // Mark the robot as destroyed immediately if it exists.
+        // Use takeDamage (the only writer of the private _damage field) — assigning
+        // robot.damage directly throws, since ServerRobot only exposes a getter.
+        // takeDamage also sets state, destructionTime and stops movement; it is a
+        // safe no-op if the robot was already destroyed.
         if (playerData?.robot) {
-             playerData.robot.state = 'destroyed';
-             if (!playerData.robot.destructionTime) {
-                // Set destruction time if not already set (e.g., disconnected before being hit)
-                playerData.robot.destructionTime = Date.now();
-             }
-             playerData.robot.damage = 100; // Ensure damage is maxed
-             playerData.robot.speed = 0; playerData.robot.targetSpeed = 0; // Stop movement
+             playerData.robot.takeDamage(1000, 'disconnect');
              console.log(`[${this.gameId}] Marked robot for ${playerName} as destroyed due to removal.`);
         }
 
@@ -517,6 +515,11 @@ class GameInstance {
     /** Performs cleanup tasks when the game instance is no longer needed. */
     cleanup() {
         console.log(`[${this.gameId}] Cleaning up instance.`);
+        // End the game and stop the tick loop BEFORE tearing down references.
+        // Otherwise a queued tick can fire with a nulled interpreter, logging a
+        // spurious "CRITICAL ERROR during tick" and a duplicate game-over event.
+        this.gameEnded = true;
+        this.stopGameLoop();
         // Make all connected sockets leave the game-specific rooms
         this.io.socketsLeave(this.spectatorRoom);
         this.io.socketsLeave(this.gameId);

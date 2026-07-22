@@ -90,6 +90,11 @@ app.use(express.urlencoded({ extended: true })); // Middleware for URL-encoded r
 app.set('trust proxy', 1); // Trust the first proxy hop (common setting for Render/Heroku)
 // --- End Trust Proxy ---
 
+// Expose the db module to routes that use req.app.get('db') (e.g. leaderboard).
+// Without this, the leaderboard route always took its "no database" fallback
+// and returned empty stats.
+app.set('db', db);
+
 app.use(sessionMiddleware); // Use session middleware for all Express routes AFTER body parsing and trust proxy
 
 // --- Socket.IO Session Sharing ---

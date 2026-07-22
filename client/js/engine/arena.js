@@ -566,21 +566,21 @@ class Arena { // File name remains Arena, class concept is Renderer
 
             case 'legs':
                 ctx.fillStyle = darkAccent;
-                const legLength = baseRadius * 0.7; const legWidth = baseRadius * 0.2;
-                const drawLeg = (angle, segment1Angle, segment2Angle) => {
+                // Legs must reach past the widest chassis (~1.2 * baseRadius) to stay visible
+                const legLength = baseRadius * 1.05; const legWidth = baseRadius * 0.22;
+                const drawLeg = (angle, kneeBend) => {
                     ctx.save(); ctx.rotate(angle);
                     ctx.fillRect(0, -legWidth/2, legLength, legWidth); ctx.strokeRect(0, -legWidth/2, legLength, legWidth);
-                    ctx.translate(legLength, 0); ctx.rotate(segment1Angle);
-                    ctx.fillRect(0, -legWidth/2, legLength*0.7, legWidth); ctx.strokeRect(0, -legWidth/2, legLength*0.7, legWidth);
-                    // Optional: Add a third segment
-                    // ctx.translate(legLength*0.7, 0); ctx.rotate(segment2Angle);
-                    // ctx.fillRect(0, -legWidth/2, legLength*0.5, legWidth); ctx.strokeRect(0, -legWidth/2, legLength*0.5, legWidth);
+                    ctx.translate(legLength, 0); ctx.rotate(kneeBend);
+                    ctx.fillRect(0, -legWidth/2, legLength*0.75, legWidth); ctx.strokeRect(0, -legWidth/2, legLength*0.75, legWidth);
                     ctx.restore();
                 };
-                drawLeg(Math.PI / 6, Math.PI / 4, -Math.PI / 6); // Front-right
-                drawLeg(-Math.PI / 6, -Math.PI / 4, Math.PI / 6); // Back-right
-                drawLeg(Math.PI * 5 / 6, -Math.PI / 4, Math.PI / 6); // Front-left
-                drawLeg(-Math.PI * 5 / 6, Math.PI / 4, -Math.PI / 6); // Back-left
+                drawLeg(Math.PI / 6, Math.PI / 4);       // Front-right
+                drawLeg(Math.PI / 2, Math.PI / 5);       // Mid-right
+                drawLeg(Math.PI * 5 / 6, -Math.PI / 4);  // Back-right
+                drawLeg(-Math.PI / 6, -Math.PI / 4);     // Front-left
+                drawLeg(-Math.PI / 2, -Math.PI / 5);     // Mid-left
+                drawLeg(-Math.PI * 5 / 6, Math.PI / 4);  // Back-left
                 break;
 
             case 'wheels': default:

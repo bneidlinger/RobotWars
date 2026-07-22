@@ -39,7 +39,13 @@ function initializeSocketHandler(io, db) { // db might be needed by GameManager 
         socket.on('disconnect', () => {
             console.log(`[Socket ${socket.id}] Client disconnected: User '${username}' (ID: ${userId})`);
             // Ensure GameManager uses socket.id to remove, but might need userId too for cross-referencing
-            gameManager.removePlayer(socket.id); // Pass socket.id for removal
+            // Guard: an exception here would propagate out of the socket.io event
+            // handler and crash the whole server process on any player disconnect.
+            try {
+                gameManager.removePlayer(socket.id); // Pass socket.id for removal
+            } catch (err) {
+                console.error(`[Socket ${socket.id}] Error during disconnect cleanup for '${username}':`, err);
+            }
         });
 
         // === Event Listeners - Use userId/username from session ===
