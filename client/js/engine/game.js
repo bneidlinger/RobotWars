@@ -62,6 +62,9 @@ class Game {
     start() {
         if (this.isRunning) return;
         console.log(`Game: Starting loop for game: ${this.gameName || this.gameId || 'Unknown'}`);
+        // Drop any particles/emitters left over from a previous match so the new
+        // arena starts clean instead of inheriting old explosions.
+        if (window.particleSystem?.clear) window.particleSystem.clear();
         this.isRunning = true;
         this.lastUpdateTime = performance.now();
         this.loop(); // Start the loop
@@ -82,6 +85,7 @@ class Game {
         this.activeFlashes = [];
         this.activeExplosions = [];
         this.activeParticleEffects = []; // Clear particle effects too
+        if (window.particleSystem?.clear) window.particleSystem.clear(); // Drop live particles/emitters
         this.shakeMagnitude = 0; // Reset shake
         // Optionally clear the dashboard/logs via their handlers
         if (window.dashboard?.updateStats) window.dashboard.updateStats([], {});
@@ -686,7 +690,11 @@ class Game {
     updateParticleEffects(deltaTime) {
         // Use the new global particle system instead of managing particles directly
         if (window.particleSystem) {
-            window.particleSystem.update(deltaTime);
+            // NOTE: deltaTime here is in SECONDS, but ParticleSystem.update expects
+            // MILLISECONDS (it ages particles against ms lifetimes). Passing seconds
+            // aged them ~1000x too slowly, so explosions never expired — they piled
+            // up at max alpha into permanent white blobs burned onto the arena.
+            window.particleSystem.update(deltaTime * 1000);
         } else {
             // Legacy particle system code for backwards compatibility
             const now = Date.now();

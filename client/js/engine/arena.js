@@ -34,6 +34,24 @@ class Arena { // File name remains Arena, class concept is Renderer
         this.gridSize = 50;
         this.gridColor = '#444444';
 
+        // --- Arena Surface / Post-Processing Configuration ---
+        // The raw floor texture is a loud, high-contrast purple noise tile that
+        // visually competes with the robots. Rather than replace the asset, it is
+        // composited as low-opacity surface grain over a dark base and unified with
+        // a cool tint, then lit from above and vignetted. Net effect: the floor
+        // reads as a lit metal surface and the robots/effects pop off it.
+        this.floorConfig = {
+            baseColor: '#151a23',                  // Deep blue-slate base beneath the texture
+            textureAlpha: 0.30,                    // How much raw texture grain shows through
+            tint: 'rgba(20, 27, 38, 0.55)',        // Cool unifying wash over the texture
+            gridMinor: 'rgba(125, 175, 205, 0.055)', // Fine grid lines
+            gridMajor: 'rgba(140, 205, 235, 0.13)',  // Every Nth line, for scale/depth
+            majorEvery: 4,                         // A major line every N grid cells
+            floorLight: 0.10,                      // Strength of the soft overhead pool of light
+            borderColor: '#2196F3',                // Arena boundary glow (matches UI neon)
+            vignette: 0.55                         // Edge darkening strength (0 = off)
+        };
+
         // Shadow Configuration
         this.shadowConfig = {
             enabled: true,            // Can be toggled off for performance
@@ -45,17 +63,21 @@ class Arena { // File name remains Arena, class concept is Renderer
         };
         
         // Dynamic Lighting Configuration
+        // NOTE: these are additive ('lighter') glows. They are tuned against the
+        // darkened arena floor — on a bright floor they can be pushed higher, but
+        // at these levels overlapping blasts bloom without clipping to pure white.
         this.lightingConfig = {
             enabled: true,            // Can be toggled off for performance
+            maxConcurrent: 12,        // Cap stacked glows so blasts can't blow out the frame
             explosionLight: {
                 radius: 150,          // Light radius for explosions
-                intensity: 0.7,       // Light intensity (0-1)
+                intensity: 0.42,      // Light intensity (0-1)
                 duration: 800,        // Duration in ms
                 falloff: 2            // Light falloff (1-3, higher = sharper falloff)
             },
             missileLight: {
                 radius: 50,           // Light radius for missile firing
-                intensity: 0.4,       // Light intensity (0-1)
+                intensity: 0.24,      // Light intensity (0-1)
                 duration: 300,        // Duration in ms
                 falloff: 1.5          // Light falloff
             }
@@ -132,25 +154,120 @@ class Arena { // File name remains Arena, class concept is Renderer
     translateY(gameY) { return gameY; }
 
     // --- Background Canvas Methods ---
-    /** Draws the background texture/color */
+    /** Draws the arena floor: dark base + tamed texture grain + unifying tint */
     drawBackgroundTexture(targetCtx) {
+        const cfg = this.floorConfig;
         targetCtx.clearRect(0, 0, this.width, this.height);
-        targetCtx.fillStyle = this.backgroundPattern || '#2c2c2c'; // Use pattern or fallback color
+
+        // 1. Dark base so the floor never washes out the robots sitting on it.
+        targetCtx.fillStyle = cfg.baseColor;
         targetCtx.fillRect(0, 0, this.width, this.height);
+
+        // 2. Texture as low-opacity surface grain (falls back to the flat base).
+        if (this.backgroundPattern) {
+            targetCtx.save();
+            targetCtx.globalAlpha = cfg.textureAlpha;
+            targetCtx.fillStyle = this.backgroundPattern;
+            targetCtx.fillRect(0, 0, this.width, this.height);
+            targetCtx.restore();
+
+            // 3. Cool wash to pull the texture's purple cast toward the UI palette.
+            targetCtx.fillStyle = cfg.tint;
+            targetCtx.fillRect(0, 0, this.width, this.height);
+        }
     }
-    /** Draws the grid lines */
-    drawGridLines(targetCtx) {
+
+    /** Draws a soft overhead pool of light so the arena reads as lit, not flat */
+    drawFloorLighting(targetCtx) {
+        const strength = this.floorConfig.floorLight;
+        if (!strength) return;
         targetCtx.save();
-        targetCtx.strokeStyle = this.gridColor;
-        targetCtx.lineWidth = 0.5;
-        // Vertical lines
+        const cx = this.width / 2;
+        const cy = this.height / 2;
+        const gradient = targetCtx.createRadialGradient(cx, cy * 0.85, 0, cx, cy, this.width * 0.72);
+        gradient.addColorStop(0, `rgba(190, 225, 255, ${strength})`);
+        gradient.addColorStop(0.55, `rgba(150, 195, 235, ${strength * 0.35})`);
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        targetCtx.fillStyle = gradient;
+        targetCtx.fillRect(0, 0, this.width, this.height);
+        targetCtx.restore();
+    }
+
+    /** Draws the grid lines (fine minor lines with brighter major lines for scale) */
+    drawGridLines(targetCtx) {
+        const cfg = this.floorConfig;
+        targetCtx.save();
+
+        // Minor lines
+        targetCtx.strokeStyle = cfg.gridMinor;
+        targetCtx.lineWidth = 1;
+        targetCtx.beginPath();
         for (let x = this.gridSize; x < this.width; x += this.gridSize) {
-            targetCtx.beginPath(); targetCtx.moveTo(x, 0); targetCtx.lineTo(x, this.height); targetCtx.stroke();
+            targetCtx.moveTo(x + 0.5, 0); targetCtx.lineTo(x + 0.5, this.height);
         }
-        // Horizontal lines
         for (let y = this.gridSize; y < this.height; y += this.gridSize) {
-            targetCtx.beginPath(); targetCtx.moveTo(0, y); targetCtx.lineTo(this.width, y); targetCtx.stroke();
+            targetCtx.moveTo(0, y + 0.5); targetCtx.lineTo(this.width, y + 0.5);
         }
+        targetCtx.stroke();
+
+        // Major lines every Nth cell — gives the floor a sense of scale and depth.
+        const majorStep = this.gridSize * cfg.majorEvery;
+        targetCtx.strokeStyle = cfg.gridMajor;
+        targetCtx.lineWidth = 1;
+        targetCtx.beginPath();
+        for (let x = majorStep; x < this.width; x += majorStep) {
+            targetCtx.moveTo(x + 0.5, 0); targetCtx.lineTo(x + 0.5, this.height);
+        }
+        for (let y = majorStep; y < this.height; y += majorStep) {
+            targetCtx.moveTo(0, y + 0.5); targetCtx.lineTo(this.width, y + 0.5);
+        }
+        targetCtx.stroke();
+
+        targetCtx.restore();
+    }
+
+    /** Draws the arena boundary: a contained edge with a subtle inner glow */
+    drawArenaBorder(targetCtx) {
+        const color = this.floorConfig.borderColor;
+        if (!color) return;
+        targetCtx.save();
+
+        // Soft inner glow bleeding in from the walls.
+        targetCtx.strokeStyle = color;
+        targetCtx.globalAlpha = 0.18;
+        targetCtx.lineWidth = 6;
+        targetCtx.shadowColor = color;
+        targetCtx.shadowBlur = 18;
+        targetCtx.strokeRect(3, 3, this.width - 6, this.height - 6);
+
+        // Crisp containment line.
+        targetCtx.globalAlpha = 0.5;
+        targetCtx.shadowBlur = 0;
+        targetCtx.lineWidth = 1.5;
+        targetCtx.strokeRect(2.5, 2.5, this.width - 5, this.height - 5);
+
+        targetCtx.restore();
+    }
+
+    /**
+     * Post-process vignette, drawn on the live canvas above everything so robots
+     * and effects near the walls fall off into shadow too. Keeps the eye centered
+     * on the action.
+     */
+    drawVignette(targetCtx) {
+        const strength = this.floorConfig.vignette;
+        if (!strength) return;
+        targetCtx.save();
+        const cx = this.width / 2;
+        const cy = this.height / 2;
+        const inner = this.width * 0.42;
+        const outer = this.width * 0.78;
+        const gradient = targetCtx.createRadialGradient(cx, cy, inner, cx, cy, outer);
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        gradient.addColorStop(0.6, `rgba(3, 6, 12, ${strength * 0.35})`);
+        gradient.addColorStop(1, `rgba(2, 4, 9, ${strength})`);
+        targetCtx.fillStyle = gradient;
+        targetCtx.fillRect(0, 0, this.width, this.height);
         targetCtx.restore();
     }
     /** 
@@ -161,10 +278,13 @@ class Arena { // File name remains Arena, class concept is Renderer
         console.log("Redrawing arena background canvas" + (clearScorchMarks ? " (clearing all scorch marks)" : ""));
         if (!this.backgroundCtx) return;
         
-        // Clear canvas and draw base elements
+        // Clear canvas and draw base elements.
+        // Order matters: floor grain -> overhead light pool -> grid -> scorch -> border,
+        // so the grid reads as painted ON the lit floor and scorch marks sit on top of it.
         this.drawBackgroundTexture(this.backgroundCtx);
+        this.drawFloorLighting(this.backgroundCtx);
         this.drawGridLines(this.backgroundCtx);
-        
+
         // Clear scorch marks if requested
         if (clearScorchMarks) {
             this.scorchMarks = [];
@@ -174,6 +294,9 @@ class Arena { // File name remains Arena, class concept is Renderer
             // Draw stored scorch marks on top of the background
             this.drawStoredScorchMarks();
         }
+
+        // Boundary last so the walls stay crisp over floor detail and scorch marks.
+        this.drawArenaBorder(this.backgroundCtx);
     }
     /** 
      * Load saved scorch marks from localStorage 
@@ -2194,9 +2317,14 @@ class Arena { // File name remains Arena, class concept is Renderer
         
         // Add to active light sources
         this.activeLightSources.push(light);
-        
-        // For debugging
-        //console.log(`Added ${type} light at (${x}, ${y})`);
+
+        // Cap concurrent glows. These composite additively, so a burst of
+        // overlapping blasts would otherwise clip the whole frame to white.
+        // Dropping the oldest keeps the newest (most relevant) blasts.
+        const max = this.lightingConfig.maxConcurrent || 12;
+        if (this.activeLightSources.length > max) {
+            this.activeLightSources.splice(0, this.activeLightSources.length - max);
+        }
     }
     
     /**
@@ -2823,6 +2951,11 @@ class Arena { // File name remains Arena, class concept is Renderer
         // --- Screen Shake Restore ---
         this.ctx.restore(); // Restore context after drawing everything (removes shake translation)
         // --- Screen Shake End ---
+
+        // 11. Post-process vignette. Drawn AFTER the shake restore so it stays
+        // anchored to the canvas edges instead of sliding with the scene (which
+        // would expose un-vignetted corners while the screen is shaking).
+        this.drawVignette(this.ctx);
     }
 } // End Arena (Renderer) Class
 

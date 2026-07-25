@@ -355,13 +355,36 @@ class ParticleSystem {
     }
     
     /**
+     * Removes every active particle and emitter.
+     * Called when a match starts/ends so leftover effects from a previous game
+     * can't linger on the arena or bleed into the next match.
+     */
+    clear() {
+        for (const type in this.particles) {
+            if (Array.isArray(this.particles[type])) this.particles[type].length = 0;
+        }
+        if (Array.isArray(this.emitters)) this.emitters.length = 0;
+    }
+
+    /**
      * Updates all active particles based on elapsed time
      * @param {number} dt - Delta time in milliseconds since last update
      */
     update(dt) {
+        // `dt` is in MILLISECONDS. Ages/lifetimes are in ms, so they use dt directly.
+        // Guard against absurd steps (e.g. the tab was backgrounded and came back);
+        // without this a single huge frame would teleport every particle at once.
+        dt = Math.min(Math.max(Number(dt) || 0, 0), 100);
+
         // Convert milliseconds to seconds for physics calculations
         const dtSec = dt / 1000;
-        
+
+        // Rate properties (fadeSpeed/shrinkSpeed/growth/rotationSpeed) are authored
+        // as per-frame amounts at ~60fps, so scale them by elapsed frame-equivalents.
+        // This keeps particle lifetimes consistent with their declared `lifetime`
+        // values instead of being tied to the actual frame rate.
+        const frames = dt / (1000 / 60);
+
         // Update emitters first
         if (this.emitters && this.emitters.length > 0) {
             for (let i = this.emitters.length - 1; i >= 0; i--) {
@@ -411,29 +434,29 @@ class ParticleSystem {
                 
                 // Size changes
                 if (p.shrinkSpeed) {
-                    p.size -= p.shrinkSpeed * dt;
+                    p.size -= p.shrinkSpeed * frames;
                     // Remove if too small
                     if (p.size <= 0.1) {
                         particles.splice(i, 1);
                         continue;
                     }
                 } else if (p.growth) {
-                    p.size += p.growth * dt;
+                    p.size += p.growth * frames;
                 }
-                
+
                 // Alpha/fading
                 if (p.fadeSpeed) {
-                    p.alpha -= p.fadeSpeed * dt;
+                    p.alpha -= p.fadeSpeed * frames;
                     // Remove if invisible
                     if (p.alpha <= 0) {
                         particles.splice(i, 1);
                         continue;
                     }
                 }
-                
+
                 // Update rotation for non-circular particles
                 if (p.shape !== 'circle' && p.rotationSpeed) {
-                    p.rotation += p.rotationSpeed * dt;
+                    p.rotation += p.rotationSpeed * frames;
                 }
             }
         }
