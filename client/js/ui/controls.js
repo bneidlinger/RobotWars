@@ -36,6 +36,7 @@ class Controls {
         this.selfDestructButton = document.getElementById('btn-self-destruct');
         this.testButton = document.getElementById('btn-test-code');
         this.lightingToggleButton = document.getElementById('btn-toggle-lighting');
+        this.floorToggleButton = document.getElementById('btn-toggle-floor');
         this.loadoutStatus = document.getElementById('loadout-status');
         // --- End Element References ---
 
@@ -348,7 +349,27 @@ class Controls {
             });
         } else { console.warn("Lighting Toggle Button not found for listener."); }
 
+        // Arena floor theme toggle button
+        if (this.floorToggleButton) {
+            this.floorToggleButton.addEventListener('click', () => {
+                if (!this.game || !this.game.renderer) return;
+                const newTheme = this.game.toggleFloorTheme();
+                this.updateFloorToggleButton(newTheme);
+                console.log(`Arena floor theme toggled to: ${newTheme}`);
+            });
+            // Reflect the persisted theme on load
+            this.updateFloorToggleButton(this.game?.getFloorTheme?.());
+        } else { console.warn("Floor Toggle Button not found for listener."); }
+
     } // End setupEventListeners
+
+    /** Syncs the floor toggle button's icon/tooltip with the active theme */
+    updateFloorToggleButton(theme) {
+        if (!this.floorToggleButton) return;
+        const isClassic = theme === 'classic';
+        this.floorToggleButton.textContent = isClassic ? '🟣' : '🎨';
+        this.floorToggleButton.title = `Toggle Arena Floor (Currently: ${isClassic ? 'Classic' : 'Tactical'})`;
+    }
 
 
     /**

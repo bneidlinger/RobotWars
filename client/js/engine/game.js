@@ -1107,6 +1107,23 @@ class Game {
         return this.currentLightingMode || 'day';
     }
 
+    /**
+     * Toggles the arena floor theme (tactical <-> classic). Safe mid-match.
+     * @returns {string} The new floor theme name
+     */
+    toggleFloorTheme() {
+        if (!this.renderer) return 'tactical';
+        return this.renderer.toggleFloorTheme();
+    }
+
+    /**
+     * Gets the current arena floor theme
+     * @returns {string} 'tactical' or 'classic'
+     */
+    getFloorTheme() {
+        return this.renderer ? this.renderer.getFloorTheme() : 'tactical';
+    }
+
 } // End Game Class
 
 // Expose class to window global scope

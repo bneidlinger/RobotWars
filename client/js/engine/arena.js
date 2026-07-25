@@ -34,23 +34,55 @@ class Arena { // File name remains Arena, class concept is Renderer
         this.gridSize = 50;
         this.gridColor = '#444444';
 
-        // --- Arena Surface / Post-Processing Configuration ---
-        // The raw floor texture is a loud, high-contrast purple noise tile that
-        // visually competes with the robots. Rather than replace the asset, it is
-        // composited as low-opacity surface grain over a dark base and unified with
-        // a cool tint, then lit from above and vignetted. Net effect: the floor
-        // reads as a lit metal surface and the robots/effects pop off it.
-        this.floorConfig = {
-            baseColor: '#151a23',                  // Deep blue-slate base beneath the texture
-            textureAlpha: 0.30,                    // How much raw texture grain shows through
-            tint: 'rgba(20, 27, 38, 0.55)',        // Cool unifying wash over the texture
-            gridMinor: 'rgba(125, 175, 205, 0.055)', // Fine grid lines
-            gridMajor: 'rgba(140, 205, 235, 0.13)',  // Every Nth line, for scale/depth
-            majorEvery: 4,                         // A major line every N grid cells
-            floorLight: 0.10,                      // Strength of the soft overhead pool of light
-            borderColor: '#2196F3',                // Arena boundary glow (matches UI neon)
-            vignette: 0.55                         // Edge darkening strength (0 = off)
+        // --- Arena Surface / Post-Processing Themes ---
+        // Two selectable looks, switchable live via toggleFloorTheme():
+        //
+        //  'tactical' — the raw floor texture is a loud, high-contrast purple noise
+        //    tile that visually competes with the robots, so here it is composited
+        //    as low-opacity grain over a dark base, unified with a cool tint, then
+        //    lit from above and vignetted. Robots and effects pop off it.
+        //
+        //  'classic'  — the original arena: full-strength purple texture, flat grid,
+        //    no floor light, border or vignette. Kept for nostalgia.
+        //
+        // `lightScale` matters: the additive explosion/muzzle glows are tuned
+        // against floor brightness. On the dark tactical floor they clip to white
+        // at full strength, while the bright classic floor needs them at full
+        // strength to read at all. Each theme therefore scales the base intensities.
+        this.floorThemes = {
+            tactical: {
+                label: 'Tactical',
+                baseColor: '#151a23',                    // Deep blue-slate base beneath the texture
+                textureAlpha: 0.30,                      // How much raw texture grain shows through
+                tint: 'rgba(20, 27, 38, 0.55)',          // Cool unifying wash over the texture
+                gridMinor: 'rgba(125, 175, 205, 0.055)', // Fine grid lines
+                gridMajor: 'rgba(140, 205, 235, 0.13)',  // Every Nth line, for scale/depth
+                majorEvery: 4,                           // A major line every N grid cells
+                floorLight: 0.10,                        // Soft overhead pool of light
+                borderColor: '#2196F3',                  // Arena boundary glow (matches UI neon)
+                vignette: 0.55,                          // Edge darkening strength (0 = off)
+                lightScale: 0.6                          // Tame additive glows on the dark floor
+            },
+            classic: {
+                label: 'Classic',
+                baseColor: '#2c2c2c',   // Original fallback colour
+                textureAlpha: 1.0,      // Original: texture at full strength
+                tint: null,             // No colour wash
+                gridMinor: '#444444',   // Original flat grid
+                gridMajor: null,        // Original had no major lines
+                majorEvery: 4,
+                floorLight: 0,          // No overhead pool
+                borderColor: null,      // No boundary glow
+                vignette: 0,            // No vignette
+                lightScale: 1.0         // Original glow strength
+            }
         };
+
+        // Base (unscaled) additive light intensities; per-theme lightScale is applied to these.
+        this.baseLightIntensity = { explosion: 0.7, missile: 0.4 };
+
+        this.floorTheme = this.loadFloorTheme();
+        this.floorConfig = this.floorThemes[this.floorTheme];
 
         // Shadow Configuration
         this.shadowConfig = {
@@ -71,13 +103,15 @@ class Arena { // File name remains Arena, class concept is Renderer
             maxConcurrent: 12,        // Cap stacked glows so blasts can't blow out the frame
             explosionLight: {
                 radius: 150,          // Light radius for explosions
-                intensity: 0.42,      // Light intensity (0-1)
+                // Intensity is derived from baseLightIntensity * the active floor
+                // theme's lightScale (see setFloorTheme), not hard-coded.
+                intensity: this.baseLightIntensity.explosion * this.floorConfig.lightScale,
                 duration: 800,        // Duration in ms
                 falloff: 2            // Light falloff (1-3, higher = sharper falloff)
             },
             missileLight: {
                 radius: 50,           // Light radius for missile firing
-                intensity: 0.24,      // Light intensity (0-1)
+                intensity: this.baseLightIntensity.missile * this.floorConfig.lightScale,
                 duration: 300,        // Duration in ms
                 falloff: 1.5          // Light falloff
             }
@@ -154,7 +188,63 @@ class Arena { // File name remains Arena, class concept is Renderer
     translateY(gameY) { return gameY; }
 
     // --- Background Canvas Methods ---
-    /** Draws the arena floor: dark base + tamed texture grain + unifying tint */
+    // --- Floor Theme Management ---
+    /** Reads the saved floor theme, falling back to 'tactical'. @private */
+    loadFloorTheme() {
+        try {
+            const saved = localStorage.getItem('robotWarsFloorTheme');
+            if (saved && this.floorThemes[saved]) return saved;
+        } catch (e) { /* localStorage unavailable — use the default */ }
+        return 'tactical';
+    }
+
+    /**
+     * Switches the arena floor theme and redraws immediately (safe mid-match).
+     * @param {string} name - 'tactical' or 'classic'
+     * @returns {string} The active theme name
+     */
+    setFloorTheme(name) {
+        if (!this.floorThemes[name]) {
+            console.error(`Unknown floor theme: ${name}. Valid themes: ${Object.keys(this.floorThemes).join(', ')}`);
+            return this.floorTheme;
+        }
+
+        this.floorTheme = name;
+        this.floorConfig = this.floorThemes[name];
+
+        // Re-derive additive light intensities for this floor's brightness so
+        // explosions neither clip to white nor wash out.
+        const scale = this.floorConfig.lightScale;
+        this.lightingConfig.explosionLight.intensity = this.baseLightIntensity.explosion * scale;
+        this.lightingConfig.missileLight.intensity = this.baseLightIntensity.missile * scale;
+
+        // Rebuild the persistent background (keeps existing scorch marks).
+        this.redrawArenaBackground();
+
+        try {
+            localStorage.setItem('robotWarsFloorTheme', name);
+        } catch (e) { /* saving is best-effort */ }
+
+        console.log(`Arena floor theme set to: ${name}`);
+        return name;
+    }
+
+    /**
+     * Cycles to the next floor theme. Safe to call during a live match.
+     * @returns {string} The newly active theme name
+     */
+    toggleFloorTheme() {
+        const names = Object.keys(this.floorThemes);
+        const next = names[(names.indexOf(this.floorTheme) + 1) % names.length];
+        return this.setFloorTheme(next);
+    }
+
+    /** @returns {string} The active floor theme name */
+    getFloorTheme() {
+        return this.floorTheme;
+    }
+
+    /** Draws the arena floor: base colour + texture grain + optional unifying tint */
     drawBackgroundTexture(targetCtx) {
         const cfg = this.floorConfig;
         targetCtx.clearRect(0, 0, this.width, this.height);
@@ -171,9 +261,12 @@ class Arena { // File name remains Arena, class concept is Renderer
             targetCtx.fillRect(0, 0, this.width, this.height);
             targetCtx.restore();
 
-            // 3. Cool wash to pull the texture's purple cast toward the UI palette.
-            targetCtx.fillStyle = cfg.tint;
-            targetCtx.fillRect(0, 0, this.width, this.height);
+            // 3. Optional cool wash to pull the texture's purple cast toward the
+            //    UI palette. Skipped by the classic theme, which keeps it purple.
+            if (cfg.tint) {
+                targetCtx.fillStyle = cfg.tint;
+                targetCtx.fillRect(0, 0, this.width, this.height);
+            }
         }
     }
 
@@ -211,17 +304,20 @@ class Arena { // File name remains Arena, class concept is Renderer
         targetCtx.stroke();
 
         // Major lines every Nth cell — gives the floor a sense of scale and depth.
-        const majorStep = this.gridSize * cfg.majorEvery;
-        targetCtx.strokeStyle = cfg.gridMajor;
-        targetCtx.lineWidth = 1;
-        targetCtx.beginPath();
-        for (let x = majorStep; x < this.width; x += majorStep) {
-            targetCtx.moveTo(x + 0.5, 0); targetCtx.lineTo(x + 0.5, this.height);
+        // The classic theme has no major lines (gridMajor: null).
+        if (cfg.gridMajor) {
+            const majorStep = this.gridSize * cfg.majorEvery;
+            targetCtx.strokeStyle = cfg.gridMajor;
+            targetCtx.lineWidth = 1;
+            targetCtx.beginPath();
+            for (let x = majorStep; x < this.width; x += majorStep) {
+                targetCtx.moveTo(x + 0.5, 0); targetCtx.lineTo(x + 0.5, this.height);
+            }
+            for (let y = majorStep; y < this.height; y += majorStep) {
+                targetCtx.moveTo(0, y + 0.5); targetCtx.lineTo(this.width, y + 0.5);
+            }
+            targetCtx.stroke();
         }
-        for (let y = majorStep; y < this.height; y += majorStep) {
-            targetCtx.moveTo(0, y + 0.5); targetCtx.lineTo(this.width, y + 0.5);
-        }
-        targetCtx.stroke();
 
         targetCtx.restore();
     }
